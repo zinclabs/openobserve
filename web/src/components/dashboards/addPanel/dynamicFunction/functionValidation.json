@@ -1,0 +1,713 @@
+[
+    {
+        "functionName": null,
+        "functionLabel": "None",
+        "args": []
+    },
+    {
+        "functionName": "histogram",
+        "functionLabel": "Histogram",
+        "args": [
+            {
+                "type": [
+                    "field",
+                    "function"
+                ],
+                "required": true
+            },
+            {
+                "type": [
+                    "histogramInterval",
+                    "function"
+                ],
+                "required": true
+            }
+        ]
+    },
+    {
+        "functionName": "count",
+        "functionLabel": "Count",
+        "args": [
+            {
+                "type": [
+                    "field",
+                    "function"
+                ],
+                "required": true
+            } 
+        ]
+    },
+    {
+        "functionName": "count-distinct",
+        "functionLabel": "Count (Distinct)",
+        "args": [
+            {
+                "type": [
+                    "field",
+                    "function"
+                ],
+                "required": true
+            }
+        ]
+    },
+    {
+        "functionName": "sum",
+        "functionLabel": "sum",
+        "args": [
+            {
+                "type": [
+                    "field",
+                    "function"
+                ],
+                "required": true
+            }
+        ]
+    },
+    {
+        "functionName": "avg",
+        "functionLabel": "avg",
+        "args": [
+            {
+                "type": [
+                    "field",
+                    "function"
+                ],
+                "required": true
+            }
+        ]
+    },
+    {
+        "functionName": "min",
+        "functionLabel": "min",
+        "args": [
+            {
+                "type": [
+                    "field",
+                    "function"
+                ],
+                "required": true
+            }
+        ]
+    },
+    {
+        "functionName": "max",
+        "functionLabel": "max",
+        "args": [
+            {
+                "type": [
+                    "field",
+                    "function"
+                ],
+                "required": true
+            }
+        ]
+    },
+    {
+        "functionName": "p50",
+        "functionLabel": "p50",
+        "args": [
+            {
+                "type": [
+                    "field",
+                    "function"
+                ],
+                "required": true
+            }
+        ]
+    },
+    {
+        "functionName": "p90",
+        "functionLabel": "p90",
+        "args": [
+            {
+                "type": [
+                    "field",
+                    "function"
+                ],
+                "required": true
+            }
+        ]
+    },
+    {
+        "functionName": "p95",
+        "functionLabel": "p95",
+        "args": [
+            {
+                "type": [
+                    "field",
+                    "function"
+                ],
+                "required": true
+            }
+        ]
+    },
+    {
+        "functionName": "p99",
+        "functionLabel": "p99",
+        "args": [
+            {
+                "type": [
+                    "field",
+                    "function"
+                ],
+                "required": true
+            }
+        ]
+    },
+    {
+        "functionName": "abs",
+        "functionLabel": "Abs",
+        "args": [
+            {
+                "type": [
+                    "field",
+                    "number",
+                    "function"
+                ],
+                "required": true
+            }
+        ]
+    },
+    {
+        "functionName": "acos",
+        "functionLabel": "ArcCos",
+        "args": [
+            {
+                "type": [
+                    "field",
+                    "number",
+                    "function"
+                ],
+                "required": true
+            }
+        ]
+    },
+    {
+        "functionName": "asin",
+        "functionLabel": "ArcSin",
+        "args": [
+            {
+                "type": [
+                    "field",
+                    "number",
+                    "function"
+                ],
+                "required": true
+            }
+        ]
+    },
+    {
+        "functionName": "atan",
+        "functionLabel": "ArcTan",
+        "args": [
+            {
+                "type": [
+                    "field",
+                    "number",
+                    "function"
+                ],
+                "required": true
+            }
+        ]
+    },
+    {
+        "functionName": "atan2",
+        "functionLabel": "ArcTan2",
+        "args": [
+            {
+                "type": [
+                    "field",
+                    "number",
+                    "function"
+                ],
+                "required": true
+            },
+            {
+                "type": [
+                    "field",
+                    "number",
+                    "function"
+                ],
+                "required": true
+            }
+        ]
+    },
+    {
+        "functionName": "ceil",
+        "functionLabel": "Ceil",
+        "args": [
+            {
+                "type": [
+                    "field",
+                    "number",
+                    "function"
+                ],
+                "required": true
+            }
+        ]
+    },
+    {
+        "functionName": "cos",
+        "functionLabel": "cos",
+        "args": [
+            {
+                "type": [
+                    "field",
+                    "number",
+                    "function"
+                ],
+                "required": true
+            }
+        ]
+    },
+    {
+        "functionName": "exp",
+        "functionLabel": "exp",
+        "args": [
+            {
+                "type": [
+                    "field",
+                    "number",
+                    "function"
+                ],
+                "required": true
+            }
+        ]
+    },
+    {
+        "functionName": "floor",
+        "functionLabel": "Floor",
+        "args": [
+            {
+                "type": [
+                    "field",
+                    "number",
+                    "function"
+                ],
+                "required": true
+            }
+        ]
+    },
+    {
+        "functionName": "log",
+        "functionLabel": "log",
+        "args": [
+            {
+                "type": [
+                    "field",
+                    "number",
+                    "function"
+                ],
+                "required": true
+            }
+        ]
+    },
+    {
+        "functionName": "log10",
+        "functionLabel": "log10",
+        "args": [
+            {
+                "type": [
+                    "field",
+                    "number",
+                    "function"
+                ],
+                "required": true
+            }
+        ]
+    },
+    {
+        "functionName": "log2",
+        "functionLabel": "log2",
+        "args": [
+            {
+                "type": [
+                    "field",
+                    "number",
+                    "function"
+                ],
+                "required": true
+            }
+        ]
+    },
+    {
+        "functionName": "pow",
+        "functionLabel": "pow",
+        "args": [
+            {
+                "type": [
+                    "field",
+                    "number",
+                    "function"
+                ],
+                "required": true
+            },
+            {
+                "type": [
+                    "field",
+                    "number",
+                    "function"
+                ],
+                "required": true
+            }
+        ]
+    },
+    {
+        "functionName": "round",
+        "functionLabel": "round",
+        "args": [
+            {
+                "type": [
+                    "field",
+                    "number"
+                ],
+                "required": true
+            },
+            {
+                "type": [
+                    "field",
+                    "number"
+                ],
+                "required": false
+            }
+        ]
+    },
+    {
+        "functionName": "sin",
+        "functionLabel": "sin",
+        "args": [
+            {
+                "type": [
+                    "field",
+                    "number"
+                ],
+                "required": true
+            }
+        ]
+    },
+    {
+        "functionName": "sqrt",
+        "functionLabel": "sqrt",
+        "args": [
+            {
+                "type": [
+                    "field",
+                    "number"
+                ],
+                "required": true
+            }
+        ]
+    },
+    {
+        "functionName": "tan",
+        "functionLabel": "tan",
+        "args": [
+            {
+                "type": [
+                    "field",
+                    "number"
+                ],
+                "required": true
+            }
+        ]
+    },
+    {
+        "functionName": "string_length",
+        "functionLabel": "string_length",
+        "args": [
+            {
+                "type": [
+                    "field",
+                    "string"
+                ],
+                "required": true
+            }
+        ]
+    },
+    {
+        "functionName": "char_length",
+        "functionLabel": "char_length",
+        "args": [
+            {
+                "type": [
+                    "field",
+                    "string"
+                ],
+                "required": true
+            }
+        ]
+    },
+    {
+        "functionName": "concat_ws",
+        "functionLabel": "concat_ws",
+        "args": [
+            {
+                "type": [
+                    "string"
+                ],
+                "required": true
+            },
+            {
+                "type": [
+                    "field",
+                    "string"
+                ],
+                "required": true,
+                "min": 2
+            }
+        ]
+    },
+    {
+        "functionName": "lower",
+        "functionLabel": "lower",
+        "args": [
+            {
+                "type": [
+                    "field",
+                    "string"
+                ],
+                "required": true
+            }
+        ]
+    },
+    {
+        "functionName": "upper",
+        "functionLabel": "upper",
+        "args": [
+            {
+                "type": [
+                    "field",
+                    "string"
+                ],
+                "required": true
+            }
+        ]
+    },
+    {
+        "functionName": "substring",
+        "functionLabel": "substring",
+        "args": [
+            {
+                "type": [
+                    "field",
+                    "string"
+                ],
+                "required": true
+            },
+            {
+                "type": [
+                    "field",
+                    "number"
+                ],
+                "required": true
+            },
+            {
+                "type": [
+                    "field",
+                    "number"
+                ],
+                "required": false
+            }
+        ]
+    },
+    {
+        "functionName": "trim",
+        "functionLabel": "trim",
+        "args": [
+            {
+                "type": [
+                    "field",
+                    "string"
+                ],
+                "required": true
+            }
+        ]
+    },
+    {
+        "functionName": "ltrim",
+        "functionLabel": "ltrim",
+        "args": [
+            {
+                "type": [
+                    "field",
+                    "string"
+                ],
+                "required": true
+            }
+        ]
+    },
+    {
+        "functionName": "rtrim",
+        "functionLabel": "rtrim",
+        "args": [
+            {
+                "type": [
+                    "field",
+                    "string"
+                ],
+                "required": true
+            }
+        ]
+    },
+    {
+        "functionName": "date_add",
+        "functionLabel": "date_add",
+        "args": [
+            {
+                "type": [
+                    "field",
+                    "string"
+                ],
+                "required": true
+            },
+            {
+                "type": [
+                    "field",
+                    "number"
+                ],
+                "required": true
+            }
+        ]
+    },
+    {
+        "functionName": "date_sub",
+        "functionLabel": "date_sub",
+        "args": [
+            {
+                "type": [
+                    "field",
+                    "string"
+                ],
+                "required": true
+            },
+            {
+                "type": [
+                    "field",
+                    "number"
+                ],
+                "required": true
+            }
+        ]
+    },
+    {
+        "functionName": "datediff",
+        "functionLabel": "datediff",
+        "args": [
+            {
+                "type": [
+                    "field",
+                    "string"
+                ],
+                "required": true
+            },
+            {
+                "type": [
+                    "field",
+                    "string"
+                ],
+                "required": true
+            }
+        ]
+    },
+    {
+        "functionName": "from_unixtime",
+        "functionLabel": "from_unixtime",
+        "args": [
+            {
+                "type": [
+                    "field",
+                    "number"
+                ],
+                "required": true
+            },
+            {
+                "type": [
+                    "field",
+                    "string"
+                ],
+                "required": false
+            }
+        ]
+    },
+    {
+        "functionName": "to_unixtime",
+        "functionLabel": "to_unixtime",
+        "args": [
+            {
+                "type": [
+                    "field",
+                    "string"
+                ],
+                "required": true
+            }
+        ]
+    },
+    {
+        "functionName": "array_length",
+        "functionLabel": "array_length",
+        "args": [
+            {
+                "type": [
+                    "field",
+                    "array"
+                ],
+                "required": true
+            }
+        ]
+    },
+    {
+        "functionName": "array_sort",
+        "functionLabel": "array_sort",
+        "args": [
+            {
+                "type": [
+                    "field",
+                    "array"
+                ],
+                "required": true
+            }
+        ]
+    },
+    {
+        "functionName": "array_append",
+        "functionLabel": "array_append",
+        "args": [
+            {
+                "type": [
+                    "field",
+                    "array"
+                ],
+                "required": true
+            },
+            {
+                "type": [
+                    "field",
+                    "string",
+                    "number"
+                ],
+                "required": true
+            }
+        ]
+    },
+    {
+        "functionName": "array_contains",
+        "functionLabel": "array_contains",
+        "args": [
+            {
+                "type": [
+                    "field",
+                    "array"
+                ],
+                "required": true
+            },
+            {
+                "type": [
+                    "field",
+                    "string",
+                    "number"
+                ],
+                "required": true
+            }
+        ]
+    }
+]

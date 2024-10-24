@@ -611,9 +611,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                           ].fields.y[index].isDerived
                         "
                         class="q-mr-xs"
-                        style="width: 160px"
                       >
-                        <q-select
+                        <!-- <q-select
                           v-model="
                             dashboardPanelData.data.queries[
                               dashboardPanelData.layout.currentQueryIndex
@@ -647,7 +646,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                               />
                             </div>
                           </template>
-                        </q-select>
+                        </q-select> -->
+                        <selectFunction />
                       </div>
                       <div
                         class="color-input-wrapper"
@@ -657,7 +657,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                           )
                         "
                       >
-                        <input
+                        <!-- <input
                           type="color"
                           data-test="dashboard-y-item-color"
                           v-model="
@@ -665,7 +665,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                               dashboardPanelData.layout.currentQueryIndex
                             ].fields.y[index].color
                           "
-                        />
+                        /> -->
                       </div>
                     </div>
                     <!-- histogram interval if auto sql and aggregation function is histogram-->
@@ -987,6 +987,7 @@ import CommonAutoComplete from "@/components/dashboards/addPanel/CommonAutoCompl
 import SanitizedHtmlRenderer from "@/components/SanitizedHtmlRenderer.vue";
 import useNotifications from "@/composables/useNotifications";
 import DashboardFiltersOption from "@/views/Dashboards/addPanel/DashboardFiltersOption.vue";
+import SelectFunction from "@/components/dashboards/addPanel/dynamicFunction/SelectFunction.vue";
 
 export default defineComponent({
   name: "DashboardQueryBuilder",
@@ -999,6 +1000,7 @@ export default defineComponent({
     CommonAutoComplete,
     SanitizedHtmlRenderer,
     DashboardFiltersOption,
+    SelectFunction,
   },
   props: ["dashboardData"],
   setup(props) {

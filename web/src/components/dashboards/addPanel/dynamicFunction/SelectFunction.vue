@@ -30,14 +30,14 @@
     <!-- Loop through the args for the first n-1 arguments -->
     <div
       v-for="(arg, argIndex) in fields.args"
-      :key="argIndex + JSON.stringify(arg)"
+      :key="argIndex"
       class="tw-w-full tw-flex tw-flex-col"
     >
       <div>
         <div>
-          <label :for="'arg-' + argIndex">Arguments {{ argIndex + 1 }}:</label>
+          <label :for="'arg-' + argIndex">Parameters {{ argIndex + 1 }}</label>
         </div>
-        <div>
+        <div class="tw-flex tw-gap-x-6">
           <!-- type selector -->
           <q-select
             v-model="fields.args[argIndex].type"
@@ -51,39 +51,49 @@
             filled
             label="Select Type"
             data-test="dashboard-y-item-dropdown"
-            class="tw-w-full"
+            class="tw-flex-1"
           />
-        </div>
-        <!-- Render different input types based on validation -->
-        <input
-          v-if="isFieldType(fields.args[argIndex].type)"
-          type="text"
-          v-model="fields.args[argIndex].fieldName"
-          placeholder="Enter field name"
-          :required="isRequired(field.functionName, argIndex)"
-          class="tw-w-full"
-        />
 
-        <input
-          v-if="isStringType(fields.args[argIndex].type)"
-          type="text"
-          v-model="fields.args[argIndex].value"
-          placeholder="Enter string"
-          :required="isRequired(field.functionName, argIndex)"
-          class="tw-w-full"
-        />
+          <!-- Render different input types based on validation -->
+          <q-select
+            v-if="isFieldType(fields.args[argIndex])"
+            v-model="fields.args[argIndex].fieldName"
+            :options="filteredSchemaOptions"
+            label="Select Field"
+            input-debounce="0"
+            behavior="menu"
+            dense
+            filled
+            use-input
+            borderless
+            hide-selected
+            fill-input
+            emit-value
+            @filter="filterStreamFn"
+            :required="isRequired(fields.functionName, argIndex)"
+            class="tw-flex-1"
+          />
 
-        <input
-          v-if="isNumberType(fields.args[argIndex].type)"
-          type="number"
-          v-model="fields.args[argIndex].value"
-          placeholder="Enter number"
-          :required="isRequired(field.functionName, argIndex)"
-          class="tw-w-full"
-        />
+          <q-input
+            v-if="isStringType(fields.args[argIndex])"
+            type="text"
+            v-model="fields.args[argIndex].value"
+            placeholder="Enter string"
+            :required="isRequired(fields.functionName, argIndex)"
+            class="tw-flex-1"
+          />
 
-        <!-- Nested function handling -->
-        <!-- <div v-if="isFunctionType(fields.args[argIndex].type)">
+          <q-input
+            v-if="isNumberType(fields.args[argIndex])"
+            type="number"
+            v-model="fields.args[argIndex].value"
+            placeholder="Enter number"
+            :required="isRequired(fields.functionName, argIndex)"
+            class="tw-flex-1"
+          />
+
+          <!-- Nested function handling -->
+          <!-- <div v-if="isFunctionType(fields.args[argIndex].type)">
               <label>Function Argument:</label>
               <select v-model="arg.functionName">
                 <option
@@ -102,15 +112,16 @@
                 />
               </div>
             </div> -->
-        <!-- Recursively render nested function arguments -->
+          <!-- Recursively render nested function arguments -->
 
-        <!-- Remove argument button for first n-1 arguments -->
-        <button
-          v-if="canRemoveArgument(fields.functionName)"
-          @click="removeArgument(index, argIndex)"
-        >
-          Remove Argument
-        </button>
+          <!-- Remove argument button for first n-1 arguments -->
+          <button
+            v-if="canRemoveArgument(fields.functionName)"
+            @click="removeArgument(argIndex)"
+          >
+            Remove Argument
+          </button>
+        </div>
       </div>
 
       <!-- Separator input (last argument) -->
@@ -126,22 +137,41 @@
         </div> -->
 
       <!-- Add more arguments if allowed -->
-      <button
-        v-if="canAddArgument(fields.functionName)"
-        @click="addArgument(index)"
-      >
+      <button v-if="canAddArgument(fields.functionName)" @click="addArgument()">
         Add Argument
       </button>
     </div>
   </div>
 </template>
-<script>
-import { ref, watch } from "vue";
+
+<script lang="ts">
+import { ref, watch, toRef, computed, inject } from "vue";
 import functionValidation from "./functionValidation.json";
+import useDashboardPanelData from "@/composables/useDashboardPanel";
+import { useSelectAutoComplete } from "@/composables/useSelectAutocomplete";
 
 export default {
   name: "SelectFunction",
   setup() {
+    const dashboardPanelDataPageKey = inject(
+      "dashboardPanelDataPageKey",
+      "dashboard",
+    );
+    const { selectedStreamFieldsBasedOnUserDefinedSchema } =
+      useDashboardPanelData(dashboardPanelDataPageKey);
+
+    const schemaOptions = computed(() =>
+      selectedStreamFieldsBasedOnUserDefinedSchema?.value?.map(
+        (field: any) => ({
+          label: field.name,
+          value: field.name,
+        }),
+      ),
+    );
+
+    const { filterFn: filterStreamFn, filteredOptions: filteredSchemaOptions } =
+      useSelectAutoComplete(toRef(schemaOptions), "label");
+
     const fields = ref({
       type: "function",
       alias: "x_axis_2",
@@ -162,74 +192,79 @@ export default {
 
     const availableFunctions = ref(["arrzip", "concat", "count", "sum"]);
 
-    const getValidationForFunction = (functionName) => {
+    const getValidationForFunction = (functionName: string) => {
       return (
-        functionValidation.find((v) => v.functionName === functionName) || {}
+        functionValidation.find((v) => v.functionName === functionName) ?? {}
       );
     };
 
-    const canAddArgument = (functionName) => {
-      const funcValidation = getValidationForFunction(functionName);
-      return funcValidation.args?.[0]?.allowAddArg || false;
+    const canAddArgument = (functionName: string) => {
+      const funcValidation: any = getValidationForFunction(functionName);
+      return funcValidation?.args?.[0]?.allowAddArg ?? false;
     };
 
-    const canRemoveArgument = (functionName) => {
+    const canRemoveArgument = (functionName: string) => {
       return functionName === "arrzip"; // You can customize this logic for other functions if needed
     };
 
-    const addArgument = (fieldIndex) => {
-      const funcValidation = getValidationForFunction(
+    const addArgument = () => {
+      const funcValidation: any = getValidationForFunction(
         fields.value.functionName,
       );
       if (canAddArgument(fields.value.functionName)) {
         // Add an argument before the separator
         fields.value.args.splice(fields.value.args.length - 1, 0, {
-          type: funcValidation.args[0].type[0], // Add default type (e.g., field, string, etc.)
+          type: funcValidation?.args?.[0]?.type?.[0], // Add default type (e.g., field, string, etc.)
           value: "",
         });
       }
     };
 
-    const removeArgument = (fieldIndex, argIndex) => {
+    const removeArgument = (argIndex: number) => {
       // Ensure we don't remove the separator (last argument)
       if (argIndex < fields.value.args.length - 1) {
         fields.value.args.splice(argIndex, 1);
       }
     };
 
-    const isRequired = (functionName, argIndex) => {
-      const funcValidation = getValidationForFunction(functionName);
-      return funcValidation.args?.[argIndex]?.required || false;
+    const isRequired = (functionName: string, argIndex: number) => {
+      const funcValidation: any = getValidationForFunction(functionName);
+      return funcValidation?.args?.[argIndex]?.required ?? false;
     };
 
-    const isFieldType = (arg) => arg.type === "field";
-    const isStringType = (arg) => arg.type === "string";
-    const isNumberType = (arg) => arg.type === "number";
-    const isFunctionType = (arg) => arg.type === "function";
+    const isFieldType = (arg: any) => arg.type === "field";
+    const isStringType = (arg: any) => arg.type === "string";
+    const isNumberType = (arg: any) => arg.type === "number";
+    const isFunctionType = (arg: any) => arg.type === "function";
 
-    const getNonSeparatorArgs = (field) => {
+    const getNonSeparatorArgs = (field: any) => {
       // Return the first n-1 arguments (non-separator)
       return field.args.slice(0, field.args.length - 1);
     };
 
-    const getSeparatorArg = (field) => {
+    const getSeparatorArg = (field: any) => {
       // Return the last argument (separator)
       return field.args[field.args.length - 1];
     };
 
     // Helper function to adjust the index based on addArgPosition
-    const getAdjustedIndex = (argsValidation, argIndex, addArgPosition) => {
+    const getAdjustedIndex = (
+      argsValidation: any,
+      argIndex: number,
+      addArgPosition: any,
+    ) => {
       const totalArgs = argsValidation.length;
 
       // Handle different cases for addArgPosition
       if (addArgPosition === "n") {
         // 'n' means the argument is added at the end
-        return totalArgs; // Add at the end, so return the current length (next available index)
+        return argIndex;
       } else if (addArgPosition === "n-1") {
         // 'n-1' means the argument should be added before the last argument
-        return Math.max(totalArgs - 1, 0); // Ensure we don't go below 0
+        return Math.max(argIndex - 1, 0); // Ensure we don't go below 0
       } else if (typeof addArgPosition === "number") {
         // If addArgPosition is a specific index, return that index
+        // NOTE: NEED TO REWORK ON THIS CASE
         return Math.min(addArgPosition, totalArgs); // Ensure we don't exceed the total number of args
       } else {
         // Default case: return the provided argIndex without adjustment
@@ -238,17 +273,17 @@ export default {
     };
 
     const getSupportedTypeBasedOnFunctionNameAndIndex = (
-      functionName,
-      argIndex,
+      functionName: string,
+      argIndex: number,
     ) => {
-      const funcValidation = getValidationForFunction(functionName);
+      const funcValidation: any = getValidationForFunction(functionName);
 
       if (!funcValidation) {
         return [];
       }
 
-      const argsValidation = funcValidation.args || [];
-      const addArgPosition = funcValidation.addArgPosition || "n"; // Default to 'n' (end) if not specified
+      const argsValidation = funcValidation?.args || [];
+      const addArgPosition = funcValidation?.addArgPosition || "n"; // Default to 'n' (end) if not specified
 
       // Determine the actual index based on addArgPosition
       const adjustedIndex = getAdjustedIndex(
@@ -256,8 +291,6 @@ export default {
         argIndex,
         addArgPosition,
       );
-
-      console.log("adjustedIndex", adjustedIndex, argsValidation);
 
       // Return the type for the adjusted index, or an empty array if the index is out of bounds
       return argsValidation[adjustedIndex]?.type || [];
@@ -269,13 +302,19 @@ export default {
       (newVal) => {
         // Reset the args array
         // get the validation for the selected function
-        const funcValidation = getValidationForFunction(
+        const funcValidation: any = getValidationForFunction(
           fields.value.functionName,
         );
 
-        console.log("funcValidation", funcValidation);
-
-        fields.value.args = funcValidation.args;
+        // rebuild fields.value.args based on funcValidation.args
+        if (funcValidation) {
+          fields.value.args = (funcValidation?.args ?? []).map((arg: any) => ({
+            type: arg.type[0],
+            value: "",
+            fieldName: "",
+            function: "",
+          }));
+        }
       },
     );
 
@@ -296,7 +335,10 @@ export default {
       getNonSeparatorArgs,
       getSeparatorArg,
       getSupportedTypeBasedOnFunctionNameAndIndex,
+      filterStreamFn,
+      filteredSchemaOptions,
     };
   },
 };
 </script>
+1``

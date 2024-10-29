@@ -34,7 +34,7 @@
                     "function"
                 ],
                 "required": true
-            } 
+            }
         ]
     },
     {
@@ -441,12 +441,6 @@
         "functionName": "concat_ws",
         "functionLabel": "concat_ws",
         "args": [
-            {
-                "type": [
-                    "string"
-                ],
-                "required": true
-            },
             {
                 "type": [
                     "field",

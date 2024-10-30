@@ -449,7 +449,8 @@
                 "required": true,
                 "min": 2
             }
-        ]
+        ],
+        "allowAddArgAt": "n"
     },
     {
         "functionName": "lower",

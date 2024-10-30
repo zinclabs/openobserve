@@ -596,7 +596,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                 class="q-pl-sm"
               >
                 <q-menu
-                  class="q-pa-md"
+                  class="q-pa-md tw-overflow-scroll"
                   :data-test="`dashboard-y-item-${itemY?.column}-menu`"
                 >
                   <div>

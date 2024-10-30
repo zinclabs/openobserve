@@ -1,5 +1,5 @@
 <template>
-  <div class="row tw-w-full">
+  <div class="row" style="width: 500px">
     <q-select
       v-model="fields.functionName"
       :options="
@@ -37,7 +37,7 @@
         <div>
           <label :for="'arg-' + argIndex">Parameters {{ argIndex + 1 }}</label>
         </div>
-        <div class="tw-flex tw-gap-x-6">
+        <div class="tw-flex tw-gap-x-3">
           <!-- type selector -->
           <q-select
             v-model="fields.args[argIndex].type"
@@ -92,55 +92,35 @@
             class="tw-flex-1"
           />
 
-          <!-- Nested function handling -->
-          <!-- <div v-if="isFunctionType(fields.args[argIndex].type)">
-              <label>Function Argument:</label>
-              <select v-model="arg.functionName">
-                <option
-                  v-for="func in availableFunctions"
-                  :key="func.functionName"
-                  :value="func.functionName"
-                >
-                  {{ func.functionName }}
-                </option>
-              </select>
-  
-              <div v-if="arg.functionName">
-                <nested-function-input
-                :function-name="arg.functionName"
-                v-model="arg"
-                />
-              </div>
-            </div> -->
-          <!-- Recursively render nested function arguments -->
+          <SelectFunction
+            v-if="isFunctionType(fields.args[argIndex])"
+            class="tw-ml-4"
+          />
 
-          <!-- Remove argument button for first n-1 arguments -->
-          <button
-            v-if="canRemoveArgument(fields.functionName)"
+          <!-- Remove argument button -->
+          <q-btn
+            v-if="canRemoveArgument(fields.functionName, argIndex)"
+            icon="close"
+            dense
+            flat
+            round
             @click="removeArgument(argIndex)"
-          >
-            Remove Argument
-          </button>
+          />
         </div>
       </div>
 
-      <!-- Separator input (last argument) -->
-      <!-- <div v-if="getSeparatorArg(field)">
-          <label>Separator:</label>
-          <input
-            type="text"
-            v-model="getSeparatorArg(field).value"
-            placeholder="Enter separator"
-            required
-            class="tw-w-full"
-          />
-        </div> -->
-
       <!-- Add more arguments if allowed -->
-      <button v-if="canAddArgument(fields.functionName)" @click="addArgument()">
-        Add Argument
-      </button>
     </div>
+    <q-btn
+      v-if="canAddArgument(fields.functionName)"
+      @click="addArgument()"
+      color="primary"
+      label="+ Add"
+      padding="5px 14px"
+      class="tw-mt-3"
+      no-caps
+      dense
+    />
   </div>
 </template>
 
@@ -200,11 +180,30 @@ export default {
 
     const canAddArgument = (functionName: string) => {
       const funcValidation: any = getValidationForFunction(functionName);
-      return funcValidation?.args?.[0]?.allowAddArg ?? false;
+      return funcValidation?.allowAddArgAt != undefined;
     };
 
-    const canRemoveArgument = (functionName: string) => {
-      return functionName === "arrzip"; // You can customize this logic for other functions if needed
+    const canRemoveArgument = (functionName: string, argIndex: number) => {
+      const funcValidation: any = getValidationForFunction(functionName);
+
+      // if add arg not allowd, then do not allow to remove argument
+      if (funcValidation?.allowAddArgAt === undefined) return false;
+
+      const argsValidation = funcValidation?.args || [];
+      const allowAddArgAt = funcValidation?.allowAddArgAt;
+
+      // Determine the actual index based on allowAddArgAt
+      const adjustedIndex = getAdjustedIndex(
+        argsValidation,
+        argIndex,
+        allowAddArgAt,
+      );
+
+      const minArg = argsValidation[adjustedIndex]?.min ?? 0;
+      const functionTotalArgs = argsValidation.length;
+      const addedArgCount = argIndex + 1 - (functionTotalArgs - 1);
+
+      return addedArgCount > minArg;
     };
 
     const addArgument = () => {
@@ -212,6 +211,7 @@ export default {
         fields.value.functionName,
       );
       if (canAddArgument(fields.value.functionName)) {
+        // NOTE: need to add at addArgAt index
         // Add an argument before the separator
         fields.value.args.splice(fields.value.args.length - 1, 0, {
           type: funcValidation?.args?.[0]?.type?.[0], // Add default type (e.g., field, string, etc.)
@@ -221,14 +221,13 @@ export default {
     };
 
     const removeArgument = (argIndex: number) => {
-      // Ensure we don't remove the separator (last argument)
-      if (argIndex < fields.value.args.length - 1) {
-        fields.value.args.splice(argIndex, 1);
-      }
+      fields.value.args.splice(argIndex, 1);
     };
 
     const isRequired = (functionName: string, argIndex: number) => {
       const funcValidation: any = getValidationForFunction(functionName);
+
+      // NOTE: get relavent arg from validation
       return funcValidation?.args?.[argIndex]?.required ?? false;
     };
 
@@ -247,25 +246,30 @@ export default {
       return field.args[field.args.length - 1];
     };
 
-    // Helper function to adjust the index based on addArgPosition
+    // Helper function to adjust the index based on allowAddArgAt
     const getAdjustedIndex = (
       argsValidation: any,
       argIndex: number,
-      addArgPosition: any,
+      allowAddArgAt: any,
     ) => {
       const totalArgs = argsValidation.length;
 
-      // Handle different cases for addArgPosition
-      if (addArgPosition === "n") {
+      // Handle different cases for allowAddArgAt
+      if (allowAddArgAt === "n") {
         // 'n' means the argument is added at the end
-        return argIndex;
-      } else if (addArgPosition === "n-1") {
+        return Math.min(argIndex, totalArgs - 1);
+      } else if (allowAddArgAt === "n-1") {
         // 'n-1' means the argument should be added before the last argument
-        return Math.max(argIndex - 1, 0); // Ensure we don't go below 0
-      } else if (typeof addArgPosition === "number") {
-        // If addArgPosition is a specific index, return that index
+        // if it is last argument
+        if (argIndex === totalArgs - 1) {
+          return totalArgs - 1;
+        } else {
+          return Math.min(argIndex, totalArgs - 2);
+        }
+      } else if (typeof allowAddArgAt === "number") {
+        // If allowAddArgAt is a specific index, return that index
         // NOTE: NEED TO REWORK ON THIS CASE
-        return Math.min(addArgPosition, totalArgs); // Ensure we don't exceed the total number of args
+        return Math.min(allowAddArgAt, totalArgs); // Ensure we don't exceed the total number of args
       } else {
         // Default case: return the provided argIndex without adjustment
         return argIndex;
@@ -283,13 +287,13 @@ export default {
       }
 
       const argsValidation = funcValidation?.args || [];
-      const addArgPosition = funcValidation?.addArgPosition || "n"; // Default to 'n' (end) if not specified
+      const allowAddArgAt = funcValidation?.allowAddArgAt || "n"; // Default to 'n' (end) if not specified
 
-      // Determine the actual index based on addArgPosition
+      // Determine the actual index based on allowAddArgAt
       const adjustedIndex = getAdjustedIndex(
         argsValidation,
         argIndex,
-        addArgPosition,
+        allowAddArgAt,
       );
 
       // Return the type for the adjusted index, or an empty array if the index is out of bounds

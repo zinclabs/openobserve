@@ -171,11 +171,7 @@ export default {
     };
 
     const fields = ref({
-      type: "function",
-      alias: "x_axis_2",
-      label: "_timestamp",
       functionName: "histogram",
-      sort_by: null,
       args: [
         {
           type: "field",

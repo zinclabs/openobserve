@@ -2,18 +2,22 @@
   <div class="row" style="width: 500px">
     <q-select
       v-model="fields.functionName"
-      :options="
-        functionValidation.map((v) => ({
-          label: v.functionLabel,
-          value: v.functionName,
-        }))
-      "
-      dense
+      label="Select Function"
+      :options="filteredFunctions"
+      data-test="dashboard-y-item-dropdown"
+      input-debounce="0"
+      behavior="menu"
+      use-input
       filled
+      borderless
+      dense
+      hide-selected
+      fill-input
+      @filter="filterFunctionsOptions"
+      option-label="label"
+      option-value="value"
       emit-value
       map-options
-      label="Select Function"
-      data-test="dashboard-y-item-dropdown"
       class="tw-w-full"
     >
       <!-- <template v-slot:append>
@@ -56,7 +60,7 @@
 
           <!-- Render different input types based on validation -->
           <q-select
-            v-if="isFieldType(fields.args[argIndex])"
+            v-if="fields.args[argIndex]?.type === 'field'"
             v-model="fields.args[argIndex].fieldName"
             :options="filteredSchemaOptions"
             label="Select Field"
@@ -75,7 +79,7 @@
           />
 
           <q-input
-            v-if="isStringType(fields.args[argIndex])"
+            v-if="fields.args[argIndex]?.type === 'string'"
             type="text"
             v-model="fields.args[argIndex].value"
             placeholder="Enter string"
@@ -84,7 +88,7 @@
           />
 
           <q-input
-            v-if="isNumberType(fields.args[argIndex])"
+            v-if="fields.args[argIndex]?.type === 'number'"
             type="number"
             v-model="fields.args[argIndex].value"
             placeholder="Enter number"
@@ -93,7 +97,7 @@
           />
 
           <SelectFunction
-            v-if="isFunctionType(fields.args[argIndex])"
+            v-if="fields.args[argIndex]?.type === 'function'"
             class="tw-ml-4"
           />
 
@@ -105,6 +109,7 @@
             flat
             round
             @click="removeArgument(argIndex)"
+            class="tw-h-10 tw-w-10"
           />
         </div>
       </div>
@@ -151,6 +156,19 @@ export default {
 
     const { filterFn: filterStreamFn, filteredOptions: filteredSchemaOptions } =
       useSelectAutoComplete(toRef(schemaOptions), "label");
+
+    const filteredFunctions: any = ref([]);
+
+    const filterFunctionsOptions = (val: string, update: any) => {
+      update(() => {
+        filteredFunctions.value = functionValidation
+          .map((v) => ({
+            label: v.functionLabel,
+            value: v.functionName,
+          }))
+          .filter((v) => v.label.toLowerCase().indexOf(val.toLowerCase()) > -1);
+      });
+    };
 
     const fields = ref({
       type: "function",
@@ -210,13 +228,26 @@ export default {
       const funcValidation: any = getValidationForFunction(
         fields.value.functionName,
       );
+
+      const adjustedIndex = getAdjustedIndex(
+        funcValidation?.args || [],
+        fields.value.args.length - 1,
+        funcValidation?.allowAddArgAt,
+      );
+
       if (canAddArgument(fields.value.functionName)) {
-        // NOTE: need to add at addArgAt index
-        // Add an argument before the separator
-        fields.value.args.splice(fields.value.args.length - 1, 0, {
-          type: funcValidation?.args?.[0]?.type?.[0], // Add default type (e.g., field, string, etc.)
-          value: "",
-        });
+        if (funcValidation.allowAddArgAt === "n") {
+          fields.value.args.push({
+            type: funcValidation?.args?.[adjustedIndex]?.type?.[0],
+            value: "",
+          });
+        } else if (funcValidation.allowAddArgAt === "n-1") {
+          // Add an argument before the separator
+          fields.value.args.splice(fields.value.args.length - 1, 0, {
+            type: funcValidation?.args?.[adjustedIndex]?.type?.[0], // Add default type (e.g., field, string, etc.)
+            value: "",
+          });
+        }
       }
     };
 
@@ -230,11 +261,6 @@ export default {
       // NOTE: get relavent arg from validation
       return funcValidation?.args?.[argIndex]?.required ?? false;
     };
-
-    const isFieldType = (arg: any) => arg.type === "field";
-    const isStringType = (arg: any) => arg.type === "string";
-    const isNumberType = (arg: any) => arg.type === "number";
-    const isFunctionType = (arg: any) => arg.type === "function";
 
     const getNonSeparatorArgs = (field: any) => {
       // Return the first n-1 arguments (non-separator)
@@ -257,7 +283,7 @@ export default {
       // Handle different cases for allowAddArgAt
       if (allowAddArgAt === "n") {
         // 'n' means the argument is added at the end
-        return Math.min(argIndex, totalArgs - 1);
+        return totalArgs - 1;
       } else if (allowAddArgAt === "n-1") {
         // 'n-1' means the argument should be added before the last argument
         // if it is last argument
@@ -312,12 +338,16 @@ export default {
 
         // rebuild fields.value.args based on funcValidation.args
         if (funcValidation) {
-          fields.value.args = (funcValidation?.args ?? []).map((arg: any) => ({
-            type: arg.type[0],
-            value: "",
-            fieldName: "",
-            function: "",
-          }));
+          // need to add args based on funcValidation.args
+          fields.value.args = (funcValidation?.args ?? []).flatMap((arg: any) =>
+            // need to consider `min` config for each arg
+            Array.from({ length: arg.min ?? 1 }).map(() => ({
+              type: arg.type[0],
+              value: "",
+              fieldName: "",
+              function: "",
+            })),
+          );
         }
       },
     );
@@ -332,15 +362,13 @@ export default {
       addArgument,
       removeArgument,
       isRequired,
-      isFieldType,
-      isStringType,
-      isNumberType,
-      isFunctionType,
       getNonSeparatorArgs,
       getSeparatorArg,
       getSupportedTypeBasedOnFunctionNameAndIndex,
       filterStreamFn,
       filteredSchemaOptions,
+      filteredFunctions,
+      filterFunctionsOptions,
     };
   },
 };

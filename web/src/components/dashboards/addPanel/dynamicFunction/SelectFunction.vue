@@ -101,6 +101,18 @@
             class="tw-ml-4"
           />
 
+          <!-- histogram interval for sql queries -->
+          <HistogramIntervalDropDown
+            v-if="fields.args[argIndex]?.type === 'histogramInterval'"
+            :model-value="fields.args[argIndex]"
+            @update:modelValue="
+              (newValue: any) => {
+                fields.args[argIndex].value = newValue.value;
+              }
+            "
+            class="tw-flex-1"
+          />
+
           <!-- Remove argument button -->
           <q-btn
             v-if="canRemoveArgument(fields.functionName, argIndex)"
@@ -134,9 +146,11 @@ import { ref, watch, toRef, computed, inject } from "vue";
 import functionValidation from "./functionValidation.json";
 import useDashboardPanelData from "@/composables/useDashboardPanel";
 import { useSelectAutoComplete } from "@/composables/useSelectAutocomplete";
+import HistogramIntervalDropDown from "../HistogramIntervalDropDown.vue";
 
 export default {
   name: "SelectFunction",
+  components: { HistogramIntervalDropDown },
   setup() {
     const dashboardPanelDataPageKey = inject(
       "dashboardPanelDataPageKey",
@@ -309,7 +323,7 @@ export default {
       }
 
       const argsValidation = funcValidation?.args || [];
-      const allowAddArgAt = funcValidation?.allowAddArgAt || "n"; // Default to 'n' (end) if not specified
+      const allowAddArgAt = funcValidation?.allowAddArgAt;
 
       // Determine the actual index based on allowAddArgAt
       const adjustedIndex = getAdjustedIndex(

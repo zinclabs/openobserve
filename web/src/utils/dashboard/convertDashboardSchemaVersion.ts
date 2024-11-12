@@ -170,6 +170,18 @@ export function convertDashboardSchemaVersion(data: any) {
       // update the version
       data.version = 5;
     }
+
+    case 5: {
+      // need to traverse all panels
+      // for each panel
+      //   for each query
+      //      for each fields [x, y, z, breakdown, latitude, longitude, weight, source, target, value] Make sure that some of fields is not array
+      //          add type: "build"
+      //          field.column will go inside args array : {type: "field", value: field.column}
+
+      // update the version
+      data.version = 6;
+    }
   }
 
   // return converted data

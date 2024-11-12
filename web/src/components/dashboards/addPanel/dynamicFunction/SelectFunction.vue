@@ -1,5 +1,5 @@
 <template>
-  <div class="row" style="width: 500px">
+  <div class="row">
     <q-select
       v-model="fields.functionName"
       label="Select Function"
@@ -383,4 +383,3 @@ export default {
   },
 };
 </script>
-1``

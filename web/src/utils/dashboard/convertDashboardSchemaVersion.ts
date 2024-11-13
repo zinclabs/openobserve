@@ -52,6 +52,42 @@ const convertPanelSchemaVersion = (data: any) => {
   };
 };
 
+const migrateV5FieldsToV6 = (fieldItem: any) => {
+  if (!fieldItem) return;
+
+  fieldItem.type = "build";
+  if (!fieldItem.args) {
+    fieldItem.args = [];
+  } else {
+    fieldItem.args.forEach((arg: any) => {
+      if (!arg.type) {
+        arg.type = "histogramInverval";
+      }
+    });
+  }
+
+  if (fieldItem.aggregationFunction) {
+    // prepend column in args
+    fieldItem.args.unshift({
+      type: "field",
+      value: fieldItem.column,
+    });
+
+    delete fieldItem.column;
+  }
+};
+
+function migrateFields(
+  fields: any | any[],
+  migrateFunction: (field: any) => void,
+) {
+  if (Array.isArray(fields)) {
+    fields.forEach(migrateFunction);
+  } else {
+    migrateFunction(fields);
+  }
+}
+
 export function convertDashboardSchemaVersion(data: any) {
   if (!data) {
     return;
@@ -178,6 +214,40 @@ export function convertDashboardSchemaVersion(data: any) {
       //      for each fields [x, y, z, breakdown, latitude, longitude, weight, source, target, value] Make sure that some of fields is not array
       //          add type: "build"
       //          field.column will go inside args array : {type: "field", value: field.column}
+      data.tabs.forEach((tabItem: any) => {
+        tabItem.panels.forEach((panelItem: any) => {
+          panelItem.queries.forEach((queryItem: any) => {
+            const {
+              x,
+              y,
+              z,
+              breakdown,
+              latitude,
+              longitude,
+              weight,
+              source,
+              target,
+              value,
+            } = queryItem.fields;
+
+            // Migrate all fields
+            [
+              x,
+              y,
+              z,
+              breakdown,
+              latitude,
+              longitude,
+              weight,
+              source,
+              target,
+              value,
+            ].forEach((field: any) => {
+              migrateFields(field, migrateV5FieldsToV6);
+            });
+          });
+        });
+      });
 
       // update the version
       data.version = 6;

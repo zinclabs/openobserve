@@ -52,10 +52,12 @@ const convertPanelSchemaVersion = (data: any) => {
   };
 };
 
-const migrateV5FieldsToV6 = (fieldItem: any) => {
+const migrateV5FieldsToV6 = (fieldItem: any, isCustomQuery: boolean) => {
+  // if fieldItem is undefined, do nothing
   if (!fieldItem) return;
-
-  fieldItem.type = "build";
+  // mirgrate old args
+  // previously, args was only used for histogram interval
+  // so, add arg type as histogramInverval
   if (!fieldItem.args) {
     fieldItem.args = [];
   } else {
@@ -66,25 +68,32 @@ const migrateV5FieldsToV6 = (fieldItem: any) => {
     });
   }
 
-  if (fieldItem.aggregationFunction) {
-    // prepend column in args
-    fieldItem.args.unshift({
-      type: "field",
-      value: fieldItem.column,
-    });
-
-    delete fieldItem.column;
+  // if customQuery then do nothing
+  // else need to shift column name to as first arg
+  if (isCustomQuery) {
+    fieldItem.type = "custom";
+  } else {
+    fieldItem.type = "build";
+    if (fieldItem.aggregationFunction) {
+      // prepend column in args
+      fieldItem.args.unshift({
+        type: "field",
+        value: fieldItem.column,
+      });
+      delete fieldItem.column;
+    }
   }
 };
 
 function migrateFields(
   fields: any | any[],
-  migrateFunction: (field: any) => void,
+  isCustomQuery: boolean,
+  migrateFunction: (field: any, isCustomQuery: boolean) => void,
 ) {
   if (Array.isArray(fields)) {
-    fields.forEach(migrateFunction);
+    fields.forEach((field: any) => migrateFunction(field, isCustomQuery));
   } else {
-    migrateFunction(fields);
+    migrateFunction(fields, isCustomQuery);
   }
 }
 
@@ -243,7 +252,7 @@ export function convertDashboardSchemaVersion(data: any) {
               target,
               value,
             ].forEach((field: any) => {
-              migrateFields(field, migrateV5FieldsToV6);
+              migrateFields(field, queryItem.customQuery, migrateV5FieldsToV6);
             });
           });
         });

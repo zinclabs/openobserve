@@ -267,6 +267,97 @@ ORDER BY x_axis_1 ASC` }
 });
 
 
+test('test', async ({ page }) => {
 
+  
+  await page.locator('[data-test="menu-link-\\/dashboards-item"]').click();
+  await waitForDashboardPage(page);
+  await page.locator('[data-test="dashboard-add"]').click();
+  await page.locator('[data-test="add-dashboard-name"]').click();
+  await page
+    .locator('[data-test="add-dashboard-name"]')
+    .fill(randomDashboardName);
+
+  await page.locator('[data-test="dashboard-add-submit"]').click();
+
+  await page
+    .locator('[data-test="dashboard-if-no-panel-add-panel-btn"]')
+    .click();
+  await page
+    .locator("label")
+    .filter({ hasText: "Streamarrow_drop_down" })
+    .locator("i")
+    .click();
+  await page.getByRole("option", { name: "e2e_automate" }).click();
+
+  
+  await page.locator('[data-test="field-list-item-logs-e2e_automate-_timestamp"] [data-test="dashboard-add-y-data"]').click();
+  await page.locator('[data-test="index-field-search-input"]').click();
+  await page.locator('[data-test="index-field-search-input"]').fill('kuber');
+  await page.locator('[data-test="field-list-item-logs-e2e_automate-kubernetes_container_name"] [data-test="dashboard-add-filter-data"]').click();
+  await page.locator('[data-test="field-list-item-logs-e2e_automate-kubernetes_container_name"] [data-test="dashboard-add-filter-data"]').click();
+  await page.locator('[data-test="dashboard-add-condition-label-0-kubernetes_container_name"]').click();
+  await page.locator('[data-test="dashboard-add-condition-condition-0"]').click();
+  await page.locator('label').filter({ hasText: 'Operatorarrow_drop_down' }).locator('i').click();
+  await page.getByText('=', { exact: true }).click();
+  await page.getByLabel('Value').click();
+  await page.getByLabel('Value').fill('ziox');
+  await page.locator('[data-test="dashboard-add-condition-label-1-kubernetes_container_name"]').click();
+  await page.locator('[data-test="dashboard-add-condition-condition-1"]').click();
+  await page.locator('[data-test="dashboard-add-condition-condition-1"] div').nth(1).click();
+
+  // await page.locator('label').filter({ hasText: 'Operatorarrow_drop_down' }).locator('i').click();
+  // await page.locator('#q-portal--menu--29 div').filter({ hasText: /^arrow_drop_down$/ }).nth(1).click();
+
+  await page.locator('[data-test="dashboard-add-condition-operator"]').click();
+
+  await page.getByRole('option', { name: '<>' }).click();
+  await page.getByLabel('Value').click();
+  await page.getByLabel('Value').fill('controller');
+  await page.locator('[data-test="date-time-btn"]').click();
+  await page.locator('[data-test="date-time-relative-6-w-btn"]').click();
+  await page.locator('[data-test="dashboard-apply"]').click();
+  await page.waitForTimeout(3000);
+
+// Define the expected query text with the additional condition
+const expectedQuery = `SELECT histogram(_timestamp) as "x_axis_1", count(_timestamp) as "y_axis_1" 
+FROM "e2e_automate" 
+WHERE kubernetes_container_name = 'ziox' AND kubernetes_container_name <> 'controller'
+GROUP BY x_axis_1 
+ORDER BY x_axis_1 ASC`;
+
+// Locate the query editor element
+const queryEditor = page.locator('[data-test="dashboard-panel-query-editor"]').getByLabel('Editor content;Press Alt+F1');
+
+// Select all text and replace with the specified query
+await queryEditor.press('Control+a');
+await queryEditor.fill(expectedQuery);
+
+// Assert that the query editor contains the expected query
+const actualQuery = await queryEditor.inputValue();
+expect(actualQuery).toBe(expectedQuery);
+
+await page.locator('[data-test="dashboard-add-condition-logical-operator-1\\}"]').getByText('AND').click();
+await page.getByRole('option', { name: 'OR' }).click();
+await page.locator('[data-test="dashboard-apply"]').click();
+
+
+
+
+
+
+
+
+
+
+// Set and save the panel name
+await page.locator('[data-test="dashboard-panel-name"]').click();
+await page.locator('[data-test="dashboard-panel-name"]').fill('test');
+await page.locator('[data-test="dashboard-panel-save"]').click();
+await page.locator('[data-test="dashboard-edit-panel-test-dropdown"]').click();
+
+
+
+});
 
 });

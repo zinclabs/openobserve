@@ -164,6 +164,7 @@ test.describe("dashboard UI testcases", () => {
     await page.getByRole("button", { name: "Save" }).click();
 
     await page.waitForTimeout(3000);
+
     const button = page.locator(
       '[data-test="dashboard-if-no-panel-add-panel-btn"]'
     );
@@ -178,11 +179,10 @@ test.describe("dashboard UI testcases", () => {
     //   .locator("i")
     //   .click();
 
-      // await page.waitForTimeout(2000);
+      await page.waitForTimeout(2000);
 
-    await page.getByText("e2e_automate").click();
-
-    // await page.locator('[data-test="index-dropdown-stream"]').waitFor({ state: 'visible' });
+    await page.locator('[data-test="index-dropdown-stream"]').waitFor({ state: 'visible' });
+    await page.locator('[data-test="index-dropdown-stream"]').click();
 
     // await page.getByText('Streamarrow_drop_down').click();
 //     const streamDropdown = page.locator('[data-test="index-dropdown-stream"]').click();
@@ -234,12 +234,13 @@ await filterButton.click();
     await page.getByText("Operatorarrow_drop_down").click();
     await page.getByText("=", { exact: true }).click();
     await page.getByLabel("Value").click();
+    await page.getByLabel('Value').fill('$variablename');
 
     // await page
     //   .locator("#q-portal--menu--183")
     //   .getByText("variablename")
     //   .click();
-      await page.getByRole("option", { name: "variablename", exact: true }).click();
+      // await page.getByRole("option", { name: "variablename", exact: true }).click();
 
     await page.locator('[data-test="dashboard-apply"]').click();
 
@@ -248,19 +249,26 @@ await filterButton.click();
 
     // Click the 'variablename' option in the dropdown menu
 
-    const variableName = await page
-      .locator("#q-portal--menu--183")
-      .getByText("variablename");
-    await variableName.click();
+    // const variableName = await page
+    //   .locator("#q-portal--menu--183")
+    //   .getByText("variablename");
+    // await variableName.click();
 
     await page.locator('[data-test="dashboard-apply"]').click();
 
     // Perform the action that applies the variable (e.g., clicking "QueryAutoPromQLCustom SQL")
-    await page.getByText("arrow_rightQueryAutoPromQLCustom SQL").click();
+    // await page.getByText("arrow_rightQueryAutoPromQLCustom SQL").click();
+    await page.waitForTimeout(2000);
 
-    // Assert that '$variablename' appears on the page
-    const expectedVariableName = "$variablename";
-    await expect(page.getByText(`'${expectedVariableName}'`)).toBeVisible();
+    await page.locator('[data-test="dashboard-panel-data-view-query-inspector-btn"]').click();
+  await expect(page.getByRole('cell', { name: 'SELECT histogram(_timestamp) as "x_axis_1", count(_timestamp) as "y_axis_1" FROM "e2e_automate" WHERE kubernetes_container_name = \'ziox\' GROUP BY x_axis_1 ORDER BY x_axis_1 ASC', exact: true })).toBeVisible();
+   
+  
+  
+  // For quary inspector button  for cancle  button dont have a locator ////////////////////////
+  await page.locator('#q-portal--dialog--41').getByRole('button').click();     
+
+  
   });
 
   
@@ -310,6 +318,7 @@ await filterButton.click();
     await page.getByRole("button", { name: "Save" }).click();
 
     await page.waitForTimeout(3000);
+
     const button = page.locator(
       '[data-test="dashboard-if-no-panel-add-panel-btn"]'
     );
@@ -323,38 +332,55 @@ await filterButton.click();
     //   .filter({ hasText: "Streamarrow_drop_down" })
     //   .locator("i")
     //   .click();
-    // await page.getByText("e2e_automate").click();
 
+      await page.waitForTimeout(2000);
+
+    await page.locator('[data-test="index-dropdown-stream"]').waitFor({ state: 'visible' });
     await page.locator('[data-test="index-dropdown-stream"]').click();
 
+    // await page.getByText('Streamarrow_drop_down').click();
+//     const streamDropdown = page.locator('[data-test="index-dropdown-stream"]').click();
+// await expect(streamDropdown).toBeVisible();
+// await streamDropdown.click();
+
+     await page.waitForTimeout(2000);
+
     await page.getByRole("option", { name: "e2e_automate", exact: true }).click();
+
+    // await page.waitForTimeout(2000);
 
     await page
       .locator(
         '[data-test="field-list-item-logs-e2e_automate-_timestamp"] [data-test="dashboard-add-y-data"]'
       )
       .click();
-    await page.waitForTimeout(2000);
+     await page.locator('[data-test="dashboard-apply"]').click();
 
-    await page
-      .locator(
-        '[data-test="field-list-item-logs-e2e_automate-kubernetes_container_name"] [data-test="dashboard-add-filter-data"]'
-      )
-      .click();
+     await page.locator('[data-test="date-time-btn"]').click();
+     await page.locator('[data-test="date-time-relative-6-w-btn"]').click();
+     await page.locator('[data-test="date-time-apply-btn"]').click();
+
+    await page.waitForTimeout(3000);
+
 
     // await page
-    // .locator(
-    //   '[data-test="field-list-item-logs-e2e_automate-kubernetes_container_name"] [data-test="dashboard-add-filter-data"]'
-    // )
-    // .waitFor({ state: 'visible' })
-    // .click();
-  
+    //   .locator(
+    //     '[data-test="field-list-item-logs-e2e_automate-kubernetes_container_name"] [data-test="dashboard-add-filter-data"]'
+    //   )
+    //   .click();
+    const filterButton = page.locator('[data-test="field-list-item-logs-e2e_automate-kubernetes_container_name"] [data-test="dashboard-add-filter-data"]');
+await expect(filterButton).toBeVisible();
+await filterButton.click();
 
-    await page
-      .locator(
-        '[data-test="field-list-item-logs-e2e_automate-kubernetes_container_image"] [data-test="dashboard-add-filter-data"]'
-      )
-      .click();
+    // await page
+    //   .locator(
+    //     '[data-test="field-list-item-logs-e2e_automate-kubernetes_container_name"] [data-test="dashboard-add-filter-data"]'
+    //   )
+    //   .click();
+
+    const filterButton1 = page.locator('[data-test="field-list-item-logs-e2e_automate-kubernetes_container_image"] [data-test="dashboard-add-filter-data"]');
+    await expect(filterButton1).toBeVisible();
+    await filterButton1.click();
     await page
       .locator(
         '[data-test="dashboard-add-condition-label-0-kubernetes_container_name"]'
@@ -366,10 +392,8 @@ await filterButton.click();
     await page.getByText("Operatorarrow_drop_down").click();
     await page.getByText("=", { exact: true }).click();
     await page.getByLabel("Value").click();
-    await page
-      .locator("#q-portal--menu--266")
-      .getByText("variablename")
-      .click();
+    await page.getByLabel('Value').fill('$variablename');
+
     await page
       .locator(
         '[data-test="dashboard-add-condition-label-1-kubernetes_container_image"]'
@@ -389,22 +413,34 @@ await filterButton.click();
       .filter({ hasText: /^Value$/ })
       .nth(2)
       .click();
-    await page
-      .locator("#q-portal--menu--268")
-      .getByText("variablename")
-      .click();
+      await page.getByLabel('Value').fill('$variablename');
+
     await page.locator('[data-test="dashboard-apply"]').click();
     await page.getByText("arrow_rightQueryAutoPromQLCustom SQL").click();
     await expect(page.getByText("'$variablename'").first()).toBeVisible();
     await page
       .locator('[data-test="dashboard-panel-data-view-query-inspector-btn"]')
       .click();
-    await expect(
-      page.getByRole("cell", {
-        name: 'SELECT histogram(_timestamp) as "x_axis_1", count(_timestamp) as "y_axis_1" FROM "e2e_automate" WHERE kubernetes_container_name = \'ziox\' AND kubernetes_container_image <> \'ziox\' GROUP BY x_axis_1 ORDER BY x_axis_1 ASC',
-        exact: true,
-      })
-    ).toBeVisible();
+    // await expect(
+    //   page.getByRole("cell", {
+    //     name: 'SELECT histogram(_timestamp) as "x_axis_1", count(_timestamp) as "y_axis_1" FROM "e2e_automate" WHERE kubernetes_container_name = \'ziox\' AND kubernetes_container_image <> \'ziox\' GROUP BY x_axis_1 ORDER BY x_axis_1 ASC',
+    //     exact: true,
+    //   })
+    // ).toBeVisible();
+
+    const cell = page.getByRole("cell", {
+      name: 'SELECT histogram(_timestamp) as "x_axis_1", count(_timestamp) as "y_axis_1" FROM "e2e_automate" WHERE kubernetes_container_name = \'ziox\' AND kubernetes_container_image <> \'ziox\' GROUP BY x_axis_1 ORDER BY x_axis_1 ASC',
+      exact: true,
+    });
+    
+    // Check if the cell is visible
+    await expect(cell).toBeVisible();
+    
+    // Verify it contains the correct text
+    await expect(cell).toHaveText(
+      'SELECT histogram(_timestamp) as "x_axis_1", count(_timestamp) as "y_axis_1" FROM "e2e_automate" WHERE kubernetes_container_name = \'ziox\' AND kubernetes_container_image <> \'ziox\' GROUP BY x_axis_1 ORDER BY x_axis_1 ASC'
+    );
+    
     await page.locator("#q-portal--dialog--273").getByRole("button").click();
     await page.locator('[data-test="dashboard-panel-name"]').click();
     await page.locator('[data-test="dashboard-panel-name"]').fill("test");

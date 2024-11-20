@@ -451,6 +451,7 @@ await filterButton.click();
   test("Should  apply the  filter group inside group", async ({
     page,
   }) => {
+  
     await page.locator('[data-test="menu-link-\\/dashboards-item"]').click();
     await waitForDashboardPage(page);
     await page.locator('[data-test="dashboard-add"]').click();
@@ -494,6 +495,7 @@ await filterButton.click();
     await page.getByRole("button", { name: "Save" }).click();
 
     await page.waitForTimeout(3000);
+
     const button = page.locator(
       '[data-test="dashboard-if-no-panel-add-panel-btn"]'
     );
@@ -508,13 +510,10 @@ await filterButton.click();
     //   .locator("i")
     //   .click();
 
-      // await page.waitForTimeout(2000);
+      await page.waitForTimeout(2000);
 
-    //  await page.getByText("e2e_automate").click();
-
-    // await page.locator('[data-test="index-dropdown-stream"]').waitFor({ state: 'visible' }).click;
-    await page.getByText('Streamarrow_drop_down').click();
-    await page.locator('div').filter({ hasText: /^Stream$/ }).first().click();
+    await page.locator('[data-test="index-dropdown-stream"]').waitFor({ state: 'visible' });
+    await page.locator('[data-test="index-dropdown-stream"]').click();
 
     // await page.getByText('Streamarrow_drop_down').click();
 //     const streamDropdown = page.locator('[data-test="index-dropdown-stream"]').click();
@@ -532,10 +531,17 @@ await filterButton.click();
         '[data-test="field-list-item-logs-e2e_automate-_timestamp"] [data-test="dashboard-add-y-data"]'
       )
       .click();
+     await page.locator('[data-test="dashboard-apply"]').click();
 
-      await page.locator('[data-test="dashboard-apply"]').click();
+     await page.locator('[data-test="date-time-btn"]').click();
+     await page.locator('[data-test="date-time-relative-6-w-btn"]').click();
+     await page.locator('[data-test="date-time-apply-btn"]').click();
 
     await page.waitForTimeout(3000);
+
+
+
+    
 
     await page.locator('[data-test="dashboard-add-condition-add"]').click();
     await page.getByText('Add Group').click();
@@ -546,7 +552,7 @@ await filterButton.click();
     await page.getByText('Operatorarrow_drop_down').click();
     await page.getByText('=', { exact: true }).click();
     await page.getByLabel('Value').click();
-    await page.locator('#q-portal--menu--84').getByText('variablename').click();
+    await page.getByLabel('Value').fill('$variablename');
 
     await page.locator('div').filter({ hasText: /^kubernetes_container_namearrow_drop_downcloseadd$/ }).locator('[data-test="dashboard-add-condition-add"]').click();
     await page.locator('div').filter({ hasText: 'Add Group' }).nth(3).click();
@@ -558,7 +564,8 @@ await filterButton.click();
     await page.getByRole('option', { name: '<>' }).locator('div').nth(2).click();
 
     await page.getByLabel('Value').click();
-    await page.locator('#q-portal--menu--88').getByText('variablename').click();
+    await page.getByLabel('Value').fill('$variablename');
+    
     await page.locator('[data-test="dashboard-apply"]').click();
     await page.getByText('<blank>variablenamearrow_drop_down').click();
     await page.getByRole('option', { name: 'ziox' }).click();

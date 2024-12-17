@@ -263,14 +263,13 @@ await filterButton.click();
   await expect(page.getByRole('cell', { name: 'SELECT histogram(_timestamp) as "x_axis_1", count(_timestamp) as "y_axis_1" FROM "e2e_automate" WHERE kubernetes_container_name = \'ziox\' GROUP BY x_axis_1 ORDER BY x_axis_1 ASC', exact: true })).toBeVisible();
    
   
-  
-  // For quary inspector button  for cancle  button dont have a locator ////////////////////////
-  await page.locator('#q-portal--dialog--41').getByRole('button').click();     
+    await page.locator('[data-test="query-inspector-close-btn"]').click();
 
-  
+    await page.locator('[data-test="dashboard-panel-name"]').click();
+    await page.locator('[data-test="dashboard-panel-name"]').fill("test");
+    await page.locator('[data-test="dashboard-panel-save"]').click();
   });
 
-  
   test("should successfully apply filter conditions using both AND and OR operators", async ({
     page,
   }) => {
@@ -452,7 +451,7 @@ await filterButton.click();
   }) => {
   
     await page.locator('[data-test="menu-link-\\/dashboards-item"]').click();
-    await waitForDashboardPage(page);
+    await waitForDashboardPage(page);           
     await page.locator('[data-test="dashboard-add"]').click();
     await page.locator('[data-test="add-dashboard-name"]').click();
     await page
@@ -537,10 +536,6 @@ await filterButton.click();
      await page.locator('[data-test="date-time-apply-btn"]').click();
 
     await page.waitForTimeout(3000);
-
-
-
-    
 
     await page.locator('[data-test="dashboard-add-condition-add"]').click();
     await page.getByText('Add Group').click();

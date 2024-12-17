@@ -1,4 +1,4 @@
-// fuction of Dashboard page and Apply quarybutton
+// fuction of Dashboard page and Apply querybutton
 export const waitForDashboardPage = async function (page) {
   const dashboardListApi = page.waitForResponse(
     (response) =>

@@ -3,6 +3,7 @@ import logData from "../../cypress/fixtures/log.json";
 import logsdata from "../../../test-data/logs_data.json";
 import { login } from "../../pages/dashLogin.js";
 import { ingestion, removeUTFCharacters } from "../../pages/dashIngestion.js";
+import { DashFilter } from "../../pages/dashFilter.js";
 import {
   waitForDashboardPage,
   applyQueryButton,
@@ -13,7 +14,7 @@ const randomDashboardName =
 
 test.describe.configure({ mode: "parallel" });
 
-test.describe("dashboard UI testcases", () => {
+test.describe("dashboard filter testcases", () => {
   test.beforeEach(async ({ page }) => {
     console.log("running before each");
     await login(page);
@@ -39,7 +40,7 @@ test.describe("dashboard UI testcases", () => {
       .fill(randomDashboardName);
 
     await page.locator('[data-test="dashboard-add-submit"]').click();
-
+    await page.locator(3000);
     await page.locator('[data-test="dashboard-setting-btn"]').click();
     await page.getByRole("tab", { name: "Variables" }).click();
     await page.getByRole("button", { name: "Add Variable" }).click();
@@ -245,23 +246,12 @@ test.describe("dashboard UI testcases", () => {
     await page.waitForTimeout(3000);
     await button.click();
 
-    // await page
-    //   .locator("label")
-    //   .filter({ hasText: "Streamarrow_drop_down" })
-    //   .locator("i")
-    //   .click();
-
     await page.waitForTimeout(2000);
 
     await page
       .locator('[data-test="index-dropdown-stream"]')
       .waitFor({ state: "visible" });
     await page.locator('[data-test="index-dropdown-stream"]').click();
-
-    // await page.getByText('Streamarrow_drop_down').click();
-    //     const streamDropdown = page.locator('[data-test="index-dropdown-stream"]').click();
-    // await expect(streamDropdown).toBeVisible();
-    // await streamDropdown.click();
 
     await page.waitForTimeout(2000);
 
@@ -284,22 +274,11 @@ test.describe("dashboard UI testcases", () => {
 
     await page.waitForTimeout(3000);
 
-    // await page
-    //   .locator(
-    //     '[data-test="field-list-item-logs-e2e_automate-kubernetes_container_name"] [data-test="dashboard-add-filter-data"]'
-    //   )
-    //   .click();
     const filterButton = page.locator(
       '[data-test="field-list-item-logs-e2e_automate-kubernetes_container_name"] [data-test="dashboard-add-filter-data"]'
     );
     await expect(filterButton).toBeVisible();
     await filterButton.click();
-
-    // await page
-    //   .locator(
-    //     '[data-test="field-list-item-logs-e2e_automate-kubernetes_container_name"] [data-test="dashboard-add-filter-data"]'
-    //   )
-    //   .click();
 
     const filterButton1 = page.locator(
       '[data-test="field-list-item-logs-e2e_automate-kubernetes_container_image"] [data-test="dashboard-add-filter-data"]'
@@ -357,12 +336,13 @@ test.describe("dashboard UI testcases", () => {
     await page
       .locator('[data-test="dashboard-panel-data-view-query-inspector-btn"]')
       .click();
-    // await expect(
-    //   page.getByRole("cell", {
-    //     name: 'SELECT histogram(_timestamp) as "x_axis_1", count(_timestamp) as "y_axis_1" FROM "e2e_automate" WHERE kubernetes_container_name = \'ziox\' AND kubernetes_container_image <> \'ziox\' GROUP BY x_axis_1 ORDER BY x_axis_1 ASC',
-    //     exact: true,
-    //   })
-    // ).toBeVisible();
+
+    await expect(
+      page.getByRole("cell", {
+        name: 'SELECT histogram(_timestamp) as "x_axis_1", count(_timestamp) as "y_axis_1" FROM "e2e_automate" WHERE kubernetes_container_name = \'ziox\' AND kubernetes_container_image <> \'ziox\' GROUP BY x_axis_1 ORDER BY x_axis_1 ASC',
+        exact: true,
+      })
+    ).toBeVisible();
 
     const cell = page.getByRole("cell", {
       name: 'SELECT histogram(_timestamp) as "x_axis_1", count(_timestamp) as "y_axis_1" FROM "e2e_automate" WHERE kubernetes_container_name = \'ziox\' AND kubernetes_container_image <> \'ziox\' GROUP BY x_axis_1 ORDER BY x_axis_1 ASC',
@@ -771,5 +751,60 @@ test.describe("dashboard UI testcases", () => {
         '[data-test="dashboard-add-condition-label-0-kubernetes_namespace_name"]'
       )
     ).toBeVisible();
+  });
+
+  ///////////////////////////////////////////
+
+  // Refactored test case
+  test("should correctly apply the filter conditions with different operators", async ({
+    page,
+  }) => {
+    const dashFilter = new DashFilter(page);
+
+    await dashFilter.openDashboardMenu();
+    await waitForDashboardPage(page);
+
+    // Add Dashboard
+    await dashFilter.addDashboard(randomDashboardName);
+
+    await page.waitForTimeout(4000);
+    // Configure Variable
+    await dashFilter.configureVariable("variablename");
+
+    // Add Panel
+    await dashFilter.addPanel();
+
+    // Apply Filter
+    await dashFilter.applyFilter("e2e_automate", "_timestamp");
+
+    // Verify Query Inspector
+    const expectedQuery =
+      'SELECT histogram(_timestamp) as "x_axis_1", count(_timestamp) as "y_axis_1" FROM "e2e_automate" WHERE kubernetes_container_name = "ziox" GROUP BY x_axis_1 ORDER BY x_axis_1 ASC';
+    await dashFilter.verifyQueryInspector(expectedQuery);
+
+    // Save Panel
+    await dashFilter.savePanel("test");
+  });
+
+  test("1should successfully apply filter conditions using both AND and OR operators", async ({
+    page,
+  }) => {
+    const dashFilter = new DashFilter(page);
+
+    await dashFilter.openDashboardMenu();
+    await waitForDashboardPage(page);
+
+    // Add Dashboard
+    await dashFilter.addDashboard(randomDashboardName);
+
+    await page.waitForTimeout(4000);
+    // Configure Variable
+    await dashFilter.configureVariable("variablename");
+
+    // Add Panel
+    await dashFilter.addPanel();
+
+    // Apply Filter
+    await dashFilter.applyStreamandField("e2e_automate", "_timestamp");
   });
 });

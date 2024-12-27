@@ -51,15 +51,21 @@ pub async fn set(short_id: &str, entry: short_urls::ShortUrlRecord) -> Result<()
     }
 
     // trigger watch event by putting empty value to cluster coordinator
+    let cache_key = format!("{SHORT_URL_KEY}{short_id}");
     let cluster_coordinator = super::get_coordinator().await;
     cluster_coordinator
-        .put(
-            &format!("{SHORT_URL_KEY}{short_id}"),
-            Bytes::new(),
-            NEED_WATCH,
-            None,
-        )
+        .put(&cache_key, Bytes::new(), NEED_WATCH, None)
         .await?;
+
+    // super cluster
+    #[cfg(feature = "enterprise")]
+    if o2_enterprise::enterprise::common::infra::config::get_config()
+        .super_cluster
+        .enabled
+    {
+        o2_enterprise::enterprise::super_cluster::queue::put(&cache_key, Bytes::new(), true, None)
+            .await?;
+    }
 
     Ok(())
 }
@@ -157,13 +163,22 @@ pub async fn gc_cache(retention_period_minutes: i64) -> Result<(), anyhow::Error
             // delete from cache
             let cluster_coordinator = super::get_coordinator().await;
             for short_id in expired_short_ids {
-                cluster_coordinator
-                    .delete(
-                        &format!("{SHORT_URL_KEY}{short_id}"),
-                        false,
-                        NEED_WATCH,
-                        None,
+                let cache_key = format!("{SHORT_URL_KEY}{short_id}");
+
+                // super cluster
+                #[cfg(feature = "enterprise")]
+                if o2_enterprise::enterprise::common::infra::config::get_config()
+                    .super_cluster
+                    .enabled
+                {
+                    o2_enterprise::enterprise::super_cluster::queue::delete(
+                        &cache_key, false, true, None,
                     )
+                    .await?;
+                }
+
+                cluster_coordinator
+                    .delete(&cache_key, false, NEED_WATCH, None)
                     .await?;
             }
         }

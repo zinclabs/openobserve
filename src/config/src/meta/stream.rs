@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use std::{cmp::max, fmt::Display};
+use std::{cmp::max, fmt::Display, str::FromStr};
 
 use chrono::{DateTime, Duration, TimeZone, Utc};
 use hashbrown::HashMap;
@@ -145,6 +145,22 @@ impl std::fmt::Display for StreamParams {
             "{}/{}/{}",
             self.org_id, self.stream_name, self.stream_type
         )
+    }
+}
+
+impl FromStr for StreamParams {
+    type Err = String;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let parts: Vec<&str> = s.split('/').collect();
+
+        if parts.len() != 3 {
+            return Err(format!(
+                "Invalid format: expected 'org_id/stream_name/stream_type', got '{}'",
+                s
+            ));
+        }
+
+        Ok(StreamParams::new(parts[0], parts[1], parts[2].into()))
     }
 }
 

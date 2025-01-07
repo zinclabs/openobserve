@@ -61,7 +61,7 @@
           <!-- Render different input types based on validation -->
           <q-select
             v-if="fields.args[argIndex]?.type === 'field'"
-            v-model="fields.args[argIndex].fieldName"
+            v-model="fields.args[argIndex].value"
             :options="filteredSchemaOptions"
             label="Select Field"
             input-debounce="0"
@@ -99,6 +99,7 @@
           <SelectFunction
             v-if="fields.args[argIndex]?.type === 'function'"
             class="tw-ml-4"
+            v-model="fields.args[argIndex].value"
           />
 
           <!-- histogram interval for sql queries -->
@@ -151,7 +152,14 @@ import HistogramIntervalDropDown from "../HistogramIntervalDropDown.vue";
 export default {
   name: "SelectFunction",
   components: { HistogramIntervalDropDown },
-  setup() {
+  props: {
+    modelValue: {
+      type: Object,
+      required: true,
+    },
+  },
+  emits: ["update:modelValue"],
+  setup(props: any, { emit }) {
     const dashboardPanelDataPageKey = inject(
       "dashboardPanelDataPageKey",
       "dashboard",
@@ -166,6 +174,17 @@ export default {
           value: field.name,
         }),
       ),
+    );
+
+    const fields = ref(props.modelValue);
+
+    console.log("fields", fields.value);
+
+    watch(
+      () => props.modelValue,
+      (value) => {
+        emit("update:modelValue", value);
+      },
     );
 
     const { filterFn: filterStreamFn, filteredOptions: filteredSchemaOptions } =
@@ -184,21 +203,7 @@ export default {
       });
     };
 
-    const fields = ref({
-      functionName: "histogram",
-      args: [
-        {
-          type: "field",
-          fieldName: "_timestamp",
-        },
-        {
-          type: "histogramInterval",
-          value: "5 min",
-        },
-      ],
-    });
-
-    const availableFunctions = ref(["arrzip", "concat", "count", "sum"]);
+    // const availableFunctions = ref(["arrzip", "concat", "count", "sum"]);
 
     const getValidationForFunction = (functionName: string) => {
       return (
@@ -354,7 +359,6 @@ export default {
             Array.from({ length: arg.min ?? 1 }).map(() => ({
               type: arg.type[0],
               value: "",
-              fieldName: "",
               function: "",
             })),
           );
@@ -365,7 +369,7 @@ export default {
     return {
       fields,
       functionValidation,
-      availableFunctions,
+      // availableFunctions,
       getValidationForFunction,
       canAddArgument,
       canRemoveArgument,

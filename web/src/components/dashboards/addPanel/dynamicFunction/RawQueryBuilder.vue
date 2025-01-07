@@ -23,14 +23,21 @@
 </template>
 
 <script lang="ts">
-import { ref } from "vue";
+import { ref, watch } from "vue";
 import { useStore } from "vuex";
 
 //   import useDashboardPanelData from "@/composables/useDashboardPanel";
 
 export default {
   name: "RawQueryBuilder",
-  setup() {
+  props: {
+    modelValue: {
+      type: Object,
+      required: true,
+    },
+  },
+  emits: ["update:modelValue"],
+  setup(props, { emit }) {
     //   const dashboardPanelDataPageKey = inject(
     //     "dashboardPanelDataPageKey",
     //     "dashboard",
@@ -41,21 +48,14 @@ export default {
 
     const store = useStore();
 
-    const fields = ref({
-      rawQuery: "",
-      alias: "",
-      functionName: "histogram",
-      args: [
-        {
-          type: "field",
-          fieldName: "_timestamp",
-        },
-        {
-          type: "histogramInterval",
-          value: "5 min",
-        },
-      ],
-    });
+    const fields = ref(props.modelValue);
+
+    watch(
+      () => props.modelValue,
+      (value: any) => {
+        emit("update:modelValue", value);
+      },
+    );
 
     return {
       store,

@@ -83,6 +83,12 @@ const migrateV5FieldsToV6 = (fieldItem: any, isCustomQuery: boolean) => {
       delete fieldItem.column;
     }
   }
+
+  // rename aggregationFunction to functionName
+  if (fieldItem.aggregationFunction) {
+    fieldItem.functionName = fieldItem.aggregationFunction;
+    delete fieldItem.aggregationFunction;
+  }
 };
 
 function migrateFields(

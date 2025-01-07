@@ -16,17 +16,17 @@
 
     <q-tab-panels v-model="fields.type" animated>
       <q-tab-panel name="build">
-        <SelectFunction />
+        <SelectFunction v-model="fields" />
       </q-tab-panel>
       <q-tab-panel name="raw">
-        <RawQueryBuilder />
+        <RawQueryBuilder v-model="fields" />
       </q-tab-panel>
     </q-tab-panels>
   </div>
 </template>
 
 <script lang="ts">
-import { ref } from "vue";
+import { ref, watch } from "vue";
 //   import useDashboardPanelData from "@/composables/useDashboardPanel";
 import RawQueryBuilder from "./RawQueryBuilder.vue";
 import SelectFunction from "./SelectFunction.vue";
@@ -34,7 +34,14 @@ import SelectFunction from "./SelectFunction.vue";
 export default {
   name: "DynamicFunctionPopUp",
   components: { RawQueryBuilder, SelectFunction },
-  setup() {
+  props: {
+    modelValue: {
+      type: Object,
+      required: true,
+    },
+  },
+  emits: ["update:modelValue"],
+  setup(props, { emit }) {
     //   const dashboardPanelDataPageKey = inject(
     //     "dashboardPanelDataPageKey",
     //     "dashboard",
@@ -43,20 +50,14 @@ export default {
     //     dashboardPanelDataPageKey
     //   );
 
-    const fields = ref({
-      type: "build",
-      functionName: "histogram",
-      args: [
-        {
-          type: "field",
-          fieldName: "_timestamp",
-        },
-        {
-          type: "histogramInterval",
-          value: "5 min",
-        },
-      ],
-    });
+    const fields = ref(props.modelValue);
+
+    watch(
+      () => props.modelValue,
+      (value) => {
+        emit("update:modelValue", value);
+      },
+    );
 
     return {
       fields,

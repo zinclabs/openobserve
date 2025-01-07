@@ -39,11 +39,11 @@ test.describe("dashboard filter testcases", () => {
       .locator('[data-test="add-dashboard-name"]')
       .fill(randomDashboardName);
 
-    await page.locator('[data-test="dashboard-add-submit"]').click();
-    await page.locator(3000);
-    await page.locator('[data-test="dashboard-setting-btn"]').click();
-    await page.getByRole("tab", { name: "Variables" }).click();
-    await page.getByRole("button", { name: "Add Variable" }).click();
+      await page.locator('[data-test="dashboard-add-submit"]').click();
+      await page.waitForTimeout(2000);
+      await page.locator('[data-test="dashboard-setting-btn"]').click();
+      await page.getByRole("tab", { name: "Variables" }).click();
+      await page.getByRole("button", { name: "Add Variable" }).click();
     await page
       .locator("div")
       .filter({ hasText: /^Name \*$/ })
@@ -53,18 +53,25 @@ test.describe("dashboard filter testcases", () => {
     // await page.getByLabel('Name *').click();
     await page.getByLabel("Name *").fill("variablename");
 
-    await page
-      .locator("label")
-      .filter({ hasText: "Stream Type *arrow_drop_down" })
-      .locator("i")
-      .click();
+    // await page
+    //   .locator("label")
+    //   .filter({ hasText: "Stream Type *arrow_drop_down" })
+    //   .locator("i")
+    //   .click();
+    await page.locator('[data-test="dashboard-variable-stream-type-select"]').click();
     await page.getByRole("option", { name: "logs" }).click();
-    await page
-      .locator("label")
-      .filter({ hasText: "Stream *arrow_drop_down" })
-      .locator("i")
-      .click();
-    await page.getByRole("option", { name: "e2e_automate" }).click();
+
+    // await page
+    //   .locator("label")
+    //   .filter({ hasText: "Stream *arrow_drop_down" })
+    //   .locator("i")
+    //   .click();
+    await page.locator('[data-test="dashboard-variable-stream-select"]').click();
+
+    await page.locator('[data-test="dashboard-variable-stream-select"]').fill('e2e_automate');
+    await page.getByRole('option', { name: 'e2e_automate', exact: true }).click();
+
+    // await page.getByRole("option", { name: "e2e_automate" }).click();
     await page.getByText("Field *arrow_drop_down").click();
     await page
       .getByRole("option", { name: "kubernetes_container_name" })
@@ -73,7 +80,7 @@ test.describe("dashboard filter testcases", () => {
       .click();
     await page.getByRole("button", { name: "Save" }).click();
 
-    await page.waitForTimeout(3000);
+    // await page.waitForTimeout(3000);
 
     const button = page.locator(
       '[data-test="dashboard-if-no-panel-add-panel-btn"]'
@@ -89,7 +96,7 @@ test.describe("dashboard filter testcases", () => {
     //   .locator("i")
     //   .click();
 
-    await page.waitForTimeout(2000);
+    // await page.waitForTimeout(2000);
 
     await page
       .locator('[data-test="index-dropdown-stream"]')
@@ -752,6 +759,110 @@ test.describe("dashboard filter testcases", () => {
       )
     ).toBeVisible();
   });
+
+
+
+
+
+
+  
+  test("Should disply an error massge if added the invalid oprator", async ({ page }) => {
+    await page.locator('[data-test="menu-link-\\/dashboards-item"]').click();
+    await waitForDashboardPage(page);
+    await page.locator('[data-test="dashboard-add"]').click();
+    await page.locator('[data-test="add-dashboard-name"]').click();
+    await page
+      .locator('[data-test="add-dashboard-name"]')
+      .fill(randomDashboardName);
+
+    await page.locator('[data-test="dashboard-add-submit"]').click();
+    await page.waitForTimeout(4000);
+
+    await page.locator('[data-test="dashboard-setting-btn"]').click();
+    await page.getByRole("tab", { name: "Variables" }).click();
+    await page.getByRole("button", { name: "Add Variable" }).click();
+    await page
+      .locator("div")
+      .filter({ hasText: /^Name \*$/ })
+      .nth(2)
+      .click();
+
+    // await page.getByLabel('Name *').click();
+    await page.getByLabel("Name *").fill("variablename");
+
+    await page
+      .locator("label")
+      .filter({ hasText: "Stream Type *arrow_drop_down" })
+      .locator("i")
+      .click();
+    await page.getByRole("option", { name: "logs" }).click();
+    await page
+      .locator("label")
+      .filter({ hasText: "Stream *arrow_drop_down" })
+      .locator("i")
+      .click();
+    await page.getByRole("option", { name: "e2e_automate" }).click();
+    await page.getByText("Field *arrow_drop_down").click();
+    await page
+      .getByRole("option", { name: "kubernetes_container_name" })
+      .locator("div")
+      .nth(2)
+      .click();
+    await page.getByRole("button", { name: "Save" }).click();
+
+    await page.waitForTimeout(3000);
+
+    const button = page.locator(
+      '[data-test="dashboard-if-no-panel-add-panel-btn"]'
+    );
+    await expect(button).toBeVisible();
+
+    await page.waitForTimeout(3000);
+    await button.click();
+    await page.waitForTimeout(2000);
+
+    await page
+      .locator('[data-test="index-dropdown-stream"]')
+      .waitFor({ state: "visible" });
+    await page.locator('[data-test="index-dropdown-stream"]').click();
+
+    await page.waitForTimeout(2000);
+
+    await page
+      .getByRole("option", { name: "e2e_automate", exact: true })
+      .click();
+
+    await page
+      .locator(
+        '[data-test="field-list-item-logs-e2e_automate-_timestamp"] [data-test="dashboard-add-y-data"]'
+      )
+      .click();
+    await page.locator('[data-test="dashboard-apply"]').click();
+
+    await page.locator('[data-test="date-time-btn"]').click();
+    await page.locator('[data-test="date-time-relative-6-w-btn"]').click();
+    await page.locator('[data-test="date-time-apply-btn"]').click();
+    await page.waitForTimeout(3000);
+
+    await page
+      .locator(
+        '[data-test="field-list-item-logs-e2e_automate-kubernetes_namespace_name"] [data-test="dashboard-add-filter-data"]'
+      )
+      .click();
+
+      await page.locator('[data-test="dashboard-add-condition-label-0-k8s_namespace_name"]').click();
+      await page.locator('[data-test="dashboard-add-condition-condition-0"]').click();
+      await page.locator('[data-test="dashboard-add-condition-operator"]').click();
+      await page.getByRole('option', { name: 'IN', exact: true }).click();
+      await page.locator('[data-test="common-auto-complete"]').click();
+      await page.locator('[data-test="common-auto-complete-option"]').click();
+      await page.locator('[data-test="dashboard-apply"]').click();
+      await expect(page.getByText('Search field not found: ziox').first()).toBeVisible();
+  });
+
+
+
+
 
   ///////////////////////////////////////////
 

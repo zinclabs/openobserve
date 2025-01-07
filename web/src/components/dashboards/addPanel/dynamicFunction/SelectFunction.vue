@@ -18,7 +18,7 @@
       option-value="value"
       emit-value
       map-options
-      class="tw-w-full"
+      class="tw-w-52"
     >
       <!-- <template v-slot:append>
           <q-icon
@@ -55,7 +55,7 @@
             filled
             label="Select Type"
             data-test="dashboard-y-item-dropdown"
-            class="tw-flex-1"
+            class="tw-w-40 tw-min-w-40"
           />
 
           <!-- Render different input types based on validation -->
@@ -75,7 +75,7 @@
             emit-value
             @filter="filterStreamFn"
             :required="isRequired(fields.functionName, argIndex)"
-            class="tw-flex-1"
+            class="tw-w-52"
           />
 
           <q-input
@@ -84,7 +84,7 @@
             v-model="fields.args[argIndex].value"
             placeholder="Enter string"
             :required="isRequired(fields.functionName, argIndex)"
-            class="tw-flex-1"
+            class="tw-w-52"
           />
 
           <q-input
@@ -93,7 +93,7 @@
             v-model="fields.args[argIndex].value"
             placeholder="Enter number"
             :required="isRequired(fields.functionName, argIndex)"
-            class="tw-flex-1"
+            class="tw-w-52"
           />
 
           <SelectFunction
@@ -110,7 +110,7 @@
                 fields.args[argIndex].value = newValue.value;
               }
             "
-            class="tw-flex-1"
+            class="tw-w-52"
           />
 
           <!-- Remove argument button -->

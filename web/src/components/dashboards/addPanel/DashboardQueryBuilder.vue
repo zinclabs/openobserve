@@ -426,7 +426,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                           </div>
                         </div>
                         <!-- histogram interval if auto sql and aggregation function is histogram-->
-                        <div
+                        <!-- histogram interval for sql queries -->
+                        <!-- <div
                           v-if="
                             !dashboardPanelData.data.queries[
                               dashboardPanelData.layout.currentQueryIndex
@@ -441,7 +442,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                           "
                           class="q-mb-sm"
                         >
-                          <!-- histogram interval for sql queries -->
                           <HistogramIntervalDropDown
                             v-if="!promqlMode"
                             :model-value="
@@ -460,7 +460,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                               }
                             "
                           />
-                        </div>
+                        </div> -->
                         <q-input
                           dense
                           filled
@@ -689,7 +689,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                       </div>
                     </div>
                     <!-- histogram interval if auto sql and aggregation function is histogram-->
-                    <div
+                    <!-- histogram interval for sql queries -->
+                    <!-- <div
                       v-if="
                         !dashboardPanelData.data.queries[
                           dashboardPanelData.layout.currentQueryIndex
@@ -703,7 +704,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                       "
                       class="q-mb-sm"
                     >
-                      <!-- histogram interval for sql queries -->
                       <HistogramIntervalDropDown
                         v-if="!promqlMode"
                         :model-value="
@@ -721,7 +721,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                           }
                         "
                       />
-                    </div>
+                    </div> -->
                     <q-input
                       dense
                       filled
@@ -1014,6 +1014,7 @@ import SanitizedHtmlRenderer from "@/components/SanitizedHtmlRenderer.vue";
 import useNotifications from "@/composables/useNotifications";
 import DashboardFiltersOption from "@/views/Dashboards/addPanel/DashboardFiltersOption.vue";
 import DynamicFunctionPopUp from "@/components/dashboards/addPanel/dynamicFunction/DynamicFunctionPopUp.vue";
+import { buildSQLQueryFromInput } from "@/utils/dashboard/convertDataIntoUnitValue";
 
 export default defineComponent({
   name: "DashboardQueryBuilder",
@@ -1443,12 +1444,7 @@ export default defineComponent({
         return field?.column;
       }
       if (field?.functionName) {
-        const aggregation = field?.functionName?.toUpperCase();
-        const argsLabel = field?.args?.reduce(
-          (acc: any, arg: any) => acc + arg?.value,
-          "",
-        );
-        return `${aggregation}(${argsLabel})`;
+        return buildSQLQueryFromInput(field);
       } else {
         // HERE NEED CHANGES
         return field?.column;

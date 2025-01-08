@@ -22,8 +22,8 @@ export default defineComponent({
   name: "HistogramIntervalDropDown",
   props: {
     modelValue: {
-      type: Object,
-      required: true,
+      type: String,
+      required: false,
     },
   },
   emits: ["update:modelValue"],

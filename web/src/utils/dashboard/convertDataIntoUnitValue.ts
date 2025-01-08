@@ -714,8 +714,7 @@ export function buildSQLQueryFromInput(fields: any) {
     const argDef = argsDefinition[i];
     const argValue = args[i]?.value;
 
-    // Skip optional arguments if not provided
-    if (!argDef.required && (argValue === undefined || argValue === null)) {
+    if (argValue === undefined || argValue === null) {
       continue;
     }
 

@@ -106,7 +106,7 @@
           <!-- histogram interval for sql queries -->
           <HistogramIntervalDropDown
             v-if="fields.args[argIndex]?.type === 'histogramInterval'"
-            :model-value="fields.args[argIndex]"
+            :model-value="fields.args[argIndex].value"
             @update:modelValue="
               (newValue: any) => {
                 fields.args[argIndex].value = newValue.value;

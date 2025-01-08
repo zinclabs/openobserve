@@ -425,6 +425,7 @@ export const calculateWidthText = (
  * @param canvasWidth - canvas width in pixels
  * @returns {number} - The optimal font size in pixels.
  */
+import functionValidation from "../../components/dashboards/addPanel/dynamicFunction/functionValidation.json";
 export const calculateOptimalFontSize = (text: string, canvasWidth: number) => {
   let minFontSize = 1; // Start with the smallest font size
   let maxFontSize = 90; // Set a maximum possible font size
@@ -686,3 +687,94 @@ export const validateSQLPanelFields = (
     );
   }
 };
+
+export function buildSQLQueryFromInput(fields: any) {
+  // Extract functionName and args from the input
+  const { functionName, args } = fields;
+
+  // Find the function definition based on the functionName
+  const selectedFunction = functionValidation.find(
+    (fn: any) => fn.functionName === functionName,
+  );
+
+  // If the function is not found, throw an error
+  if (!selectedFunction) {
+    throw new Error(`Function "${functionName}" is not supported.`);
+  }
+
+  // Validate the provided args against the function's argument definitions
+  const argsDefinition = selectedFunction.args;
+
+  if (!argsDefinition || argsDefinition.length === 0) {
+    return `${functionName}()`; // If no args are required, return the function call
+  }
+
+  const sqlArgs = [];
+  for (let i = 0; i < argsDefinition.length; i++) {
+    const argDef = argsDefinition[i];
+    const argValue = args[i]?.value;
+
+    // Skip optional arguments if not provided
+    if (!argDef.required && (argValue === undefined || argValue === null)) {
+      continue;
+    }
+
+    // Validate the type of the argument (only if it exists)
+    if (argValue !== undefined && argValue !== null) {
+      const isValidType = argDef.type.some((type) => {
+        if (type === "field") return typeof argValue === "string"; // Assume fields are strings
+        if (type === "number") return typeof argValue === "number";
+        if (type === "string") return typeof argValue === "string";
+        if (type === "array") return Array.isArray(argValue);
+        if (type === "function") return typeof argValue === "string"; // Nested functions are strings for simplicity
+        return false;
+      });
+
+      if (!isValidType) {
+        throw new Error(
+          `Invalid argument type for argument at position ${i + 1}. Expected one of [${argDef.type.join(
+            ", ",
+          )}], but got "${typeof argValue}".`,
+        );
+      }
+    }
+
+    // Add the argument to the SQL query
+    if (argDef.type.includes("field")) {
+      // If the argument type is "field", do not wrap with quotes
+      sqlArgs.push(argValue);
+    } else if (
+      typeof argValue === "string" &&
+      !argValue.startsWith("'") &&
+      !argValue.endsWith("'")
+    ) {
+      // Wrap strings in quotes if they are not already wrapped
+      sqlArgs.push(`'${argValue}'`);
+    } else {
+      // Add other types (e.g., numbers) as-is
+      sqlArgs.push(argValue);
+    }
+  }
+
+  // Handle additional arguments for functions like concat_ws
+  if (
+    selectedFunction.allowAddArgAt === "n" &&
+    args.length > argsDefinition.length
+  ) {
+    for (let i = argsDefinition.length; i < args.length; i++) {
+      const extraArg = args[i]?.value;
+      if (
+        typeof extraArg === "string" &&
+        !extraArg.startsWith("'") &&
+        !extraArg.endsWith("'")
+      ) {
+        sqlArgs.push(`'${extraArg}'`);
+      } else {
+        sqlArgs.push(extraArg);
+      }
+    }
+  }
+
+  // Construct the SQL query string
+  return `${functionName}(${sqlArgs.join(", ")})`;
+}

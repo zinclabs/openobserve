@@ -45,6 +45,7 @@
           <!-- type selector -->
           <q-select
             v-model="fields.args[argIndex].type"
+            @update:model-value="onArgTypeChange(fields.args[argIndex])"
             :options="
               getSupportedTypeBasedOnFunctionNameAndIndex(
                 fields.functionName,
@@ -359,12 +360,16 @@ export default {
             Array.from({ length: arg.min ?? 1 }).map(() => ({
               type: arg.type[0],
               value: "",
-              function: "",
             })),
           );
         }
       },
     );
+
+    const onArgTypeChange = (arg: any) => {
+      // reset value
+      arg.value = "";
+    };
 
     return {
       fields,
@@ -383,6 +388,7 @@ export default {
       filteredSchemaOptions,
       filteredFunctions,
       filterFunctionsOptions,
+      onArgTypeChange,
     };
   },
 };

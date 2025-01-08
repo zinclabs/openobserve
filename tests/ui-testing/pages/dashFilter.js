@@ -22,6 +22,7 @@ export class DashFilter {
       this.streamOption = page.getByRole("option", { name: "e2e_automate" });
       this.fieldDropdown = page.getByText("Field *arrow_drop_down");
       this.saveVariableButton = page.getByRole("button", { name: "Save" });
+      this.settingsclosebtn = page.locator('[data-test="dashboard-settings-close-btn"]').click();
       this.addPanelButton = page.locator('[data-test="dashboard-if-no-panel-add-panel-btn"]');
       this.streamSelector = page.locator('[data-test="index-dropdown-stream"]');
       this.applyButton = page.locator('[data-test="dashboard-apply"]');
@@ -58,6 +59,7 @@ export class DashFilter {
       await this.page.getByRole("option", { name: field }).click();
   
       await this.saveVariableButton.click();
+      await this.settingsclosebtn.click();
     }
   
     async addPanel() {

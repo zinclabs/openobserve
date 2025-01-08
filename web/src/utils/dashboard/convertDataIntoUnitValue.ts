@@ -710,36 +710,16 @@ export function buildSQLQueryFromInput(fields: any) {
   }
 
   const sqlArgs = [];
-  for (let i = 0; i < argsDefinition.length; i++) {
-    const argDef = argsDefinition[i];
+  for (let i = 0; i < args.length; i++) {
     const argValue = args[i]?.value;
+    const argType = args[i]?.type;
 
     if (argValue === undefined || argValue === null) {
       continue;
     }
 
-    // Validate the type of the argument (only if it exists)
-    if (argValue !== undefined && argValue !== null) {
-      const isValidType = argDef.type.some((type) => {
-        if (type === "field") return typeof argValue === "string"; // Assume fields are strings
-        if (type === "number") return typeof argValue === "number";
-        if (type === "string") return typeof argValue === "string";
-        if (type === "array") return Array.isArray(argValue);
-        if (type === "function") return typeof argValue === "string"; // Nested functions are strings for simplicity
-        return false;
-      });
-
-      if (!isValidType) {
-        throw new Error(
-          `Invalid argument type for argument at position ${i + 1}. Expected one of [${argDef.type.join(
-            ", ",
-          )}], but got "${typeof argValue}".`,
-        );
-      }
-    }
-
     // Add the argument to the SQL query
-    if (argDef.type.includes("field")) {
+    if (argType === "field") {
       // If the argument type is "field", do not wrap with quotes
       sqlArgs.push(argValue);
     } else if (
@@ -752,25 +732,6 @@ export function buildSQLQueryFromInput(fields: any) {
     } else {
       // Add other types (e.g., numbers) as-is
       sqlArgs.push(argValue);
-    }
-  }
-
-  // Handle additional arguments for functions like concat_ws
-  if (
-    selectedFunction.allowAddArgAt === "n" &&
-    args.length > argsDefinition.length
-  ) {
-    for (let i = argsDefinition.length; i < args.length; i++) {
-      const extraArg = args[i]?.value;
-      if (
-        typeof extraArg === "string" &&
-        !extraArg.startsWith("'") &&
-        !extraArg.endsWith("'")
-      ) {
-        sqlArgs.push(`'${extraArg}'`);
-      } else {
-        sqlArgs.push(extraArg);
-      }
     }
   }
 

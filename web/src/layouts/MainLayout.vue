@@ -56,7 +56,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
           <img
             v-if="store.state.zoConfig.custom_hide_self_logo == false"
             class="appLogo"
-            loading="lazy"
             :src="
               store?.state?.theme == 'dark'
                 ? getImageURL('images/common/open_observe_logo_2.svg')
@@ -68,7 +67,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
         <div v-else class="flex relative-position q-mr-sm">
           <img
             class="appLogo"
-            loading="lazy"
             :src="getImageURL('images/common/open_observe_logo.svg')"
             @click="goToHome"
           />

@@ -585,8 +585,22 @@ export default defineComponent({
           filterQuery.value = ''; 
         }
         if (searchQuery.value) { 
-          const searchResults = await fetchSearchResults.execute(searchQuery.value); 
-          filteredResults.value = toRaw(searchResults); 
+          // const searchResults = await fetchSearchResults.execute(searchQuery.value); 
+          // filteredResults.value = toRaw(searchResults); 
+          try {
+            // Cancel any in-flight search
+            if (currentSearchAbortController) {
+              currentSearchAbortController.abort();
+            }
+            currentSearchAbortController = new AbortController();
+              const searchResults = await fetchSearchResults.execute(searchQuery.value); 
+              filteredResults.value = toRaw(searchResults); 
+          } catch (error) {
+            if (!error.name === 'AbortError') {
+              filteredResults.value = [];
+              // Handle error state
+            }
+          }
         } else {
           // If no search query, clear filtered results
           filteredResults.value = []; 

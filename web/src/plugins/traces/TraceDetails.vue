@@ -149,6 +149,41 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
           </div>
         </div>
         <div class="flex items-center">
+          <div class="flex justify-center items-center tw-border tw-pl-2 tw-rounded-sm tw-border-gray-300">
+              <q-input
+              v-model="searchQuery"
+              placeholder="Search..."
+              @update:model-value="handleSearchQueryChange" 
+              dense
+              borderless
+              clearable
+              debounce="500"
+              class="q-mr-sm custom-height flex items-center"
+            />
+            <p class="tw-mr-1" v-if="searchResults"><small><span>{{currentIndex+1}}</span> of <span>{{searchResults}}</span></small></p>
+            <q-btn 
+              v-if="searchResults" 
+              :disable="currentIndex === 0" 
+              class="tw-mr-1 download-logs-btn flex" 
+              flat 
+              round
+              title="Previous"
+              icon="keyboard_arrow_up"
+              @click="prevMatch"
+              dense
+              :size="`sm`"
+              />
+            <q-btn 
+              v-if="searchResults"
+              :disable="currentIndex+1 === searchResults"
+              class="tw-mr-1 download-logs-btn flex"
+              flat round title= "Next" 
+              icon="keyboard_arrow_down" 
+              @click="nextMatch" 
+              dense
+              :size="`sm`"
+            />
+            </div>
           <q-btn
             data-test="logs-search-bar-share-link-btn"
             class="q-mr-sm download-logs-btn"
@@ -238,8 +273,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
             class="trace-tree-container"
             :class="store.state.theme === 'dark' ? 'bg-dark' : 'bg-white'"
           >
-            <div class="q-pt-sm position-relative">
-              <div
+            <div class="position-relative">
+              <!-- <div
                 :style="{
                   width: '1px',
                   left: `${leftWidth}px`,
@@ -252,7 +287,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                 }"
                 class="absolute full-height"
                 @mousedown="startResize"
-              />
+              /> -->
               <trace-tree
                 :collapseMapping="collapseMapping"
                 :spans="spanPositionList"
@@ -260,8 +295,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                 :spanDimensions="spanDimensions"
                 :spanMap="spanMap"
                 :leftWidth="leftWidth"
+                ref="traceTreeRef" 
+                :search-query="searchQuery"
+                :spanList="spanList"
                 @toggle-collapse="toggleSpanCollapse"
                 @select-span="updateSelectedSpan"
+                @update-current-index="handleIndexUpdate"
+                @search-result="handleSearchResult"
               />
             </div>
           </div>
@@ -351,7 +391,8 @@ export default defineComponent({
       () => import("@/components/dashboards/panels/ChartRenderer.vue")
     ),
   },
-  emits: ["shareLink"],
+  
+  emits: ["shareLink","searchQueryUpdated"],
   setup(props, { emit }) {
     const traceTree: any = ref([]);
     const spanMap: any = ref({});
@@ -429,6 +470,33 @@ export default defineComponent({
     );
 
     const showTraceDetails = ref(false);
+    const currentIndex = ref(0);
+    const searchResults = ref(0);
+    const searchQuery = ref('');
+
+    const handleSearchQueryChange = (value:any) => {
+      searchQuery.value = value; 
+      
+    };
+    const traceTreeRef = ref<InstanceType<typeof TraceTree> | null>(null);
+    const nextMatch = () => {
+      if (traceTreeRef.value) {
+        traceTreeRef.value.nextMatch();
+      }
+    };
+    const prevMatch = () => {
+      if (traceTreeRef.value) {
+        traceTreeRef.value.prevMatch();
+      }
+    };
+    const handleIndexUpdate = (newIndex:any) => {
+      currentIndex.value = newIndex; // Update the parent's state with the child's emitted value
+    };
+    const handleSearchResult = (newIndex:any) => {
+      searchResults.value = newIndex; // Update the parent's state with the child's emitted value
+    };
+    // Watch for changes in searchQuery
+    
 
     // Disabled for now
     // onActivated(() => {
@@ -642,6 +710,7 @@ export default defineComponent({
             return;
           }
           searchObj.data.traceDetails.spanList = res.data?.hits || [];
+          console.log(res.data?.hits)
           buildTracesTree();
         })
         .finally(() => {
@@ -1145,6 +1214,15 @@ export default defineComponent({
       routeToTracesList,
       openTraceLink,
       convertTimeFromNsToMs,
+      searchQuery,
+      handleSearchQueryChange,
+      traceTreeRef,
+      nextMatch,
+      prevMatch,
+      currentIndex,
+      handleIndexUpdate,
+      handleSearchResult,
+      searchResults
     };
   },
 });
@@ -1312,4 +1390,13 @@ $traceChartCollapseHeight: 42px;
     }
   }
 }
+.custom-height {
+  height: 34px;
+}
+
+.custom-height .q-field__control,.custom-height .q-field__append {
+  height: 100%; /* Ensures the input control fills the container height */
+  line-height: 36px; /* Vertically centers the text inside */
+}
+
 </style>

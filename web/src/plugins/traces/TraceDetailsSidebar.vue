@@ -211,10 +211,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
             class="pointer"
           >
             <q-td
-              v-for="column in eventColumns"
+              v-for="(column,columnIndex) in eventColumns"
               :key="index + '-' + column.name"
               class="field_list"
               style="cursor: pointer"
+              :style="getSecondTdWidth(columnIndex)"
             >
               <div class="flex row items-center no-wrap">
                 <q-btn
@@ -414,6 +415,7 @@ import { computed } from "vue";
 import { formatTimeWithSuffix, convertTimeFromNsToMs } from "@/utils/zincutils";
 import useTraces from "@/composables/useTraces";
 import { useRouter } from "vue-router";
+import { onMounted } from "vue";
 
 export default defineComponent({
   name: "TraceDetailsSidebar",
@@ -496,7 +498,35 @@ export default defineComponent({
         sortable: true,
       },
     ]);
+    const secondTdWidth = ref<number | null>(null);
+      // Function to calculate width dynamically
+    const getSecondTdWidth = (columnIndex: number) => {
+      if (columnIndex === 1) {
+        const tableElement = document.querySelector('.q-virtual-scroll') as HTMLElement | null;
+        const tableWidth = tableElement?.offsetWidth || 0;
 
+        const headersWidth = eventColumns.value
+          .slice(0, columnIndex)
+          .reduce((acc, col) => {
+            const headerElement = document.querySelector(`[data-test="trace-events-table-th-${col.label}"]`) as HTMLElement | null;
+            const colWidth = headerElement?.offsetWidth || 0;
+            return acc + colWidth;
+          }, 0);
+
+        secondTdWidth.value = tableWidth - headersWidth;
+      }
+      return secondTdWidth.value
+        ? `width: ${secondTdWidth.value}px; white-space: normal; word-break: break-word;`
+        : '';
+
+    };
+    // Recalculate width when component is mounted or updated
+    onMounted(() => {
+      getSecondTdWidth(1);
+    });
+    watch(() => eventColumns, () => {
+      getSecondTdWidth(1);
+    });
     const exceptionEventColumns = ref([
       {
         name: "@timestamp",
@@ -750,6 +780,8 @@ export default defineComponent({
       openReferenceTrace,
       spanLinks,
       linkColumns,
+      secondTdWidth,
+      getSecondTdWidth
     };
   },
 });

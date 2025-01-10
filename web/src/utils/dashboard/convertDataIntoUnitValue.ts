@@ -688,7 +688,7 @@ export const validateSQLPanelFields = (
   }
 };
 
-export function buildSQLQueryFromInput(fields: any) {
+export function buildSQLQueryFromInput(fields: any): string {
   // Extract functionName and args from the input
   const { functionName, args } = fields;
 
@@ -722,16 +722,28 @@ export function buildSQLQueryFromInput(fields: any) {
     if (argType === "field") {
       // If the argument type is "field", do not wrap with quotes
       sqlArgs.push(argValue);
-    } else if (
-      typeof argValue === "string" &&
-      !argValue.startsWith("'") &&
-      !argValue.endsWith("'")
-    ) {
+    } else if (argType === "string" || argType === "histogramInterval") {
       // Wrap strings in quotes if they are not already wrapped
-      sqlArgs.push(`'${argValue}'`);
-    } else {
-      // Add other types (e.g., numbers) as-is
+      if (
+        typeof argValue === "string" &&
+        !argValue.startsWith("'") &&
+        !argValue.endsWith("'")
+      ) {
+        sqlArgs.push(`'${argValue}'`);
+      } else {
+        sqlArgs.push(argValue);
+      }
+    } else if (argType === "number") {
+      // Add numbers as-is
       sqlArgs.push(argValue);
+    } else if (argType === "function") {
+      // Recursively build the SQL query for the nested function
+      const nestedFunctionQuery = buildSQLQueryFromInput(argValue);
+      sqlArgs.push(nestedFunctionQuery);
+    } else {
+      throw new Error(
+        `Unsupported argument type "${argType}" for argument at position ${i + 1}.`,
+      );
     }
   }
 

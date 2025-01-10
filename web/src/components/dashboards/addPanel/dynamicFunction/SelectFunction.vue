@@ -4,7 +4,7 @@
       v-model="fields.functionName"
       label="Select Function"
       :options="filteredFunctions"
-      data-test="dashboard-y-item-dropdown"
+      data-test="dashboard-function-dropdown"
       input-debounce="0"
       behavior="menu"
       use-input
@@ -182,7 +182,7 @@ export default {
     console.log("fields", fields.value);
 
     watch(
-      () => props.modelValue,
+      () => fields.value,
       (value) => {
         emit("update:modelValue", value);
       },
@@ -359,7 +359,7 @@ export default {
             // need to consider `min` config for each arg
             Array.from({ length: arg.min ?? 1 }).map(() => ({
               type: arg.type[0],
-              value: "",
+              value: arg?.defaultValue,
             })),
           );
         }
@@ -367,8 +367,23 @@ export default {
     );
 
     const onArgTypeChange = (arg: any) => {
-      // reset value
-      arg.value = "";
+      if (arg.type === "field") {
+        arg.value = "";
+      } else if (arg.type === "string") {
+        arg.value = "";
+      } else if (arg.type === "number") {
+        arg.value = 0;
+      } else if (arg.type === "boolean") {
+        arg.value = false;
+      } else if (arg.type === "function") {
+        arg.value = {
+          functionName: null,
+          args: [],
+          value: "",
+        };
+      } else if (arg.type === "histogramInterval") {
+        arg.value = null;
+      }
     };
 
     return {

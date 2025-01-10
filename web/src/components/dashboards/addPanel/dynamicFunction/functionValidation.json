@@ -2,7 +2,15 @@
     {
         "functionName": null,
         "functionLabel": "None",
-        "args": []
+        "args": [
+            {
+                "type": [
+                    "field",
+                    "function"
+                ],
+                "required": true
+            }
+        ]
     },
     {
         "functionName": "histogram",
@@ -20,6 +28,7 @@
                     "histogramInterval",
                     "function"
                 ],
+                "defaultValue": null,
                 "required": true
             }
         ]
@@ -438,13 +447,14 @@
         ]
     },
     {
-        "functionName": "concat_ws",
-        "functionLabel": "concat_ws",
+        "functionName": "concat",
+        "functionLabel": "concat",
         "args": [
             {
                 "type": [
                     "field",
-                    "string"
+                    "string",
+                    "function"
                 ],
                 "required": true,
                 "min": 2

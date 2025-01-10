@@ -125,7 +125,7 @@ export default defineComponent({
 
     const histogramIntervalModel: any = ref(
       histogramIntervalOptions.find(
-        (v: any) => v.value == props.modelValue,
+        (v: any) => v.value == (props.modelValue ?? null),
       ) ?? { label: "Auto", value: null },
     );
 

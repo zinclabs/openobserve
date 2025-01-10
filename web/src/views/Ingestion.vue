@@ -29,7 +29,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
         padding="sm lg"
         color="secondary"
         no-caps
-        icon="lock_reset"
         :label="t(`ingestion.resetRUMTokenLabel`)"
         @click="showRUMUpdateDialogFn"
       />
@@ -42,7 +41,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
         padding="sm lg"
         color="secondary"
         no-caps
-        icon="lock_reset"
         :label="t(`ingestion.generateRUMTokenLabel`)"
         @click="generateRUMToken"
       />
@@ -52,7 +50,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
         padding="sm lg"
         color="secondary"
         no-caps
-        icon="lock_reset"
         :label="t(`ingestion.resetTokenBtnLabel`)"
         @click="showUpdateDialogFn"
       />

@@ -1443,12 +1443,7 @@ export default defineComponent({
       ) {
         return field?.column;
       }
-      if (field?.functionName) {
-        return buildSQLQueryFromInput(field);
-      } else {
-        // HERE NEED CHANGES
-        return field?.column;
-      }
+      return buildSQLQueryFromInput(field);
     };
 
     const xLabel = computed(() => {

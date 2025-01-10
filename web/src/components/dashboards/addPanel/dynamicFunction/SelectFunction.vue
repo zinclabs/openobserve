@@ -149,6 +149,7 @@ import functionValidation from "./functionValidation.json";
 import useDashboardPanelData from "@/composables/useDashboardPanel";
 import { useSelectAutoComplete } from "@/composables/useSelectAutocomplete";
 import HistogramIntervalDropDown from "../HistogramIntervalDropDown.vue";
+import { addMissingArgs } from "@/utils/dashboard/convertDataIntoUnitValue";
 
 export default {
   name: "SelectFunction",
@@ -177,14 +178,15 @@ export default {
       ),
     );
 
-    const fields = ref(props.modelValue);
-
-    console.log("fields", fields.value);
+    const fields = ref(addMissingArgs(props.modelValue));
 
     watch(
       () => fields.value,
-      (value) => {
-        emit("update:modelValue", value);
+      () => {
+        emit("update:modelValue", fields.value);
+      },
+      {
+        deep: true,
       },
     );
 

@@ -2,6 +2,7 @@
   <div style="width: 500px">
     <q-tabs
       v-model="fields.type"
+      @update:modelValue="onFieldTypeChange"
       dense
       class="text-grey"
       active-color="primary"
@@ -53,14 +54,26 @@ export default {
     const fields = ref(props.modelValue);
 
     watch(
-      () => props.modelValue,
+      () => fields.value,
       (value) => {
         emit("update:modelValue", value);
       },
+      { deep: true },
     );
+
+    const onFieldTypeChange = () => {
+      // reset fields object
+      if (fields.value.type === "build") {
+        fields.value.rawQuery = "";
+      } else {
+        fields.value.functionName = null;
+        fields.value.args = [];
+      }
+    };
 
     return {
       fields,
+      onFieldTypeChange,
     };
   },
 };

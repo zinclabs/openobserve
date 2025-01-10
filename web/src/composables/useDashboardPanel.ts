@@ -2260,41 +2260,42 @@ const useDashboardPanelData = (pageKey: string = "dashboard") => {
       let selector = "";
 
       // TODO: add aggregator
-      if (field?.functionName) {
-        // switch (field?.functionName) {
-        //   case "count-distinct":
-        //     selector += `count(distinct(${field?.column}))`;
-        //     break;
-        //   case "p50":
-        //     selector += `approx_percentile_cont(${field?.column}, 0.5)`;
-        //     break;
-        //   case "p90":
-        //     selector += `approx_percentile_cont(${field?.column}, 0.9)`;
-        //     break;
-        //   case "p95":
-        //     selector += `approx_percentile_cont(${field?.column}, 0.95)`;
-        //     break;
-        //   case "p99":
-        //     selector += `approx_percentile_cont(${field?.column}, 0.99)`;
-        //     break;
-        //   case "histogram": {
-        //     // if interval is not null, then use it
-        //     if (field?.args && field?.args?.length && field?.args[0].value) {
-        //       selector += `${field?.functionName}(${field?.column}, '${field?.args[0]?.value}')`;
-        //     } else {
-        //       selector += `${field?.functionName}(${field?.column})`;
-        //     }
-        //     break;
-        //   }
-        //   default:
-        //     selector += `${field?.functionName}(${field?.column})`;
-        //     break;
-        // }
+      // if (field?.functionName) {
+      // switch (field?.functionName) {
+      //   case "count-distinct":
+      //     selector += `count(distinct(${field?.column}))`;
+      //     break;
+      //   case "p50":
+      //     selector += `approx_percentile_cont(${field?.column}, 0.5)`;
+      //     break;
+      //   case "p90":
+      //     selector += `approx_percentile_cont(${field?.column}, 0.9)`;
+      //     break;
+      //   case "p95":
+      //     selector += `approx_percentile_cont(${field?.column}, 0.95)`;
+      //     break;
+      //   case "p99":
+      //     selector += `approx_percentile_cont(${field?.column}, 0.99)`;
+      //     break;
+      //   case "histogram": {
+      //     // if interval is not null, then use it
+      //     if (field?.args && field?.args?.length && field?.args[0].value) {
+      //       selector += `${field?.functionName}(${field?.column}, '${field?.args[0]?.value}')`;
+      //     } else {
+      //       selector += `${field?.functionName}(${field?.column})`;
+      //     }
+      //     break;
+      //   }
+      //   default:
+      //     selector += `${field?.functionName}(${field?.column})`;
+      //     break;
+      // }
 
-        selector += buildSQLQueryFromInput(field);
-      } else {
-        selector += `${field?.column}`;
-      }
+      selector += buildSQLQueryFromInput(field);
+      // } else {
+      //   selector += `${field?.column}`;
+      // }
+
       selector += ` as "${field?.alias}"${i == fields.length - 1 ? " " : ", "}`;
       return selector;
     });

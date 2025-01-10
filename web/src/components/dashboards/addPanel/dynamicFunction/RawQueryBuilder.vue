@@ -51,9 +51,12 @@ export default {
     const fields = ref(props.modelValue);
 
     watch(
-      () => props.modelValue,
+      () => fields.value,
       (value: any) => {
         emit("update:modelValue", value);
+      },
+      {
+        deep: true,
       },
     );
 

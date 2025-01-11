@@ -963,6 +963,7 @@ async fn handle_derived_stream_triggers(
                                         StreamType::Logs
                                             | StreamType::EnrichmentTables
                                             | StreamType::Metrics
+                                            | StreamType::Traces
                                     ) {
                                         let (_, results): (Vec<_>, Vec<_>) =
                                             stream_pl_results.into_iter().unzip();

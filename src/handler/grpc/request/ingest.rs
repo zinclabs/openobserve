@@ -75,6 +75,25 @@ impl Ingest for Ingester {
                         .map_err(|e| anyhow::anyhow!("error in ingesting metrics {}", e))
                 }
             }
+            StreamType::Traces => {
+                let log_ingestion_type: IngestionType = req
+                    .ingestion_type
+                    .unwrap_or_default()
+                    .try_into()
+                    .unwrap_or(IngestionType::Multi); // multi is just place holder
+                if log_ingestion_type != IngestionType::Json {
+                    Err(anyhow::anyhow!(
+                        "Internal gPRC trace ingestion only supports json type data, got {:?}",
+                        log_ingestion_type
+                    ))
+                } else {
+                    let data = bytes::Bytes::from(in_data.data);
+                    crate::service::traces::otlp_json(&org_id, data, Some(&stream_name))
+                        .await
+                        .map(|_| ()) // we don't care about success response
+                        .map_err(|e| anyhow::anyhow!("error in ingesting traces {}", e))
+                }
+            }
             StreamType::EnrichmentTables => {
                 let json_records: Vec<json::Map<String, json::Value>> =
                     json::from_slice(&in_data.data).unwrap_or({

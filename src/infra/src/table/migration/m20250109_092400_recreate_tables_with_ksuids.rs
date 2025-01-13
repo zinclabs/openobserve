@@ -44,7 +44,7 @@
 use itertools::Itertools;
 use sea_orm::{
     sea_query::{Table, TableCreateStatement},
-    DeriveIden, EntityTrait, IntoActiveModel, PaginatorTrait, Set, TransactionTrait,
+    DeriveIden, EntityTrait, IntoActiveModel, PaginatorTrait, QueryOrder, Set, TransactionTrait,
 };
 use sea_orm_migration::prelude::*;
 
@@ -283,6 +283,7 @@ mod legacy_alerts {
 }
 
 mod new_folders {
+
     use super::*;
 
     const FOLDERS_ORG_IDX: &str = "folders_org_idx_2";
@@ -352,8 +353,9 @@ mod new_folders {
     /// Select each record from the `legacy_folders` table and use it to
     /// create a new record in the new `folders` table.
     pub async fn populate<C: ConnectionTrait>(conn: &C) -> Result<(), DbErr> {
-        let mut legacy_folder_pages =
-            legacy_entities::legacy_folders::Entity::find().paginate(conn, 100);
+        let mut legacy_folder_pages = legacy_entities::legacy_folders::Entity::find()
+            .order_by_asc(legacy_entities::legacy_folders::Column::Id)
+            .paginate(conn, 100);
         while let Some(legacy_folders) = legacy_folder_pages.fetch_and_next().await? {
             let conversions_rslt: Result<Vec<_>, _> = legacy_folders
                 .into_iter()
@@ -372,6 +374,8 @@ mod new_folders {
 }
 
 mod new_dashboards {
+    use sea_orm::QueryOrder;
+
     use super::*;
 
     const DASHBOARDS_FOLDERS_FK: &str = "dashboards_folders_fk_2";
@@ -449,6 +453,7 @@ mod new_dashboards {
     pub async fn populate<C: ConnectionTrait>(conn: &C) -> Result<(), DbErr> {
         let mut legacy_dashboard_pages = legacy_entities::legacy_dashboards::Entity::find()
             .find_also_related(legacy_entities::legacy_folders::Entity)
+            .order_by_asc(legacy_entities::legacy_dashboards::Column::Id)
             .paginate(conn, 100);
         while let Some(legacy_dashboards) = legacy_dashboard_pages.fetch_and_next().await? {
             let conversions_rslt: Result<Vec<_>, _> = legacy_dashboards

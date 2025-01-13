@@ -33,34 +33,39 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
     >
       <div class="q-table__title">{{ t("dashboard.header") }}</div>
 
-      <div class="q-ml-auto">
-        <q-toggle
-          data-test="dashboard-search-across-folders-toggle"
-          v-model="searchAcrossFolders"
+      
+      <div class="flex q-ml-auto  tw-ps-2">
+      <!-- :class="store.state.theme === 'dark' ? 'bg-grey-9' : 'bg-grey-3'" -->
+        <q-input
+          v-model="dynamicQueryModel"   
+          dense
+          filled
+          borderless
+          :placeholder="searchAcrossFolders ? t('dashboard.searchAcross') : t('dashboard.search')"
+          data-test="dashboard-search"
+          :clearable="searchAcrossFolders"
+          @clear="clearSearchHistory"
         >
-      </q-toggle>
-        <q-tooltip class="q-mt-lg" anchor="top middle" self="bottom middle">
-          {{ searchAcrossFolders
-            ? t("dashboard.searchSelf")
-            : t("dashboard.searchAll") }}
-        </q-tooltip>
-
+          <template #prepend>
+            <q-icon name="search" />
+          </template>
+        </q-input>
+        
       </div>
-
-      <q-input
-        v-model="dynamicQueryModel"   
-        filled
-        dense
-        :placeholder="searchAcrossFolders ? t('dashboard.searchAcross') : t('dashboard.search')"
-        data-test="dashboard-search"
-        :clearable="searchAcrossFolders"
-        @clear="clearSearchHistory"
-      >
-        <template #prepend>
-          <q-icon name="search" />
-        </template>
-      </q-input>
-
+      <div>
+          <q-toggle
+            data-test="dashboard-search-across-folders-toggle"
+            v-model="searchAcrossFolders"
+            label="All Folders"
+            class="tw-mr-3"
+          >
+        </q-toggle>
+          <q-tooltip class="q-mt-lg" anchor="top middle" self="bottom middle">
+            {{ searchAcrossFolders
+              ? t("dashboard.searchSelf")
+              : t("dashboard.searchAll") }}
+          </q-tooltip>
+        </div>
       <q-btn
         class="q-ml-md text-bold"
         padding="sm lg"
@@ -573,8 +578,46 @@ export default defineComponent({
     });
 
     watch(searchAcrossFolders, async (newVal) => {
-      if(filterQuery.value != "") filterQuery.value = ""; 
-      if(searchQuery.value != "") searchQuery.value = "";
+      if (newVal) {
+        // If searching across folders, use searchQuery 
+        if (filterQuery.value) { 
+          searchQuery.value = filterQuery.value; 
+          filterQuery.value = ''; 
+        }
+        if (searchQuery.value) { 
+          // const searchResults = await fetchSearchResults.execute(searchQuery.value); 
+          // filteredResults.value = toRaw(searchResults); 
+          try {
+            // Cancel any in-flight search
+            if (currentSearchAbortController) {
+              currentSearchAbortController.abort();
+            }
+            currentSearchAbortController = new AbortController();
+              const searchResults = await fetchSearchResults.execute(searchQuery.value); 
+              filteredResults.value = toRaw(searchResults); 
+          } catch (error) {
+            if (!error.name === 'AbortError') {
+              filteredResults.value = [];
+              // Handle error state
+            }
+          }
+        } else {
+          // If no search query, clear filtered results
+          filteredResults.value = []; 
+        }
+      } else {
+        // If searching within the current folder, use filterQuery
+        if (searchQuery.value) {
+          filterQuery.value = searchQuery.value; 
+          searchQuery.value = ''; 
+        }
+        if (filterQuery.value) { 
+          await getDashboards(); 
+        } else {
+          // If no search query, clear filtered results
+          filteredResults.value = []; 
+        }
+      }
     });
 
     // Cleanup debounced function 

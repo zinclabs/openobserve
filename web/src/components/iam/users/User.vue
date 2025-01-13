@@ -105,7 +105,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
               padding="sm lg"
               color="secondary"
               no-caps
-              icon="add"
               dense
               :label="t(`user.add`)"
               @click="addRoutePush({})"
@@ -547,13 +546,17 @@ export default defineComponent({
       }
     };
 
-    const updateMember = (data: any) => {
+    const updateMember = async (data: any) => {
       if (data.data != undefined) {
-        usersState.users.forEach((member: any, key: number) => {
-          if (member.org_member_id == data.data.id) {
-            usersState.users[key].role = data.data.role;
-          }
-        });
+        try {
+          await getOrgMembers();
+        } catch (error) {
+          $q.notify({
+            color: "negative",
+            message: "Failed to refresh user list",
+          });
+        }
+        updateUserActions();
         showUpdateUserDialog.value = false;
       }
     };
@@ -568,49 +571,15 @@ export default defineComponent({
       });
     };
 
-    const addMember = (res: any, data: any, operationType: string) => {
+    const addMember = async (res: any, data: any, operationType: string) => {
       showAddUserDialog.value = false;
       if (res.code == 200) {
         $q.notify({
           color: "positive",
           message: "User added successfully.",
         });
-
-        if (operationType == "created") {
-          if (
-            store.state.selectedOrganization.identifier == data.organization
-          ) {
-            const user = {
-              "#":
-                usersState.users.length + 1 <= 9
-                  ? `0${usersState.users.length + 1}`
-                  : usersState.users.length + 1,
-              email: data.email,
-              first_name: data.first_name,
-              last_name: data.last_name,
-              role: data.role,
-              isExternal: false,
-              enableEdit: false,
-              enableChangeRole: false,
-              enableDelete: false,
-            };
-
-            user["enableEdit"] = shouldAllowEdit(user);
-            user["enableChangeRole"] = shouldAllowChangeRole(user);
-            user["enableDelete"] = shouldAllowDelete(user);
-
-            usersState.users.push(user);
-          }
-        } else {
-          usersState.users.forEach((member: any, key: number) => {
-            if (member.email == data.email) {
-              usersState.users[key] = {
-                ...usersState.users[key],
-                ...data,
-              };
-            }
-          });
-        }
+        await getOrgMembers();
+        updateUserActions();
       }
       router.replace({
         name: "users",

@@ -57,7 +57,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
             padding="sm lg"
             color="secondary"
             no-caps
-            icon="add"
             dense
             :label="t(`organization.add`)"
             @click="addOrganization"

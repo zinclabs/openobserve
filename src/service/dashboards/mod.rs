@@ -34,6 +34,7 @@ use crate::common::{
     utils::auth::{remove_ownership, set_ownership},
 };
 pub mod reports;
+pub mod timed_annotations;
 
 #[cfg(feature = "enterprise")]
 use o2_enterprise::enterprise::{

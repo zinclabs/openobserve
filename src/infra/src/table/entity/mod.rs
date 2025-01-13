@@ -3,6 +3,7 @@
 pub mod prelude;
 
 pub mod alerts;
+pub mod annotation_panels;
 pub mod dashboards;
 pub mod distinct_value_fields;
 pub mod folders;
@@ -10,3 +11,4 @@ pub mod search_job_partitions;
 pub mod search_job_results;
 pub mod search_jobs;
 pub mod search_queue;
+pub mod timed_annotations;

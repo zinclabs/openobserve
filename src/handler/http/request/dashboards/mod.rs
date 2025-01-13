@@ -28,6 +28,7 @@ use crate::{
 };
 
 pub mod reports;
+pub mod timed_annotations;
 
 impl From<DashboardError> for HttpResponse {
     fn from(value: DashboardError) -> Self {

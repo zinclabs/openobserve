@@ -32,6 +32,7 @@ mod migration;
 pub mod search_job;
 pub mod search_queue;
 pub mod short_urls;
+pub mod timed_annotations;
 
 pub async fn init() -> Result<(), anyhow::Error> {
     distinct_values::init().await?;

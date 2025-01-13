@@ -33,6 +33,8 @@ use config::{
 use infra::errors;
 use tracing::{Instrument, Span};
 
+#[cfg(feature = "enterprise")]
+use crate::service::search::sql::get_cipher_key_names;
 use crate::{
     common::{
         meta::{self, http::HttpResponse as MetaHttpResponse},
@@ -267,7 +269,51 @@ pub async fn search_multi(
                     return Ok(MetaHttpResponse::forbidden("Unauthorized Access"));
                 }
             }
+
+            let keys_used = match get_cipher_key_names(&req.query.sql) {
+                Ok(v) => v,
+                Err(e) => {
+                    return Ok(HttpResponse::InternalServerError().json(
+                        meta::http::HttpResponse::error(
+                            StatusCode::INTERNAL_SERVER_ERROR.into(),
+                            e.to_string(),
+                        ),
+                    ));
+                }
+            };
             // Check permissions on stream ends
+            // Check permissions on keys
+            for key in keys_used {
+                if !is_root_user(user_id) {
+                    let user: meta::user::User =
+                        USERS.get(&format!("{org_id}/{}", user_id)).unwrap().clone();
+
+                    if !crate::handler::http::auth::validator::check_permissions(
+                        user_id,
+                        AuthExtractor {
+                            auth: "".to_string(),
+                            method: "GET".to_string(),
+                            o2_type: format!(
+                                "{}:{}",
+                                OFGA_MODELS
+                                    .get("cipher_keys")
+                                    .map_or("cipher_keys", |model| model.key),
+                                key
+                            ),
+                            org_id: org_id.clone(),
+                            bypass_check: false,
+                            parent_id: "".to_string(),
+                        },
+                        user.role,
+                        user.is_external,
+                    )
+                    .await
+                    {
+                        return Ok(MetaHttpResponse::forbidden("Unauthorized Access to key"));
+                    }
+                    // Check permissions on key ends
+                }
+            }
         }
 
         if !per_query_resp {

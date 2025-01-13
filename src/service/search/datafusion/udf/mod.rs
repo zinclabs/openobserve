@@ -22,6 +22,8 @@ pub(crate) mod arrjoin_udf;
 pub(crate) mod arrsort_udf;
 pub(crate) mod arrzip_udf;
 pub(crate) mod cast_to_arr_udf;
+#[cfg(feature = "enterprise")]
+pub(crate) mod cipher_udf;
 pub(crate) mod date_format_udf;
 pub(crate) mod fuzzy_match_udf;
 pub(crate) mod histogram_udf;

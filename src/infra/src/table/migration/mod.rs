@@ -30,6 +30,7 @@ mod m20241217_155000_populate_alerts_table;
 mod m20241222_085111_search_jobs;
 mod m20241222_085135_search_job_partitions;
 mod m20241222_085148_search_job_results;
+mod m20241224_120000_create_cipher_table;
 mod m20250109_092400_recreate_tables_with_ksuids;
 
 pub struct Migrator;
@@ -54,6 +55,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20241222_085135_search_job_partitions::Migration),
             Box::new(m20241222_085148_search_job_results::Migration),
             Box::new(m20250109_092400_recreate_tables_with_ksuids::Migration),
+            Box::new(m20241224_120000_create_cipher_table::Migration),
         ]
     }
 }

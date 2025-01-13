@@ -506,7 +506,7 @@ export const formatSizeFromMB = (sizeInMB: string) => {
 };
 
 export const addCommasToNumber = (number: number) => {
-  if (number === null || number === undefined) return '0';
+  if (number === null || number === undefined) return "0";
   return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 };
 
@@ -986,5 +986,23 @@ export const isWebSocketEnabled = () => {
       ?.enable_websocket_search;
   } else {
     return (window as any).use_web_socket;
+  }
+};
+export const maxLengthCharValidation = (
+  val: string = "",
+  char_length: number = 50,
+) => {
+  return (
+    (val && val.length <= char_length) ||
+    `Maximum ${char_length} characters allowed`
+  );
+};
+
+export const validateUrl = (val: string) => {
+  try {
+    const url = new URL(val); // Built-in URL constructor
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch (error) {
+    return "Please provide correct URL.";
   }
 };

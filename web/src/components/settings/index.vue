@@ -82,6 +82,19 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
             :label="t('alert_templates.header')"
             content-class="tab_content"
           />
+          <q-route-tab
+            data-test="management-cipher-key-tab"
+            name="cipher-keys"
+            :to="{
+              name: 'cipherKeys',
+              query: {
+                org_identifier: store.state.selectedOrganization.identifier,
+              },
+            }"
+            icon="key"
+            :label="t('settings.cipherKeys')"
+            content-class="tab_content"
+          />
         </q-tabs>
       </template>
 

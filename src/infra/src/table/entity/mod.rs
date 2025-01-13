@@ -3,6 +3,7 @@
 pub mod prelude;
 
 pub mod alerts;
+pub mod cipher_keys;
 pub mod dashboards;
 pub mod distinct_value_fields;
 pub mod folders;

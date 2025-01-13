@@ -50,6 +50,8 @@ use sqlparser::{
     parser::Parser,
 };
 
+#[cfg(feature = "enterprise")]
+use super::datafusion::udf::cipher_udf::{DECRYPT_UDF_NAME, ENCRYPT_UDF_NAME};
 use super::{
     datafusion::udf::match_all_udf::{
         FUZZY_MATCH_ALL_UDF_NAME, MATCH_ALL_RAW_IGNORE_CASE_UDF_NAME, MATCH_ALL_RAW_UDF_NAME,
@@ -1456,6 +1458,93 @@ fn o2_id_is_needed(schemas: &HashMap<TableReference, Arc<SchemaCache>>) -> bool 
         let stream_setting = unwrap_stream_settings(schema.schema());
         stream_setting.map_or(false, |setting| setting.store_original_data)
     })
+}
+
+#[cfg(feature = "enterprise")]
+struct ExtractKeyNamesVisitor {
+    keys: Vec<String>,
+    error: Option<Error>,
+}
+
+#[cfg(feature = "enterprise")]
+impl ExtractKeyNamesVisitor {
+    fn new() -> Self {
+        Self {
+            keys: Vec::new(),
+            error: None,
+        }
+    }
+}
+
+#[cfg(feature = "enterprise")]
+impl VisitorMut for ExtractKeyNamesVisitor {
+    type Break = ();
+
+    fn pre_visit_expr(&mut self, expr: &mut Expr) -> ControlFlow<Self::Break> {
+        if let Expr::Function(Function {
+            name: ObjectName(names),
+            args,
+            ..
+        }) = expr
+        {
+            // cipher functions will always be 1-part names
+            if names.len() != 1 {
+                return ControlFlow::Continue(());
+            }
+            let fname = names.first().unwrap();
+            if fname.value == ENCRYPT_UDF_NAME || fname.value == DECRYPT_UDF_NAME {
+                let list = match args {
+                    FunctionArguments::List(list) => list,
+                    _ => {
+                        self.error = Some(Error::Message(
+                            "invalid arguments to cipher function".to_string(),
+                        ));
+                        return ControlFlow::Continue(());
+                    }
+                };
+                if list.args.len() != 2 {
+                    self.error = Some(Error::Message(
+                        "invalid number of arguments to cipher function".to_string(),
+                    ));
+                    return ControlFlow::Continue(());
+                }
+                let arg = match &list.args[1] {
+                    FunctionArg::Named { arg, .. } => arg,
+                    FunctionArg::Unnamed(arg) => arg,
+                };
+                match arg {
+                    FunctionArgExpr::Expr(Expr::Value(
+                        sqlparser::ast::Value::SingleQuotedString(s),
+                    )) => {
+                        self.keys.push(s.to_owned());
+                    }
+                    _ => {
+                        self.error = Some(Error::Message(
+                            "key name must be a static string in cipher function".to_string(),
+                        ));
+                        return ControlFlow::Continue(());
+                    }
+                }
+            }
+        }
+        ControlFlow::Continue(())
+    }
+}
+
+#[cfg(feature = "enterprise")]
+pub fn get_cipher_key_names(sql: &str) -> Result<Vec<String>, Error> {
+    let dialect = &PostgreSqlDialect {};
+    let mut statement = Parser::parse_sql(dialect, sql)
+        .map_err(|e| Error::Message(e.to_string()))?
+        .pop()
+        .unwrap();
+    let mut visitor = ExtractKeyNamesVisitor::new();
+    statement.visit(&mut visitor);
+    if let Some(e) = visitor.error {
+        Err(e)
+    } else {
+        Ok(visitor.keys)
+    }
 }
 
 #[cfg(test)]

@@ -21,6 +21,8 @@ pub mod enrichment_table;
 #[allow(deprecated)]
 pub mod folders;
 pub mod functions;
+#[cfg(feature = "enterprise")]
+pub mod keys;
 pub mod kv;
 pub mod logs;
 pub mod metrics;

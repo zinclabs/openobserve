@@ -373,6 +373,7 @@ pub struct Config {
     pub rum: RUM,
     pub chrome: Chrome,
     pub tokio_console: TokioConsole,
+    pub encryption: Encryption,
 }
 
 #[derive(EnvConfig)]
@@ -1523,6 +1524,14 @@ pub struct RUM {
     pub insecure_http: bool,
 }
 
+#[derive(EnvConfig)]
+pub struct Encryption {
+    #[env_config(name = "ZO_MASTER_ENCRYPTION_ALGORITHM", default = "")]
+    pub algorithm: String,
+    #[env_config(name = "ZO_MASTER_ENCRYPTION_KEY", default = "")]
+    pub master_key: String,
+}
+
 pub fn init() -> Config {
     dotenv_override().ok();
     let mut cfg = Config::init().expect("config init error");
@@ -1671,6 +1680,10 @@ pub fn init() -> Config {
     // check sns config
     if let Err(e) = check_sns_config(&mut cfg) {
         panic!("sns config error: {e}");
+    }
+
+    if let Err(e) = check_encryption_config(&mut cfg) {
+        panic!("encryption config error: {e}");
     }
 
     cfg
@@ -2220,6 +2233,15 @@ pub fn get_cluster_name() -> String {
     } else {
         INSTANCE_ID.get("instance_id").unwrap().to_string()
     }
+}
+
+fn check_encryption_config(cfg: &mut Config) -> Result<(), anyhow::Error> {
+    if !cfg.encryption.algorithm.is_empty() && cfg.encryption.algorithm != "aes-256-siv" {
+        return Err(anyhow::anyhow!(
+            "invalid algorithm specified, only [aes-256-siv] is supported"
+        ));
+    }
+    Ok(())
 }
 
 #[cfg(test)]

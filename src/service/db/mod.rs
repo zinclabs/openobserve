@@ -30,6 +30,8 @@ pub mod enrichment_table;
 pub mod file_list;
 pub mod functions;
 pub mod instance;
+#[cfg(feature = "enterprise")]
+pub mod keys;
 pub mod kv;
 pub mod metrics;
 #[cfg(feature = "enterprise")]

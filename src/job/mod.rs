@@ -28,6 +28,8 @@ use crate::{
 };
 
 mod alert_manager;
+#[cfg(feature = "enterprise")]
+mod cipher;
 mod compactor;
 pub(crate) mod files;
 mod flatten_compactor;
@@ -202,6 +204,11 @@ pub async fn init() -> Result<(), anyhow::Error> {
 
     #[cfg(feature = "enterprise")]
     o2_enterprise::enterprise::openfga::authorizer::authz::init_open_fga().await;
+
+    #[cfg(feature = "enterprise")]
+    tokio::task::spawn(async move { cipher::run().await });
+    #[cfg(feature = "enterprise")]
+    tokio::task::spawn(async move { db::keys::watch().await });
 
     // RBAC model
     #[cfg(feature = "enterprise")]

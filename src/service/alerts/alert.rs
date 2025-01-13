@@ -816,6 +816,7 @@ async fn send_notification(
         DestinationType::Http => send_http_notification(dest, msg.clone()).await,
         DestinationType::Email => send_email_notification(&email_subject, dest, msg).await,
         DestinationType::Sns => send_sns_notification(&alert.name, dest, msg).await,
+        DestinationType::HttpNoTemplate => Ok("".to_string()),
     }
 }
 

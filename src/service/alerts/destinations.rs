@@ -86,6 +86,7 @@ pub async fn save(
                 ));
             }
         }
+        _ => {}
     }
 
     if !name.is_empty() {
@@ -114,9 +115,12 @@ pub async fn save(
         ));
     }
 
-    if db::alerts::templates::get(org_id, &destination.template)
-        .await
-        .is_err()
+    if destination
+        .destination_type
+        .ne(&DestinationType::HttpNoTemplate)
+        && db::alerts::templates::get(org_id, &destination.template)
+            .await
+            .is_err()
     {
         return Err((
             http::StatusCode::BAD_REQUEST,

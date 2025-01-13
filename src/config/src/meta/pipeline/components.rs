@@ -13,13 +13,23 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+use dashmap::DashMap;
+use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-use crate::meta::{
-    alerts::{QueryCondition, TriggerCondition},
-    stream::{RoutingCondition, StreamParams, StreamType},
+use crate::{
+    ider,
+    meta::{
+        alerts::{QueryCondition, TriggerCondition},
+        stream::{RoutingCondition, StreamParams, StreamType},
+    },
+    utils::{async_file, file, json, time},
+    RwHashMap,
 };
+
+pub static PIPELINES_EXTERNAL_RECORDS_FILES: Lazy<RwHashMap<i64, String>> =
+    Lazy::new(DashMap::default);
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(tag = "source_type")]
@@ -111,6 +121,7 @@ impl Edge {
 #[serde(tag = "node_type")]
 #[serde(rename_all = "snake_case")]
 pub enum NodeData {
+    Http(Vec<String>),
     Stream(StreamParams),
     Query(DerivedStream),
     Function(FunctionParams),
@@ -143,6 +154,53 @@ struct Position {
 #[serde(rename_all = "camelCase")]
 struct NodeStyle {
     background_color: Option<String>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct ExternalIngestionTask {
+    pub id: String,
+    pub pipeline_id: String,
+    pub destinations: Vec<String>,
+    pub data: Vec<json::Value>,
+    pub tried: u8,
+    pub created_at: i64,
+}
+
+impl ExternalIngestionTask {
+    pub fn new(pipeline_id: String, destinations: Vec<String>, data: Vec<json::Value>) -> Self {
+        Self {
+            id: ider::uuid(),
+            pipeline_id,
+            destinations,
+            data,
+            tried: 0,
+            created_at: time::now_micros(),
+        }
+    }
+
+    pub async fn persist_data(self) -> anyhow::Result<()> {
+        let file = format!("{}.json", self.id);
+        let record_timestamp = self.created_at;
+
+        let contents = json::to_vec(&self)?;
+
+        // Spawn a task to write the file
+        tokio::task::spawn(async move {
+            match async_file::put_file_contents(&file, &contents).await {
+                Ok(_) => {
+                    // File write done, insert the event into the global map
+                    PIPELINES_EXTERNAL_RECORDS_FILES.insert(record_timestamp, file);
+                }
+                Err(e) => {
+                    log::error!(
+                        "[PIPELINE] Failed to write external ingestion records into local disk: {}",
+                        e
+                    );
+                }
+            }
+        });
+        Ok(())
+    }
 }
 
 #[cfg(test)]

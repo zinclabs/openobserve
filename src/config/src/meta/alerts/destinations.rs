@@ -50,14 +50,13 @@ pub struct Destination {
 }
 
 #[derive(Serialize, Debug, Default, PartialEq, Eq, Deserialize, Clone, ToSchema)]
+#[serde(rename_all = "snake_case")]
 pub enum DestinationType {
     #[default]
-    #[serde(rename = "http")]
     Http,
-    #[serde(rename = "email")]
     Email,
-    #[serde(rename = "sns")]
     Sns,
+    HttpNoTemplate,
 }
 
 impl Destination {

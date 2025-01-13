@@ -100,11 +100,25 @@ const jstransform = {
     table_name: string,
     data: any,
     append: boolean,
+    useJson:boolean
   ) => {
-    return http({ headers: { "Content-Type": "multipart/form-data" } }).post(
-      `/api/${org_identifier}/enrichment_tables/${table_name}?append=${append}`,
-      data,
-    );
+    if (useJson) {
+      const jsonPayload = {
+        file_link: data, // Pass the URL as 'file_link'
+      };
+  
+      // JSON request
+      return http().post(
+        `/api/${org_identifier}/enrichment_tables/${table_name}?append=${append}`,
+        jsonPayload,
+      );
+    } else {
+      // Multipart request
+      return http({ headers: { "Content-Type": "multipart/form-data" } }).post(
+        `/api/${org_identifier}/enrichment_tables/${table_name}?append=${append}`,
+        data,
+      );
+    }
   },
   test: (org_identifier: string, data: TestFunctionPayload) => {
     return http().post(`/api/${org_identifier}/functions/test`, data);

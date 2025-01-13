@@ -34,6 +34,7 @@ pub async fn set_ofga_model(existing_meta: Option<OFGAModel>) -> Result<String, 
             Ok(existing_model.store_id)
         } else {
             let store_id = if existing_model.store_id.is_empty() {
+                log::info!("[OFGA DB] Creating new store_id, as existing store_id is empty");
                 create_open_fga_store().await.unwrap()
             } else {
                 existing_model.store_id
@@ -49,6 +50,7 @@ pub async fn set_ofga_model(existing_meta: Option<OFGAModel>) -> Result<String, 
             }
         }
     } else {
+        log::info!("[OFGA DB] Creating new store_id, as existing store_id is empty");
         let store_id = create_open_fga_store().await.unwrap();
         match write_auth_models(&meta, &store_id).await {
             Ok(_) => {

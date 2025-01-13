@@ -501,7 +501,9 @@
     "streamPipeline": "Pipelines",
     "streamRouting": "Stream Routing",
     "testFunction": "Test Function",
-    "errorDetails": "Error"
+    "errorDetails": "Error",
+    "useUrlInput":"Add File Link",
+    "fileLink":"File link"
   },
   "confirmDialog": {
     "cancel": "Cancel",

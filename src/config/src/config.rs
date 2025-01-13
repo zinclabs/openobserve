@@ -598,6 +598,8 @@ pub struct Common {
     pub data_db_dir: String,
     #[env_config(name = "ZO_DATA_CACHE_DIR", default = "")] // ./data/openobserve/cache/
     pub data_cache_dir: String,
+    #[env_config(name = "ZO_DATA_TMP_DIR", default = "")] // ./data/openobserve/tmp/
+    pub data_tmp_dir: String,
     #[env_config(name = "ZO_COLUMN_TIMESTAMP", default = "_timestamp")]
     pub column_timestamp: String,
     // TODO: should rename to column_all
@@ -1215,6 +1217,18 @@ pub struct Limit {
         help = "unit: Hour. Optional env variable to add restriction for SA, if not set SA will use max_query_range stream setting. When set which ever is smaller value will apply to api calls"
     )]
     pub max_query_range_for_sa: i64,
+    #[env_config(name = "ZO_ENRICHMENT_TABLE_JOB_WORKS", default = 1)]
+    pub enrichment_table_job_workers: i64,
+    #[env_config(name = "ZO_ENRICHMENT_TABLE_JOB_SCHEDULE_INTERVAL", default = 10)] // seconds
+    pub enrichment_table_job_scheduler_interval: i64,
+    #[env_config(
+        name = "ZO_ENRICHMENT_TABLE_JOB_TIMEOUT",
+        default = 10800, // seconds
+        help = "Timeout for query"
+    )]
+    pub enrichment_table_job_timeout: i64,
+    #[env_config(name = "ZO_ENRICHMENT_TABLE_JOB_DELETE_INTERVAL", default = 600)] // seconds
+    pub enrichment_table_job_delete_interval: i64,
 }
 
 #[derive(EnvConfig)]
@@ -1883,6 +1897,12 @@ fn check_path_config(cfg: &mut Config) -> Result<(), anyhow::Error> {
     }
     if !cfg.common.data_cache_dir.ends_with('/') {
         cfg.common.data_cache_dir = format!("{}/", cfg.common.data_cache_dir);
+    }
+    if cfg.common.data_tmp_dir.is_empty() {
+        cfg.common.data_tmp_dir = format!("{}tmp/", cfg.common.data_dir);
+    }
+    if !cfg.common.data_tmp_dir.ends_with('/') {
+        cfg.common.data_tmp_dir = format!("{}/", cfg.common.data_tmp_dir);
     }
     if cfg.common.mmdb_data_dir.is_empty() {
         cfg.common.mmdb_data_dir = format!("{}mmdb/", cfg.common.data_dir);

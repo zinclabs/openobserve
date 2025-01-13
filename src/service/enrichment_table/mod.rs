@@ -13,18 +13,17 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use std::{collections::HashMap, io::Error, sync::Arc};
+use std::{collections::HashMap, fs::File, io::Error, sync::Arc};
 
 use actix_multipart::Multipart;
 use actix_web::{
     http::{self, StatusCode},
     HttpResponse,
 };
-use bytes::Bytes;
 use chrono::Utc;
 use config::{
     cluster::LOCAL_NODE,
-    get_config,
+    get_config, ider,
     meta::{
         self_reporting::usage::UsageType,
         stream::{PartitionTimeLevel, StreamType},
@@ -39,10 +38,15 @@ use infra::{
         SchemaCache, STREAM_RECORD_ID_GENERATOR, STREAM_SCHEMAS, STREAM_SCHEMAS_COMPRESSED,
         STREAM_SCHEMAS_LATEST, STREAM_SETTINGS,
     },
+    table::enrichment_table_jobs::{self, EnrichmentTableJobsRecord, TaskStatus},
 };
+use tokio::io::AsyncWriteExt;
 
 use crate::{
-    common::meta::{http::HttpResponse as MetaHttpResponse, stream::SchemaRecords},
+    common::meta::{
+        enrichment_table::EnrichmentTableResp, http::HttpResponse as MetaHttpResponse,
+        stream::SchemaRecords,
+    },
     service::{
         compact::retention,
         db::{self, enrichment_table},
@@ -54,6 +58,9 @@ use crate::{
 };
 
 pub mod geoip;
+
+// Constants for record limits
+const MAX_RECORDS: usize = 8192; // Save every 8192 records
 
 pub async fn save_enrichment_data(
     org_id: &str,
@@ -299,7 +306,7 @@ pub async fn extract_multipart(
         while let Some(chunk) = field.next().await {
             let chunked_data = chunk.unwrap();
             // Reconstruct entire CSV data bytes here to prevent fragmentation of values.
-            data = Bytes::from([data.as_ref(), chunked_data.as_ref()].concat());
+            data = bytes::Bytes::from([data.as_ref(), chunked_data.as_ref()].concat());
         }
         let mut rdr = csv::Reader::from_reader(data.as_ref());
         let headers: csv::StringRecord = rdr
@@ -331,4 +338,450 @@ pub async fn extract_multipart(
     }
 
     Ok(records)
+}
+
+pub async fn add_task(
+    org_id: &str,
+    table_name: &str,
+    append_data: bool,
+    file_link: &str,
+) -> Result<(String, String), Error> {
+    let key = generate_file_key(org_id, table_name, append_data);
+    let task_id = generate_task_id();
+    let record = EnrichmentTableJobsRecord::new(&task_id, org_id, &key, file_link);
+    enrichment_table_jobs::add(record).await.map_err(|e| {
+        log::error!("[ENRICHMENT_TABLE] Failed to add task: {}", e);
+        Error::other("Failed to add task")
+    })?;
+    Ok((task_id, key))
+}
+
+pub async fn list_jobs(org_id: &str) -> Result<HttpResponse, Error> {
+    let res = enrichment_table_jobs::list(org_id, None)
+        .await
+        .map_err(|e| {
+            log::error!("[ENRICHMENT_TABLE] Failed to list tasks: {}", e);
+            Error::other("Failed to list tasks")
+        })?;
+    let res: Vec<EnrichmentTableResp> = res
+        .into_iter()
+        .filter_map(|item| {
+            match EnrichmentTableResp::try_from(item) {
+                Ok(resp) => Some(resp), // Successfully converted item
+                Err(e) => {
+                    log::error!(
+                        "[ENRICHMENT_TABLE] Failed to convert task to response: {}",
+                        e
+                    );
+                    None
+                }
+            }
+        })
+        .collect();
+
+    Ok(HttpResponse::Ok().json(res))
+}
+
+pub async fn get_job_status(task_id: &str) -> Result<HttpResponse, Error> {
+    let res = enrichment_table_jobs::get(task_id).await.map_err(|e| {
+        log::error!("[ENRICHMENT_TABLE] Failed to get task status: {}", e);
+        Error::other("Failed to get task status")
+    })?;
+    let res = EnrichmentTableResp::try_from(res).map_err(|e| {
+        log::error!("[ENRICHMENT_TABLE] Failed to convert task status: {}", e);
+        Error::other("Failed to convert task status")
+    })?;
+
+    Ok(HttpResponse::Ok().json(res))
+}
+
+pub async fn cancel_jobs(task_ids: Vec<String>) -> Result<HttpResponse, Error> {
+    for task_id in task_ids.iter() {
+        let task = enrichment_table_jobs::get(task_id)
+            .await
+            .map_err(|_| Error::other("Failed to get task id"))?;
+        let (org_id, table_name, append_data) =
+            parse_key(&task.file_key).map_err(|_| Error::other("Failed to parse key"))?;
+        do_cancel(task_id, &org_id, &table_name, append_data).await?;
+    }
+    Ok(HttpResponse::Ok().json(MetaHttpResponse::message(
+        StatusCode::OK.into(),
+        format!("Cancelled enrichment table jobs: {:?}", task_ids),
+    )))
+}
+
+pub async fn delete_job(task_id: &str) -> Result<HttpResponse, Error> {
+    let task = enrichment_table_jobs::get(task_id)
+        .await
+        .map_err(|_| Error::other("Failed to get task id"))?;
+    let (org_id, table_name, append_data) =
+        parse_key(&task.file_key).map_err(|_| Error::other("Failed to parse key"))?;
+
+    do_cancel(task_id, &org_id, &table_name, append_data).await?;
+    delete_table(&org_id, &table_name).await?;
+    Ok(HttpResponse::Ok().json(MetaHttpResponse::message(
+        StatusCode::OK.into(),
+        format!("Deleted enrichment table job, task_id: {}", task_id),
+    )))
+}
+
+pub async fn task_ready(task_id: &str) -> Result<(), Error> {
+    enrichment_table_jobs::set_job_status(task_id, TaskStatus::Ready)
+        .await
+        .map_err(|e| {
+            log::error!("[ENRICHMENT_TABLE] Failed to update task status: {}", e);
+            Error::other("Failed to update task status")
+        })?;
+    Ok(())
+}
+
+pub async fn store_file_to_disk(
+    key: &str,
+    file_link: &str,
+    cancel_rx: tokio::sync::watch::Receiver<bool>,
+) -> Result<(), anyhow::Error> {
+    let (org_id, table_name, append_data) = parse_key(key)?;
+
+    let temp_file_path = prepare_file_path(&org_id, &table_name, append_data).await?;
+
+    let client = reqwest::Client::new();
+    let response = client.get(file_link).send().await?;
+
+    // Open the file for writing
+    let mut temp_file = tokio::fs::OpenOptions::new()
+        .create(true)
+        .write(true)
+        .truncate(true)
+        .open(&temp_file_path)
+        .await
+        .map_err(|e| anyhow::anyhow!("Failed to open file '{}': {}", temp_file_path, e))?;
+    let mut stream = response.bytes_stream();
+
+    while let Some(chunk) = stream.next().await {
+        if *cancel_rx.borrow() {
+            log::warn!(
+                "[FILE_DOWNLOAD] Download cancelled for file: {} (org_id: {}, table_name: {})",
+                file_link,
+                org_id,
+                table_name
+            );
+
+            // Remove temp file on cancel
+            remove_temp_file(&org_id, &table_name, append_data).await?;
+            return Err(anyhow::anyhow!(
+                "Download cancelled for file: {} (org_id: {}, table_name: {})",
+                file_link,
+                org_id,
+                table_name
+            ));
+        }
+
+        // Write chunk to file
+        let chunk = chunk?;
+        temp_file.write_all(&chunk).await?;
+    }
+
+    temp_file.flush().await?;
+
+    Ok(())
+}
+
+pub async fn store_multipart_to_disk(
+    key: &str,
+    mut payload: Multipart,
+) -> Result<(), anyhow::Error> {
+    let (org_id, table_name, append_data) = parse_key(key)?;
+
+    let temp_file_path = prepare_file_path(&org_id, &table_name, append_data).await?;
+
+    let mut temp_file = tokio::fs::OpenOptions::new()
+        .create(true)
+        .write(true)
+        .truncate(true)
+        .open(&temp_file_path)
+        .await?;
+
+    while let Ok(Some(mut field)) = payload.try_next().await {
+        if let Some(content_disposition) = field.content_disposition() {
+            if content_disposition.get_filename().is_some() {
+                while let Some(chunk) = field.next().await {
+                    let chunk = chunk.unwrap();
+                    temp_file.write_all(&chunk).await?;
+                }
+            }
+        }
+    }
+
+    temp_file.flush().await?;
+    drop(temp_file);
+
+    Ok(())
+}
+
+pub async fn remove_temp_file(
+    org_id: &str,
+    table_name: &str,
+    append_data: bool,
+) -> Result<(), std::io::Error> {
+    let temp_file_path = construct_file_path(org_id, table_name, append_data);
+    match tokio::fs::remove_file(&temp_file_path).await {
+        Ok(_) => {
+            log::info!(
+                "[ENRICHMENT_TABLE] Temporary file removed: {}",
+                temp_file_path
+            );
+            Ok(())
+        }
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+            log::warn!(
+                "[ENRICHMENT_TABLE] File not found, nothing to remove: {}",
+                temp_file_path
+            );
+            Ok(())
+        }
+        Err(e) => {
+            log::error!(
+                "[ENRICHMENT_TABLE] Failed to remove file {}: {:?}",
+                temp_file_path,
+                e
+            );
+            Err(e)
+        }
+    }
+}
+
+pub async fn download_and_save_data(
+    task: &EnrichmentTableJobsRecord,
+    mut cancel_rx: tokio::sync::watch::Receiver<bool>,
+) -> Result<(), anyhow::Error> {
+    // Download the file from link and save it to disk
+    let key = &task.file_key;
+    let file_link = &task.file_link;
+    store_file_to_disk(key, file_link, cancel_rx.clone()).await?;
+
+    let (org_id, table_name, append_data) = parse_key(key)?;
+    log::info!(
+        "[ENRICHMENT_TABLE] Starting to extract and save data for org_id: {}, table_name: {}, append_data: {}",
+        org_id,
+        table_name,
+        append_data
+    );
+
+    let mut record_buffer = Vec::new();
+    let mut part_number = 0;
+    let file_path = construct_file_path(&org_id, &table_name, append_data);
+    let file = File::open(file_path)?;
+    let mut rdr = csv::ReaderBuilder::new()
+        .has_headers(true)
+        .from_reader(file);
+    let headers = rdr.headers()?.clone();
+
+    for record in rdr.records() {
+        tokio::select! {
+                _ = cancel_rx.changed() => {
+                    if *cancel_rx.borrow() {
+                        let err_msg = format!(
+                            "[ENRICHMENT_TABLE_JOB] Task id {} cancelled for org_id: {}, table_name: {}",
+                            task.task_id,
+                            org_id,
+                            table_name
+                        );
+                        log::warn!("{err_msg}");
+                        return Err(anyhow::anyhow!(
+                            "{err_msg}"
+                        ));
+                    }
+                }
+                // Process the current record buffer
+                result = async {
+
+                let record = record?;
+                let mut json_record = json::Map::new();
+
+                for (header, field) in headers.iter().zip(record.iter()) {
+                    json_record.insert(header.into(), json::Value::String(field.into()));
+                }
+
+                record_buffer.push(json_record);
+
+                // Send records in batches to the saving task
+                if record_buffer.len() >= MAX_RECORDS {
+                    let full_buffer = std::mem::take(&mut record_buffer);
+
+                    // Save the buffer
+                    do_save(
+                        &mut part_number,
+                        full_buffer,
+                        &org_id,
+                        &table_name,
+                        append_data,
+                    )
+                    .await?;
+                    log::debug!(
+                        "[ENRICHMENT_TABLE] Saved records for org_id: {}, table_name: {}, part_number: {}",
+                        org_id,
+                        table_name,
+                        part_number
+                    );
+                }
+                    Ok::<(), anyhow::Error>(())
+            } => {
+                result?;
+            }
+        }
+    }
+
+    // Send any remaining records in the buffer
+    if !record_buffer.is_empty() {
+        if *cancel_rx.borrow() {
+            log::warn!(
+                "[ENRICHMENT_TABLE] Task cancelled for org_id: {}, table_name: {}. Stopping before final save.",
+                org_id,
+                table_name
+            );
+
+            // Clean up temporary files
+            remove_temp_file(&org_id, &table_name, append_data).await?;
+
+            return Err(anyhow::anyhow!(
+                "Task cancelled for org_id: {}, table_name: {}",
+                org_id,
+                table_name
+            ));
+        }
+
+        let full_buffer = std::mem::take(&mut record_buffer);
+
+        // Save the buffer
+        do_save(
+            &mut part_number,
+            full_buffer,
+            &org_id,
+            &table_name,
+            append_data,
+        )
+        .await?;
+        log::debug!(
+            "[ENRICHMENT_TABLE] Saved records for org_id: {}, table_name: {}, part_number: {}",
+            org_id,
+            table_name,
+            part_number
+        );
+    }
+
+    log::info!(
+        "[ENRICHMENT_TABLE] All records processed successfully for org_id: {}, table_name: {}",
+        org_id,
+        table_name
+    );
+
+    remove_temp_file(&org_id, &table_name, append_data).await?;
+
+    // update the task status to completed
+    enrichment_table_jobs::set_job_status(
+        &task.task_id,
+        enrichment_table_jobs::TaskStatus::Completed,
+    )
+    .await?;
+
+    Ok(())
+}
+
+async fn do_save(
+    part_number: &mut i64,
+    buffer: Vec<json::Map<String, json::Value>>,
+    org_id: &str,
+    table_name: &str,
+    append_data: bool,
+) -> Result<HttpResponse, Error> {
+    *part_number += 1;
+    // if append_data is false, then we need to delete the existing table
+    // and create a new one when processing part 1
+    // and the rest of the data will be appended to the new table
+    let tmp_append_data = append_data || *part_number != 1;
+
+    // Save the buffer
+    save_enrichment_data(org_id, table_name, buffer, tmp_append_data).await
+}
+
+#[inline]
+fn generate_task_id() -> String {
+    ider::uuid()
+}
+
+#[inline]
+fn generate_file_key(org_id: &str, table_name: &str, append_data: bool) -> String {
+    format!("{}/{}/{}", org_id, table_name, append_data)
+}
+
+#[inline]
+pub fn parse_key(key: &str) -> Result<(String, String, bool), anyhow::Error> {
+    let parts: Vec<&str> = key.split('/').collect();
+    if parts.len() != 3 {
+        let err_msg = format!("[ENRICHMENT_TABLE] Invalid key format: {}", key);
+        log::info!("{err_msg}");
+        return Err(anyhow::anyhow!("{err_msg}"));
+    }
+    let org_id = parts[0].to_string();
+    let table_name = parts[1].to_string();
+    let append_data = parts[2].parse::<bool>().unwrap_or(false);
+
+    Ok((org_id, table_name, append_data))
+}
+
+#[inline]
+fn construct_file_path(org_id: &str, table_name: &str, append_data: bool) -> String {
+    let tmp_dir = get_config().common.data_tmp_dir.clone();
+    let dir_path = format!("{}enrichment_table/{}/", tmp_dir, org_id);
+    format!("{}{}_{}.csv", dir_path, table_name, append_data)
+}
+
+#[inline]
+async fn prepare_file_path(
+    org_id: &str,
+    table_name: &str,
+    append_data: bool,
+) -> Result<String, Error> {
+    let file_path = construct_file_path(org_id, table_name, append_data);
+
+    // Extract the directory from the file path
+    if let Some(dir_path) = std::path::Path::new(&file_path).parent() {
+        tokio::fs::create_dir_all(dir_path).await?;
+    }
+    Ok(file_path)
+}
+
+async fn do_cancel(
+    task_id: &str,
+    org_id: &str,
+    table_name: &str,
+    append_data: bool,
+) -> Result<(), Error> {
+    remove_temp_file(org_id, table_name, append_data).await?;
+
+    enrichment_table_jobs::set_job_status(task_id, TaskStatus::Cancelled)
+        .await
+        .map_err(|_| Error::other("Failed to cancel task"))?;
+    Ok(())
+}
+
+pub async fn create_empty_stream(org_id: &str, table_name: &str) -> Result<(), Error> {
+    // hack to create empty stream for enrichment table
+    infra::schema::update_setting(
+        org_id,
+        table_name,
+        StreamType::EnrichmentTables,
+        HashMap::new(),
+    )
+    .await
+    .map_err(|e| {
+        log::error!("[ENRICHMENT_TABLE] Failed to create empty stream: {}", e);
+        Error::other("Failed to create empty stream")
+    })?;
+    Ok(())
+}
+
+pub async fn delete_table(org_id: &str, table_name: &str) -> Result<(), Error> {
+    delete_enrichment_table(org_id, table_name, StreamType::EnrichmentTables).await;
+    Ok(())
 }

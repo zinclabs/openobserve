@@ -425,6 +425,7 @@ export const calculateWidthText = (
  * @param canvasWidth - canvas width in pixels
  * @returns {number} - The optimal font size in pixels.
  */
+import functionValidation from "../../components/dashboards/addPanel/dynamicFunction/functionValidation.json";
 export const calculateOptimalFontSize = (text: string, canvasWidth: number) => {
   let minFontSize = 1; // Start with the smallest font size
   let maxFontSize = 90; // Set a maximum possible font size
@@ -444,3 +445,116 @@ export const calculateOptimalFontSize = (text: string, canvasWidth: number) => {
 
   return optimalFontSize; // Return the largest font size that fits
 };
+
+export function buildSQLQueryFromInput(fields: any): string {
+  // if fields type is raw, return rawQuery
+  if (fields.type === "raw") {
+    return `${fields?.rawQuery ?? ""}`;
+  }
+
+  // Extract functionName and args from the input
+  const { functionName, args } = fields;
+
+  // Find the function definition based on the functionName
+  const selectedFunction = functionValidation.find(
+    (fn: any) => fn.functionName === functionName,
+  );
+
+  // If the function is not found, throw an error
+  if (!selectedFunction) {
+    throw new Error(`Function "${functionName}" is not supported.`);
+  }
+
+  // if selectedFunction is null, simply return the first argument
+  if (selectedFunction.functionName === null) {
+    return `${args?.[0]?.value ?? fields.column ?? ""}`;
+  }
+
+  // Validate the provided args against the function's argument definitions
+  const argsDefinition = selectedFunction.args;
+
+  if (!argsDefinition || argsDefinition.length === 0) {
+    return `${functionName}()`; // If no args are required, return the function call
+  }
+
+  const sqlArgs = [];
+  for (let i = 0; i < args.length; i++) {
+    const argValue = args[i]?.value;
+    const argType = args[i]?.type;
+
+    if (argValue === undefined || argValue === null) {
+      continue;
+    }
+
+    // Add the argument to the SQL query
+    if (argType === "field") {
+      // If the argument type is "field", do not wrap with quotes
+      sqlArgs.push(argValue);
+    } else if (argType === "string" || argType === "histogramInterval") {
+      // Wrap strings in quotes if they are not already wrapped
+      if (
+        typeof argValue === "string" &&
+        !argValue.startsWith("'") &&
+        !argValue.endsWith("'")
+      ) {
+        sqlArgs.push(`'${argValue}'`);
+      } else {
+        sqlArgs.push(argValue);
+      }
+    } else if (argType === "number") {
+      // Add numbers as-is
+      sqlArgs.push(argValue);
+    } else if (argType === "function") {
+      // Recursively build the SQL query for the nested function
+      const nestedFunctionQuery = buildSQLQueryFromInput(argValue);
+      sqlArgs.push(nestedFunctionQuery);
+    } else {
+      throw new Error(
+        `Unsupported argument type "${argType}" for argument at position ${i + 1}.`,
+      );
+    }
+  }
+
+  // Construct the SQL query string
+  return `${functionName}(${sqlArgs.join(", ")})`;
+}
+
+export function addMissingArgs(fields: any): any {
+  const { functionName, args } = fields;
+
+  // Find the function definition in functionValidation
+  const functionDef = functionValidation.find(
+    (fn: any) => fn.functionName === functionName,
+  );
+
+  if (!functionDef) {
+    return fields;
+  }
+
+  const updatedArgs = [...args]; // Clone the existing args array
+
+  // Iterate through the function definition's arguments
+  functionDef.args.forEach((argDef: any) => {
+    const isArgProvided = updatedArgs.some((arg: any) => {
+      // Check if the argument's type matches any of the required types
+      return argDef.type.includes(arg.type);
+    });
+
+    if (!isArgProvided) {
+      // If the argument is missing, add it
+      const argType = argDef.type[0]; // Always take the first type
+      const defaultValue =
+        argDef.defaultValue !== undefined ? argDef.defaultValue : "";
+
+      updatedArgs.push({
+        type: argType,
+        value: defaultValue,
+      });
+    }
+  });
+
+  return {
+    ...fields,
+    args: updatedArgs,
+  };
+}

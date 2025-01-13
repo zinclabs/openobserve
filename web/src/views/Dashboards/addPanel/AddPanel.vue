@@ -187,7 +187,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                   <template #before>
                     <div
                       class="layout-panel-container col"
-                      style="height: 100%"
+                      style="height: 100%; width: 100%"
                     >
                       <DashboardQueryBuilder
                         :dashboardData="currentDashboardData.data"

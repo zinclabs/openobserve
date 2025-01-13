@@ -30,7 +30,7 @@ use crate::{get_config, meta::stream::StreamType, FxIndexMap};
 
 const MAX_PARTITION_KEY_LENGTH: usize = 100;
 
-static RE_CORRECT_STREAM_NAME: Lazy<Regex> = Lazy::new(|| Regex::new(r"[^a-zA-Z0-9_]+").unwrap());
+static RE_CORRECT_STREAM_NAME: Lazy<Regex> = Lazy::new(|| Regex::new(r"[^a-zA-Z0-9_:]+").unwrap());
 
 pub fn infer_json_schema<R: BufRead>(
     reader: R,

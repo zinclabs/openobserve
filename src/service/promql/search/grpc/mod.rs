@@ -211,7 +211,7 @@ fn generate_search_group(start: i64, end: i64, step: i64, group_interval: i64) -
     resp
 }
 
-fn add_value(resp: &mut cluster_rpc::MetricsQueryResponse, value: Value) {
+pub(crate) fn add_value(resp: &mut cluster_rpc::MetricsQueryResponse, value: Value) {
     match value {
         value::Value::None => {}
         value::Value::Instant(v) => {

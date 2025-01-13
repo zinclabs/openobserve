@@ -133,6 +133,21 @@ pub async fn download(trace_id: &str, file: &str) -> Result<(), anyhow::Error> {
     }
 }
 
+/// set the data to the cache
+///
+/// store the data to the memory cache or disk cache
+pub async fn set(trace_id: &str, key: &str, data: bytes::Bytes) -> Result<(), anyhow::Error> {
+    let cfg = config::get_config();
+    // set the data to the memory cache
+    if cfg.memory_cache.enabled {
+        memory::set(trace_id, key, data).await
+    } else if cfg.disk_cache.enabled {
+        disk::set(trace_id, key, data).await
+    } else {
+        Ok(())
+    }
+}
+
 pub async fn get(
     _trace_id: &str,
     file: &str,

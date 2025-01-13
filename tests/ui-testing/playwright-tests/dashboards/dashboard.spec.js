@@ -117,21 +117,8 @@ test.describe("dashboard UI testcases", () => {
     await orgNavigation;
   });
 
-  test("should create a new dashboard", async ({ page }) => {
-    await page.locator('[data-test="menu-link-\\/dashboards-item"]').click();
-    await waitForDashboardPage(page);
-    await page.locator('[data-test="dashboard-add"]').click();
-    await page.locator('[data-test="add-dashboard-name"]').click();
-    await page
-      .locator('[data-test="add-dashboard-name"]')
-      .fill(randomDashboardName);
-    await page.locator('[data-test="dashboard-add-submit"]').click();
-    await expect(page.getByText("Dashboard added successfully.")).toBeVisible({
-      timeout: 30000,
-    });
-  });
 
-  test("should delete the dashboard", async ({ page }) => {
+  test("should add and delete the dashboard", async ({ page }) => {
     await page.locator('[data-test="menu-link-\\/dashboards-item"]').click();
     await waitForDashboardPage(page);
     await page.locator('[data-test="dashboard-add"]').click();

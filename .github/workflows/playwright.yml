@@ -110,6 +110,7 @@ jobs:
             "dashboards/dashboard-variables-setting.spec.js",
             "dashboards/dashboard-tabs-setting.spec.js",
             "reportsUpdated.spec.js",
+            "dashboards/dashboardFilter.spec.js"
             "join.spec.js",
             "changeOrg.spec.js",
             "serviceAccount.spec.js",

@@ -2406,31 +2406,35 @@ const useDashboardPanelData = (pageKey: string = "dashboard") => {
     let query = "";
 
     if (name && value_for_maps) {
-      query = `SELECT ${name.column} as "${name.alias}", `;
+      // query = `SELECT ${name.column} as "${name.alias}", `;
+      query = `SELECT ${buildSQLQueryFromInput(name)} as "${name.alias}",  `;
 
       if (value_for_maps?.functionName) {
-        switch (value_for_maps.functionName) {
-          case "p50":
-            query += `approx_percentile_cont(${value_for_maps.column}, 0.5) as ${value_for_maps.alias}`;
-            break;
-          case "p90":
-            query += `approx_percentile_cont(${value_for_maps.column}, 0.9) as ${value_for_maps.alias}`;
-            break;
-          case "p95":
-            query += `approx_percentile_cont(${value_for_maps.column}, 0.95) as ${value_for_maps.alias}`;
-            break;
-          case "p99":
-            query += `approx_percentile_cont(${value_for_maps.column}, 0.99) as ${value_for_maps.alias}`;
-            break;
-          case "count-distinct":
-            query += `count(distinct(${value_for_maps.column})) as "${value_for_maps.alias}"`;
-            break;
-          default:
-            query += `${value_for_maps.functionName}(${value_for_maps.column}) as "${value_for_maps.alias}"`;
-            break;
-        }
+        // switch (value_for_maps.functionName) {
+        //   case "p50":
+        //     query += `approx_percentile_cont(${value_for_maps.column}, 0.5) as ${value_for_maps.alias}`;
+        //     break;
+        //   case "p90":
+        //     query += `approx_percentile_cont(${value_for_maps.column}, 0.9) as ${value_for_maps.alias}`;
+        //     break;
+        //   case "p95":
+        //     query += `approx_percentile_cont(${value_for_maps.column}, 0.95) as ${value_for_maps.alias}`;
+        //     break;
+        //   case "p99":
+        //     query += `approx_percentile_cont(${value_for_maps.column}, 0.99) as ${value_for_maps.alias}`;
+        //     break;
+        //   case "count-distinct":
+        //     query += `count(distinct(${value_for_maps.column})) as "${value_for_maps.alias}"`;
+        //     break;
+        //   default:
+        //     query += `${value_for_maps.functionName}(${value_for_maps.column}) as "${value_for_maps.alias}"`;
+        //     break;
+        // }
+
+        query += `${buildSQLQueryFromInput(value_for_maps)} as "${value_for_maps.alias}"`;
       } else {
-        query += `${value_for_maps.column} as "${value_for_maps.alias}"`;
+        // query += `${value_for_maps.column} as "${value_for_maps.alias}"`;
+        query += `${buildSQLQueryFromInput(value_for_maps)} as "${value_for_maps.alias}"`;
       }
 
       query += ` FROM "${
@@ -2489,35 +2493,39 @@ const useDashboardPanelData = (pageKey: string = "dashboard") => {
       ].fields;
 
     if (latitude && !latitude.isDerived && longitude && !longitude.isDerived) {
-      query += `SELECT ${latitude.column} as ${latitude.alias}, ${longitude.column} as ${longitude.alias}`;
+      query += `SELECT ${buildSQLQueryFromInput(latitude)} as ${latitude.alias}, ${buildSQLQueryFromInput(longitude)} as ${longitude.alias}`;
+      // query += `SELECT ${latitude.column} as ${latitude.alias}, ${longitude.column} as ${longitude.alias}`;
     } else if (latitude && !latitude.isDerived) {
-      query += `SELECT ${latitude.column} as ${latitude.alias}`;
+      query += `SELECT ${buildSQLQueryFromInput(latitude)} as ${latitude.alias}`;
+      // query += `SELECT ${latitude.column} as ${latitude.alias}`;
     } else if (longitude && !longitude.isDerived) {
-      query += `SELECT ${longitude.column} as ${longitude.alias}`;
+      query += `SELECT ${buildSQLQueryFromInput(longitude)} as ${longitude.alias}`;
+      // query += `SELECT ${longitude.column} as ${longitude.alias}`;
     }
 
     if (query) {
       if (weight && !weight.isDerived) {
-        switch (weight?.functionName) {
-          case "p50":
-            query += `, approx_percentile_cont(${weight.column}, 0.5) as ${weight.alias}`;
-            break;
-          case "p90":
-            query += `, approx_percentile_cont(${weight.column}, 0.9) as ${weight.alias}`;
-            break;
-          case "p95":
-            query += `, approx_percentile_cont(${weight.column}, 0.95) as ${weight.alias}`;
-            break;
-          case "p99":
-            query += `, approx_percentile_cont(${weight.column}, 0.99) as ${weight.alias}`;
-            break;
-          case "count-distinct":
-            query += `, count(distinct(${weight.column})) as ${weight.alias}`;
-            break;
-          default:
-            query += `, ${weight.functionName}(${weight.column}) as ${weight.alias}`;
-            break;
-        }
+        // switch (weight?.functionName) {
+        //   case "p50":
+        //     query += `, approx_percentile_cont(${weight.column}, 0.5) as ${weight.alias}`;
+        //     break;
+        //   case "p90":
+        //     query += `, approx_percentile_cont(${weight.column}, 0.9) as ${weight.alias}`;
+        //     break;
+        //   case "p95":
+        //     query += `, approx_percentile_cont(${weight.column}, 0.95) as ${weight.alias}`;
+        //     break;
+        //   case "p99":
+        //     query += `, approx_percentile_cont(${weight.column}, 0.99) as ${weight.alias}`;
+        //     break;
+        //   case "count-distinct":
+        //     query += `, count(distinct(${weight.column})) as ${weight.alias}`;
+        //     break;
+        //   default:
+        //     query += `, ${weight.functionName}(${weight.column}) as ${weight.alias}`;
+        //     break;
+        // }
+        query += `, ${buildSQLQueryFromInput(weight)} as ${weight.alias}`;
       }
       query += ` FROM "${
         dashboardPanelData.data.queries[
@@ -2591,41 +2599,44 @@ const useDashboardPanelData = (pageKey: string = "dashboard") => {
     const selectFields = [];
 
     if (source && !source.isDerived) {
-      selectFields.push(`${source.column} as ${source.alias}`);
+      // selectFields.push(`${source.column} as ${source.alias}`);
+      selectFields.push(`${buildSQLQueryFromInput(source)} as ${source.alias}`);
     }
 
     if (target && !target.isDerived) {
-      selectFields.push(`${target.column} as ${target.alias}`);
+      // selectFields.push(`${target.column} as ${target.alias}`);
+      selectFields.push(`${buildSQLQueryFromInput(target)} as ${target.alias}`);
     }
 
     if (value && !value.isDerived) {
-      switch (value?.functionName) {
-        case "p50":
-          selectFields.push(
-            `approx_percentile_cont(${value?.column}, 0.5) as ${value.alias}`,
-          );
-          break;
-        case "p90":
-          selectFields.push(
-            `approx_percentile_cont(${value?.column}, 0.9) as ${value.alias}`,
-          );
-          break;
-        case "p95":
-          selectFields.push(
-            `approx_percentile_cont(${value?.column}, 0.95) as ${value.alias}`,
-          );
-          break;
-        case "p99":
-          selectFields.push(
-            `approx_percentile_cont(${value?.column}, 0.99) as ${value.alias}`,
-          );
-          break;
-        default:
-          selectFields.push(
-            `${value.functionName}(${value.column}) as ${value.alias}`,
-          );
-          break;
-      }
+      // switch (value?.functionName) {
+      //   case "p50":
+      //     selectFields.push(
+      //       `approx_percentile_cont(${value?.column}, 0.5) as ${value.alias}`,
+      //     );
+      //     break;
+      //   case "p90":
+      //     selectFields.push(
+      //       `approx_percentile_cont(${value?.column}, 0.9) as ${value.alias}`,
+      //     );
+      //     break;
+      //   case "p95":
+      //     selectFields.push(
+      //       `approx_percentile_cont(${value?.column}, 0.95) as ${value.alias}`,
+      //     );
+      //     break;
+      //   case "p99":
+      //     selectFields.push(
+      //       `approx_percentile_cont(${value?.column}, 0.99) as ${value.alias}`,
+      //     );
+      //     break;
+      //   default:
+      //     selectFields.push(
+      //       `${value.functionName}(${value.column}) as ${value.alias}`,
+      //     );
+      //     break;
+      // }
+      selectFields.push(`${buildSQLQueryFromInput(value)} as ${value.alias}`);
     }
 
     // Adding the selected fields to the query

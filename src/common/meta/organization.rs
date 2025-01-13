@@ -13,17 +13,71 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+use config::meta::user::UserRole;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
+#[cfg(feature = "cloud")]
+use super::user::InviteStatus;
+
 pub const DEFAULT_ORG: &str = "default";
 pub const CUSTOM: &str = "custom";
+pub const USER_DEFAULT: &str = "user_default";
 pub const THRESHOLD: i64 = 9383939382;
 
 #[derive(Serialize, Deserialize, ToSchema, Clone, Debug)]
 pub struct Organization {
+    #[serde(default)]
     pub identifier: String,
-    pub label: String,
+    pub name: String,
+    #[serde(default)]
+    pub org_type: String,
+}
+
+#[cfg(feature = "cloud")]
+#[derive(Serialize, Deserialize, ToSchema, Clone, Debug)]
+pub struct OrganizationInvites {
+    #[serde(default)]
+    pub invites: Vec<String>, // user emails
+    pub role: UserRole,
+}
+
+#[cfg(feature = "cloud")]
+#[derive(Serialize, Deserialize, ToSchema, Clone, Debug)]
+pub struct OrganizationInviteResponse {
+    #[serde(default)]
+    pub data: OrganizationInviteResponseData, // user emails
+    pub message: String,
+}
+
+#[cfg(feature = "cloud")]
+#[derive(Serialize, Deserialize, Default, ToSchema, Clone, Debug)]
+pub struct OrganizationInviteResponseData {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub valid_members: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub existing_members: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub invalid_email: Option<String>,
+}
+
+#[cfg(feature = "cloud")]
+#[derive(Serialize, Deserialize, ToSchema, Clone, Debug)]
+pub struct OrganizationInviteUserRecord {
+    pub email: String,
+    pub first_name: String,
+    pub last_name: String,
+    pub role: String,
+    pub status: InviteStatus,
+    pub expires_at: i64,
+    pub is_external: bool,
+}
+
+#[derive(Serialize, Deserialize, ToSchema, Clone, Debug)]
+pub struct OrgRoleMapping {
+    pub org_id: String,
+    pub org_name: String,
+    pub role: UserRole,
 }
 
 #[derive(Serialize, Clone, ToSchema)]
@@ -45,6 +99,8 @@ pub struct OrgDetails {
     pub org_type: String,
     #[serde(rename = "UserObj")]
     pub user_obj: OrgUser,
+    #[serde(default)]
+    pub plan: i32,
 }
 
 #[derive(Serialize, ToSchema)]

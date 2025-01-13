@@ -167,7 +167,10 @@ pub async fn cli() -> Result<bool, anyhow::Error> {
                             change_password: true,
                             old_password: None,
                             new_password: Some(cfg.auth.root_user_password.clone()),
-                            role: Some(meta::user::UserRole::Root),
+                            role: Some(crate::common::meta::user::UserRoleRequest {
+                                role: config::meta::user::UserRole::Root.to_string(),
+                                custom: None,
+                            }),
                             first_name: Some("root".to_owned()),
                             last_name: Some("".to_owned()),
                             token: None,
@@ -218,6 +221,7 @@ pub async fn cli() -> Result<bool, anyhow::Error> {
                 }
                 "user" => {
                     db::user::cache().await?;
+                    db::org_users::cache().await?;
                     let mut id = 0;
                     for user in USERS.iter() {
                         id += 1;

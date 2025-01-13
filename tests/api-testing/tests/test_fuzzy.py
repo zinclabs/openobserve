@@ -34,7 +34,7 @@ def post_query(session, base_url, org_id, query):
 def test_e2e_fuzzy(create_session, base_url, sql_query):
     """Running E2E tests for various SQL queries."""
     session = create_session
-    org_id = "org_pytest_data"
+    org_id = "default"
     one_min_ago, end_time = get_dynamic_timestamps()
 
     query = {

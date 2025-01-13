@@ -155,9 +155,19 @@ openobserveRum.startSessionReplayRecording();`;
     const replaceStaticValues = () => {
       rumToken.value = store.state.organizationData.rumToken.rum_token;
       let configData = defaultConfig;
+
+      let ingestionURL: string = store.state.API_ENDPOINT;
+      if (
+        Object.hasOwn(store.state.zoConfig, "ingestion_url") &&
+        store.state.zoConfig.ingestion_url !== ""
+      ) {
+        ingestionURL = store.state.zoConfig.ingestion_url;
+      }
+
       configData = configData.replace(
         /<OPENOBSERVE_SITE>/g,
-        store.state.API_ENDPOINT.replace("https://", "")
+        ingestionURL
+          .replace("https://", "")
           .replace("http://", "")
           .replace(/\/$/, "")
       );

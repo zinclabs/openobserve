@@ -59,6 +59,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
           </q-th>
         </q-tr>
       </template>
+       <template #top="scope">
+        <QTablePagination
+          :scope="scope"
+          :resultTotal="resultTotal"
+          :perPageOptions="perPageOptions"
+          position="top"
+          @update:changeRecordPerPage="changePagination"
+        />
+       </template>
       <template v-slot:body="props">
         <q-tr :props="props" :key="`m_${props.row.index}`">
           <q-td
@@ -95,7 +104,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
           </q-td>
         </q-tr>
       </template>
-      <template v-if="showPagination" #bottom="scope">
+      <template  #bottom="scope">
         <QTablePagination
           :scope="scope"
           :position="'bottom'"
@@ -113,7 +122,7 @@ import type { QTable } from "quasar";
 import type { Ref } from "vue";
 import { ref } from "vue";
 import QTablePagination from "@/components/shared/grid/Pagination.vue";
-import { computed } from "vue";
+import { computed,watch  } from "vue";
 import NoData from "./shared/grid/NoData.vue";
 
 const props = defineProps({
@@ -157,7 +166,7 @@ const props = defineProps({
   },
   rowsPerPage: {
     type: Number,
-    default: 20,
+    default: 25,
   },
   dense: {
     type: Boolean,
@@ -180,16 +189,15 @@ const props = defineProps({
 const emit = defineEmits(["event-emitted"]);
 
 const perPageOptions: any = [
-  { label: "5", value: 5 },
-  { label: "10", value: 10 },
-  { label: "20", value: 20 },
-  { label: "50", value: 50 },
-  { label: "100", value: 100 },
-  { label: "All", value: 0 },
+      { label: "25", value: 25 },
+      { label: "50", value: 50 },
+      { label: "100", value: 100 },
+      { label: "250", value: 250 },
+      { label: "500", value: 500 }
 ];
 
 const resultTotal = ref<number>(0);
-const selectedPerPage = ref<number>(20);
+const selectedPerPage = ref<number>(25);
 
 const qTableRef: Ref<InstanceType<typeof QTable> | null> = ref(null);
 
@@ -216,6 +224,14 @@ const onScroll = (e: any) => {
     console.log("error", e);
   }
 };
+watch(
+  () => props.rows,
+  (newRows) => {
+    resultTotal.value = newRows.length;
+  },
+  { immediate: true } // Ensures it runs on initial load
+);
+
 </script>
 
 <style lang="scss">

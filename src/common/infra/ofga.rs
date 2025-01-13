@@ -15,6 +15,7 @@
 
 use std::cmp::Ordering;
 
+use config::meta::user::UserRole;
 use hashbrown::HashSet;
 use infra::dist_lock;
 use o2_enterprise::enterprise::{
@@ -31,8 +32,8 @@ use o2_enterprise::enterprise::{
 
 use crate::{
     common::{
-        infra::config::USERS,
-        meta::{organization::DEFAULT_ORG, user::UserRole},
+        infra::config::{ORG_USERS, USERS},
+        meta::organization::DEFAULT_ORG,
     },
     service::db,
 };
@@ -179,18 +180,19 @@ pub async fn init() -> Result<(), anyhow::Error> {
                     .await;
                 }
 
-                for user_key_val in USERS.iter() {
-                    let user = user_key_val.value();
-                    if user.is_external {
+                for user_key_val in ORG_USERS.iter() {
+                    let org_user = user_key_val.value();
+                    let user = USERS.get(org_user.email.as_str()).unwrap();
+                    if user.user_type.is_external() {
                         continue;
                     } else {
-                        let role = if user.role.eq(&UserRole::Root) {
+                        let role = if user.is_root {
                             UserRole::Admin.to_string()
                         } else {
-                            user.role.to_string()
+                            org_user.role.to_string()
                         };
 
-                        get_user_role_tuple(&role, &user.email, &user.org, &mut tuples);
+                        get_user_role_tuple(&role, &org_user.email, &org_user.org_id, &mut tuples);
                     }
                 }
             } else {
@@ -226,7 +228,6 @@ pub async fn init() -> Result<(), anyhow::Error> {
             if tuples.is_empty() {
                 log::info!("No orgs to update to the openfga");
             } else {
-                log::debug!("tuples not empty: {:#?}", tuples);
                 match update_tuples(tuples, vec![]).await {
                     Ok(_) => {
                         log::info!("Data migrated to openfga");

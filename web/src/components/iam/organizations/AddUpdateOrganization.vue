@@ -32,17 +32,18 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
         </div>
         <div class="col-auto">
           <q-btn
+            data-test="close-organizations-modal"
             v-close-popup="true"
             round
             flat
-            icon="img:/src/assets/images/common/close_icon.svg"
+            icon="close"
             @click="router.replace({ name: 'organizations' })"
           />
         </div>
       </div>
     </q-card-section>
     <q-separator />
-    <q-card-section class="q-w-md q-mx-lg">
+    <q-card-section class="q-w-md">
       <q-form ref="addOrganizationForm" @submit="onSubmit">
         <q-input
           v-if="beingUpdated"
@@ -54,7 +55,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
         <q-input
           v-model="organizationData.name"
-          :placeholder="t('organization.nameHolder')"
           :label="t('organization.name') + '*'"
           color="input-border"
           bg-color="input-bg"
@@ -65,9 +65,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
           dense
           :rules="[(val: any) => !!val || t('organization.nameRequired')]"
           data-test="org-name"
+          maxlength="100"
         />
 
-        <div class="flex justify-center q-mt-lg">
+        <div class="flex q-mt-lg">
           <q-btn
             v-close-popup="true"
             class="q-mb-md text-bold"
@@ -76,6 +77,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
             padding="sm md"
             no-caps
             @click="router.replace({ name: 'organizations' })"
+            data-test="cancel-organizations-modal"
           />
           <q-btn
             :disable="organizationData.name === '' && !proPlanRequired"
@@ -196,6 +198,7 @@ export default defineComponent({
       );
     },
     onSubmit() {
+      this.organizationData.name = this.organizationData.name.trim();
       const dismiss = this.$q.notify({
         spinner: true,
         message: "Please wait...",
@@ -220,15 +223,15 @@ export default defineComponent({
         // }
 
         callOrganization
-          .then((res: { data: any }) => {
+          .then((res: any) => {
             const data = res.data;
-            if (res.data.data.status == "active") {
+            if (res?.status == 200) {
               this.organizationData = {
                 id: "",
                 name: "",
               };
 
-              this.$emit("update:modelValue", data);
+              // this.$emit("update:modelValue", data);
               this.$emit("updated");
               this.addOrganizationForm.resetValidation();
               dismiss();
@@ -261,7 +264,7 @@ export default defineComponent({
             this.$q.notify({
               type: "negative",
               message: JSON.stringify(
-                err.response.data["error"] || "Organization creation failed."
+                err?.response?.data["error"] || "Organization creation failed."
               ),
             });
             dismiss();

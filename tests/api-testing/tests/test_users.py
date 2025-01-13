@@ -14,7 +14,7 @@ def test_e2e_users(create_session, base_url):
 
 
 def test_e2e_createusers(create_session, base_url):
-    """Running an E2E test for new user creation."""
+    """Running an E2E test for new user creation. This user will be part of default org."""
 
     session = create_session
     url = base_url
@@ -86,15 +86,13 @@ def test_e2e_invalidrole(create_session, base_url):
     ), f"Invalid role added, but got {resp_create_users.status_code} {resp_create_users.content}"
 
 
-# TODO = PLEASE change this testcase once bug fixed, add 400 and remove delete bug1679
 def test_e2e_invalidorganization(create_session, base_url):
     """Running an E2E test for invalid org added while user creation."""
 
     session = create_session
     url = base_url
-    org_id = "default"
+    org_id = "default_invalid"
     payload = {
-        "organization": "",
         "email": "pytests@gmail.com",
         "password": "T",
         "first_name": "Nehapd",
@@ -106,11 +104,11 @@ def test_e2e_invalidorganization(create_session, base_url):
 
     print(resp_create_users.content)
     assert (
-        resp_create_users.status_code == 200
+        resp_create_users.status_code == 404
     ), f"Invalid org added, but got {resp_create_users.status_code} {resp_create_users.content}"
     resp_delete_users = session.delete(f"{url}api/{org_id}/users/pytests@gmail.com")
     assert (
-        resp_delete_users.status_code == 200
+        resp_delete_users.status_code == 404
     ), f"Deleting this user, but got {resp_delete_users.status_code} {resp_delete_users.content}"
 
 
@@ -135,8 +133,8 @@ def test_e2e_addinvalidusertoOrg(create_session, base_url):
 
     print(resp_create_users.content)
     assert (
-        resp_create_users.status_code == 404
-    ), f"Invalid role added 404, but got {resp_create_users.status_code} {resp_create_users.content}"
+        resp_create_users.status_code == 422
+    ), f"Invalid user returning 422, but got {resp_create_users.status_code} {resp_create_users.content}"
 
 
 def test_e2e_updateuser(create_session, base_url):

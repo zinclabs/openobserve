@@ -80,7 +80,7 @@ export default defineComponent({
       const route = this.$router.resolve({ name: "organizations" });
       const redirectURI = route.href || baseURL;
       await organizationsService
-        .process_subscription(s, action)
+        .process_subscription(s, action, this.$store.state.selectedOrganization.identifier)
         .then((res) => {
           this.status = "completed";
           const dismiss = this.$q.notify({
@@ -100,7 +100,7 @@ export default defineComponent({
         })
         .catch((e) => {
           this.status = "error";
-          this.error = e.response.data.error.replaceAll("[BASE_URL]", baseURL);
+          this.error = e.response.data.message.replaceAll("[BASE_URL]", baseURL);
         });
     },
   },

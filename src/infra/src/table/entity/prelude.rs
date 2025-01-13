@@ -3,7 +3,8 @@
 pub use super::{
     alerts::Entity as Alerts, dashboards::Entity as Dashboards,
     distinct_value_fields::Entity as DistinctValueFields, folders::Entity as Folders,
+    org_users::Entity as OrgUsers, organizations::Entity as Organizations,
     search_job_partitions::Entity as SearchJobPartitions,
     search_job_results::Entity as SearchJobResults, search_jobs::Entity as SearchJobs,
-    search_queue::Entity as SearchQueue,
+    search_queue::Entity as SearchQueue, users::Entity as Users,
 };

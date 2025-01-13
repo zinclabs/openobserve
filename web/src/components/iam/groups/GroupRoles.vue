@@ -75,7 +75,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
           filled
           dense
           class="q-ml-auto q-mb-xs no-border"
-          placeholder="Search"
+          placeholder="Search Roles"
         >
           <template #prepend>
             <q-icon name="search" class="cursor-pointer" />
@@ -193,7 +193,7 @@ const columns = [
     field: "",
     label: "",
     align: "left",
-    sortable: true,
+    sortable: false,
     slot: true,
     slotName: "select",
   },

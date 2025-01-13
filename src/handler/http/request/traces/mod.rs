@@ -157,16 +157,15 @@ pub async fn get_latest_traces(
     {
         use o2_enterprise::enterprise::openfga::meta::mapping::OFGA_MODELS;
 
-        use crate::common::{
-            infra::config::USERS,
-            utils::auth::{is_root_user, AuthExtractor},
+        use crate::{
+            common::utils::auth::{is_root_user, AuthExtractor},
+            service::users::get_user,
         };
         let user_id = in_req.headers().get("user_id").unwrap();
         if !is_root_user(user_id.to_str().unwrap()) {
-            let user: meta::user::User = USERS
-                .get(&format!("{org_id}/{}", user_id.to_str().unwrap()))
-                .unwrap()
-                .clone();
+            let user: config::meta::user::User = get_user(Some(&org_id), user_id.to_str().unwrap())
+                .await
+                .unwrap();
             let stream_type_str = StreamType::Traces.to_string();
 
             if !crate::handler::http::auth::validator::check_permissions(

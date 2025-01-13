@@ -13,19 +13,24 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use std::{collections::HashSet, io::Error};
+use std::{
+    collections::{HashMap, HashSet},
+    io::Error,
+};
 
-use actix_web::{get, http, post, put, web, HttpResponse, Result};
-use infra::schema::STREAM_SCHEMAS_LATEST;
+use actix_web::{get, http, post, put, web, HttpRequest, HttpResponse, Result};
+#[cfg(feature = "cloud")]
+use o2_enterprise::enterprise::cloud::org_usage;
 
+#[cfg(feature = "cloud")]
+use crate::common::meta::organization::OrganizationInvites;
 use crate::{
     common::{
-        infra::config::USERS,
         meta::{
             http::HttpResponse as MetaHttpResponse,
             organization::{
                 OrgDetails, OrgUser, Organization, OrganizationResponse, PasscodeResponse,
-                RumIngestionResponse, CUSTOM, DEFAULT_ORG, THRESHOLD,
+                RumIngestionResponse, THRESHOLD,
             },
         },
         utils::auth::{is_root_user, UserEmail},
@@ -46,82 +51,72 @@ use crate::{
     )
 )]
 #[get("/organizations")]
-pub async fn organizations(user_email: UserEmail) -> Result<HttpResponse, Error> {
+pub async fn organizations(user_email: UserEmail, req: HttpRequest) -> Result<HttpResponse, Error> {
     let user_id = user_email.user_id.as_str();
     let mut id = 0;
+    let query = web::Query::<HashMap<String, String>>::from_query(req.query_string()).unwrap();
 
     let mut orgs: Vec<OrgDetails> = vec![];
     let mut org_names = HashSet::new();
     let user_detail = OrgUser {
-        first_name: user_id.to_string(),
-        last_name: user_id.to_string(),
+        first_name: "".to_string(),
+        last_name: "".to_string(),
         email: user_id.to_string(),
     };
 
+    let limit = query
+        .get("limit")
+        .unwrap_or(&"100".to_string())
+        .parse::<i64>()
+        .ok();
     let is_root_user = is_root_user(user_id);
-    if is_root_user {
+    let all_orgs = if is_root_user {
+        let Ok(records) = organization::list_all_orgs(limit).await else {
+            return Ok(
+                HttpResponse::InternalServerError().json(MetaHttpResponse::error(
+                    http::StatusCode::INTERNAL_SERVER_ERROR.into(),
+                    "Something went wrong".to_string(),
+                )),
+            );
+        };
+        records
+    } else {
+        let Ok(records) = organization::list_orgs_by_user(user_id).await else {
+            return Ok(HttpResponse::NotFound().json(MetaHttpResponse::error(
+                http::StatusCode::NOT_FOUND.into(),
+                "Something went wrong".to_string(),
+            )));
+        };
+        records
+    };
+    for org in all_orgs {
         id += 1;
-        org_names.insert(DEFAULT_ORG.to_string());
-        orgs.push(OrgDetails {
-            id,
-            identifier: DEFAULT_ORG.to_string(),
-            name: DEFAULT_ORG.to_string(),
-            user_email: user_id.to_string(),
-            ingest_threshold: THRESHOLD,
-            search_threshold: THRESHOLD,
-            org_type: DEFAULT_ORG.to_string(),
-            user_obj: user_detail.clone(),
-        });
-
-        let r = STREAM_SCHEMAS_LATEST.read().await;
-        for key in r.keys() {
-            if !key.contains('/') {
-                continue;
+        #[cfg(feature = "cloud")]
+        let org_subscription = {
+            if let Ok(Some(subscription)) = org_usage::get(org.identifier.as_str()).await {
+                subscription.subscription_type as i32
+            } else {
+                0
             }
-
-            id += 1;
-            let org = OrgDetails {
-                id,
-                identifier: key.split('/').collect::<Vec<&str>>()[0].to_string(),
-                name: key.split('/').collect::<Vec<&str>>()[0].to_string(),
-                user_email: user_id.to_string(),
-                ingest_threshold: THRESHOLD,
-                search_threshold: THRESHOLD,
-                org_type: CUSTOM.to_string(),
-                user_obj: user_detail.clone(),
-            };
-            if !org_names.contains(&org.identifier) {
-                org_names.insert(org.identifier.clone());
-                orgs.push(org)
-            }
-        }
-        drop(r);
-    }
-    for user in USERS.iter() {
-        if !user.key().contains('/') {
-            continue;
-        }
-        if !user.key().ends_with(&format!("/{user_id}")) {
-            continue;
-        }
-
-        id += 1;
+        };
+        #[cfg(not(feature = "cloud"))]
+        let org_subscription = 0;
         let org = OrgDetails {
             id,
-            identifier: user.key().split('/').collect::<Vec<&str>>()[0].to_string(),
-            name: user.key().split('/').collect::<Vec<&str>>()[0].to_string(),
+            identifier: org.identifier.clone(),
+            name: org.name,
             user_email: user_id.to_string(),
             ingest_threshold: THRESHOLD,
             search_threshold: THRESHOLD,
-            org_type: CUSTOM.to_string(),
+            org_type: org.org_type,
             user_obj: user_detail.clone(),
+            plan: org_subscription,
         };
         if !org_names.contains(&org.identifier) {
             org_names.insert(org.identifier.clone());
             orgs.push(org)
         }
     }
-    orgs.sort_by(|a, b| a.name.cmp(&b.name));
     let org_response = OrganizationResponse { data: orgs };
 
     Ok(HttpResponse::Ok().json(org_response))
@@ -337,23 +332,163 @@ async fn create_user_rumtoken(
     security(
         ("Authorization"= [])
     ),
-    params(
-        ("org_id" = String, Path, description = "Organization name"),
-      ),
+    request_body(content = Organization, description = "Organization data", content_type = "application/json"),
     responses(
         (status = 200, description = "Success", content_type = "application/json", body = RumIngestionResponse),
     )
 )]
 #[post("/organizations")]
 async fn create_org(
-    _user_email: UserEmail,
+    user_email: UserEmail,
     org: web::Json<Organization>,
 ) -> Result<HttpResponse, Error> {
-    let org = org.into_inner();
+    let mut org = org.into_inner();
 
-    let result = organization::create_org(&org).await;
+    let result = organization::create_org(&mut org, &user_email.user_id).await;
     match result {
         Ok(_) => Ok(HttpResponse::Ok().json(org)),
-        Err(err) => Err(err),
+        Err(err) => Ok(HttpResponse::BadRequest().json(MetaHttpResponse::error(
+            http::StatusCode::BAD_REQUEST.into(),
+            err.to_string(),
+        ))),
+    }
+}
+
+/// RenameOrganization
+#[utoipa::path(
+    context_path = "/api",
+    tag = "Organizations",
+    operation_id = "RenameOrganization",
+    security(
+        ("Authorization"= [])
+    ),
+    params(
+        ("org_id" = String, Path, description = "Organization id"),
+        ("new_name" = String, Path, description = "New organization name"),
+      ),
+    responses(
+        (status = 200, description = "Success", content_type = "application/json", body = Organization),
+    )
+)]
+#[put("/{org_id}/rename/{new_name}")]
+async fn rename_org(
+    user_email: UserEmail,
+    path: web::Path<(String, String)>,
+) -> Result<HttpResponse, Error> {
+    let (org, new_name) = path.into_inner();
+    let new_name = new_name.trim();
+    if new_name.is_empty() {
+        return Ok(HttpResponse::BadRequest().json(MetaHttpResponse::error(
+            http::StatusCode::BAD_REQUEST.into(),
+            "New name cannot be empty".to_string(),
+        )));
+    }
+
+    let result = organization::rename_org(&org, new_name, &user_email.user_id).await;
+    match result {
+        Ok(org) => Ok(HttpResponse::Ok().json(org)),
+        Err(err) => Ok(HttpResponse::BadRequest().json(MetaHttpResponse::error(
+            http::StatusCode::BAD_REQUEST.into(),
+            err.to_string(),
+        ))),
+    }
+}
+
+/// InviteOrganizationMembers
+#[cfg(feature = "cloud")]
+#[utoipa::path(
+    context_path = "/api",
+    tag = "Organizations",
+    operation_id = "GetOrganizationMemberInvites",
+    security(
+        ("Authorization"= [])
+    ),
+    params(
+        ("org_id" = String, Path, description = "Organization id"),
+      ),
+    responses(
+        (status = 200, description = "Success", content_type = "application/json", body = OrganizationInviteUserRecord),
+    )
+)]
+#[get("/{org_id}/invites")]
+pub async fn get_org_invites(path: web::Path<String>) -> Result<HttpResponse, Error> {
+    let org = path.into_inner();
+
+    let result = organization::get_invitations_for_org(&org).await;
+    match result {
+        Ok(result) => Ok(HttpResponse::Ok().json(result)),
+        Err(err) => Ok(HttpResponse::BadRequest().json(MetaHttpResponse::error(
+            http::StatusCode::BAD_REQUEST.into(),
+            err.to_string(),
+        ))),
+    }
+}
+
+/// InviteOrganizationMembers
+#[cfg(feature = "cloud")]
+#[utoipa::path(
+    context_path = "/api",
+    tag = "Organizations",
+    operation_id = "InviteOrganizationMembers",
+    security(
+        ("Authorization"= [])
+    ),
+    params(
+        ("org_id" = String, Path, description = "Organization id"),
+      ),
+    responses(
+        (status = 200, description = "Success", content_type = "application/json", body = Organization),
+    )
+)]
+#[post("/{org_id}/invites")]
+pub async fn generate_org_invite(
+    user_email: UserEmail,
+    path: web::Path<String>,
+    invites: web::Json<OrganizationInvites>,
+) -> Result<HttpResponse, Error> {
+    let org = path.into_inner();
+    let invites = invites.into_inner();
+
+    let result = organization::generate_invitation(&org, &user_email.user_id, invites).await;
+    match result {
+        Ok(org) => Ok(HttpResponse::Ok().json(org)),
+        Err(err) => Ok(HttpResponse::BadRequest().json(MetaHttpResponse::error(
+            http::StatusCode::BAD_REQUEST.into(),
+            err.to_string(),
+        ))),
+    }
+}
+
+/// AcceptOrganizationInvite
+#[cfg(feature = "cloud")]
+#[utoipa::path(
+    context_path = "/api",
+    tag = "Organizations",
+    operation_id = "AcceptOrganizationInvite",
+    security(
+        ("Authorization"= [])
+    ),
+    params(
+        ("org_id" = String, Path, description = "Organization id"),
+        ("invite_token" = String, Path, description = "The token sent to the user"),
+      ),
+    responses(
+        (status = 200, description = "Success", content_type = "application/json", body = Organization),
+    )
+)]
+#[put("/{org_id}/member_subscription/{invite_token}")]
+async fn accept_org_invite(
+    user_email: UserEmail,
+    path: web::Path<(String, String)>,
+) -> Result<HttpResponse, Error> {
+    let (_org, invite_token) = path.into_inner();
+
+    let result = organization::accept_invitation(&user_email.user_id, &invite_token).await;
+    match result {
+        Ok(_) => Ok(MetaHttpResponse::ok("Invitation accepted successfully")),
+        Err(err) => Ok(HttpResponse::BadRequest().json(MetaHttpResponse::error(
+            http::StatusCode::BAD_REQUEST.into(),
+            err.to_string(),
+        ))),
     }
 }

@@ -25,7 +25,7 @@ def test_e2e_query(create_session, base_url):
 
     session = create_session
     url = base_url
-    org_id = "org_pytest_data"
+    org_id = "default"
     now = datetime.now(timezone.utc)
     end_time = int(now.timestamp() * 1000000)
     one_min_ago = int((now - timedelta(minutes=1)).timestamp() * 1000000)
@@ -52,7 +52,7 @@ def test_e2e_query(create_session, base_url):
 
     session = create_session
     url = base_url
-    org_id = "org_pytest_data"
+    org_id = "default"
     now = datetime.now(timezone.utc)
     end_time = int(now.timestamp() * 1000000)
     one_min_ago = int((now - timedelta(minutes=1)).timestamp() * 1000000)
@@ -81,7 +81,7 @@ def test_e2e_limitadded(create_session, base_url):
 
     session = create_session
     url = base_url
-    org_id = "org_pytest_data"
+    org_id = "default"
     now = datetime.now(timezone.utc)
     end_time = int(now.timestamp() * 1000000)
     one_min_ago = int((now - timedelta(minutes=1)).timestamp() * 1000000)
@@ -110,7 +110,7 @@ def test_e2e_validhistogram(create_session, base_url):
 
     session = create_session
     url = base_url
-    org_id = "org_pytest_data"
+    org_id = "default"
     now = datetime.now(timezone.utc)
     end_time = int(now.timestamp() * 1000000)
     one_min_ago = int((now - timedelta(minutes=1)).timestamp() * 1000000)
@@ -140,7 +140,7 @@ def test_e2e_histogramwithlimit(create_session, base_url):
 
     session = create_session
     url = base_url
-    org_id = "org_pytest_data"
+    org_id = "default"
     now = datetime.now(timezone.utc)
     end_time = int(now.timestamp() * 1000000)
     one_min_ago = int((now - timedelta(minutes=1)).timestamp() * 1000000)
@@ -170,7 +170,7 @@ def test_e2e_matchallhistogram(create_session, base_url):
 
     session = create_session
     url = base_url
-    org_id = "org_pytest_data"
+    org_id = "default"
     now = datetime.now(timezone.utc)
     end_time = int(now.timestamp() * 1000000)
     one_min_ago = int((now - timedelta(minutes=1)).timestamp() * 1000000)
@@ -198,7 +198,7 @@ def test_e2e_matchallindexhistogram(create_session, base_url):
 
     session = create_session
     url = base_url
-    org_id = "org_pytest_data"
+    org_id = "default"
     now = datetime.now(timezone.utc)
     end_time = int(now.timestamp() * 1000000)
     one_min_ago = int((now - timedelta(minutes=1)).timestamp() * 1000000)
@@ -228,7 +228,7 @@ def test_e2e_matchallignorecasehistogram(create_session, base_url):
 
     session = create_session
     url = base_url
-    org_id = "org_pytest_data"
+    org_id = "default"
     now = datetime.now(timezone.utc)
     end_time = int(now.timestamp() * 1000000)
     one_min_ago = int((now - timedelta(minutes=1)).timestamp() * 1000000)
@@ -252,7 +252,7 @@ def test_e2e_matchallignorecasehistogram(create_session, base_url):
 
     session = create_session
     url = base_url
-    org_id = "org_pytest_data"
+    org_id = "default"
     now = datetime.now(timezone.utc)
     end_time = int(now.timestamp() * 1000000)
     one_min_ago = int((now - timedelta(minutes=1)).timestamp() * 1000000)
@@ -282,7 +282,7 @@ def test_e2e_matchallsql(create_session, base_url):
 
     session = create_session
     url = base_url
-    org_id = "org_pytest_data"
+    org_id = "default"
     now = datetime.now(timezone.utc)
     end_time = int(now.timestamp() * 1000000)
     one_min_ago = int((now - timedelta(minutes=1)).timestamp() * 1000000)
@@ -309,7 +309,7 @@ def test_e2e_matchallindexedsql(create_session, base_url):
 
     session = create_session
     url = base_url
-    org_id = "org_pytest_data"
+    org_id = "default"
     now = datetime.now(timezone.utc)
     end_time = int(now.timestamp() * 1000000)
     one_min_ago = int((now - timedelta(minutes=1)).timestamp() * 1000000)
@@ -347,7 +347,7 @@ def test_e2e_matchallcount(create_session, base_url):
 
     session = create_session
     url = base_url
-    org_id = "org_pytest_data"
+    org_id = "default"
     now = datetime.now(timezone.utc)
     end_time = int(now.timestamp() * 1000000)
     one_min_ago = int((now - timedelta(minutes=1)).timestamp() * 1000000)
@@ -390,7 +390,7 @@ def test_e2e_matchallignorecasesql(create_session, base_url):
 
     session = create_session
     url = base_url
-    org_id = "org_pytest_data"
+    org_id = "default"
     now = datetime.now(timezone.utc)
     end_time = int(now.timestamp() * 1000000)
     one_min_ago = int((now - timedelta(minutes=1)).timestamp() * 1000000)
@@ -429,7 +429,7 @@ def test_e2e_sqlaggregationquery(create_session, base_url):
 
     session = create_session
     url = base_url
-    org_id = "org_pytest_data"
+    org_id = "default"
     now = datetime.now(timezone.utc)
     end_time = int(now.timestamp() * 1000000)
     one_min_ago = int((now - timedelta(minutes=1)).timestamp() * 1000000)
@@ -458,7 +458,7 @@ def test_e2e_sqlgroupbytimestamp(create_session, base_url):
 
     session = create_session
     url = base_url
-    org_id = "org_pytest_data"
+    org_id = "default"
     now = datetime.now(timezone.utc)
     end_time = int(now.timestamp() * 1000000)
     one_min_ago = int((now - timedelta(minutes=1)).timestamp() * 1000000)
@@ -485,7 +485,7 @@ def test_e2e_sqlgroupbytimestampwithk8s(create_session, base_url):
 
     session = create_session
     url = base_url
-    org_id = "org_pytest_data"
+    org_id = "default"
     now = datetime.now(timezone.utc)
     end_time = int(now.timestamp() * 1000000)
     one_min_ago = int((now - timedelta(minutes=1)).timestamp() * 1000000)
@@ -513,7 +513,7 @@ def test_e2e_sqlcountaggregationquery(create_session, base_url):
 
     session = create_session
     url = base_url
-    org_id = "org_pytest_data"
+    org_id = "default"
     now = datetime.now(timezone.utc)
     end_time = int(now.timestamp() * 1000000)
     one_min_ago = int((now - timedelta(minutes=1)).timestamp() * 1000000)
@@ -542,7 +542,7 @@ def test_e2e_sqlmatchquery(create_session, base_url):
 
     session = create_session
     url = base_url
-    org_id = "org_pytest_data"
+    org_id = "default"
     now = datetime.now(timezone.utc)
     end_time = int(now.timestamp() * 1000000)
     one_min_ago = int((now - timedelta(minutes=1)).timestamp() * 1000000)
@@ -570,7 +570,7 @@ def test_e2e_sqlmaxquery(create_session, base_url):
 
     session = create_session
     url = base_url
-    org_id = "org_pytest_data"
+    org_id = "default"
     now = datetime.now(timezone.utc)
     end_time = int(now.timestamp() * 1000000)
     one_min_ago = int((now - timedelta(minutes=1)).timestamp() * 1000000)
@@ -598,7 +598,7 @@ def test_e2e_inquery(create_session, base_url):
 
     session = create_session
     url = base_url
-    org_id = "org_pytest_data"
+    org_id = "default"
     now = datetime.now(timezone.utc)
     end_time = int(now.timestamp() * 1000000)
     one_min_ago = int((now - timedelta(minutes=1)).timestamp() * 1000000)
@@ -626,7 +626,7 @@ def test_e2e_matchalllowercase(create_session, base_url):
 
     session = create_session
     url = base_url
-    org_id = "org_pytest_data"
+    org_id = "default"
     now = datetime.now(timezone.utc)
     end_time = int(now.timestamp() * 1000000)
     one_min_ago = int((now - timedelta(minutes=1)).timestamp() * 1000000)
@@ -657,7 +657,7 @@ def test_e2e_matchalluppercase(create_session, base_url):
 
     session = create_session
     url = base_url
-    org_id = "org_pytest_data"
+    org_id = "default"
     now = datetime.now(timezone.utc)
     end_time = int(now.timestamp() * 1000000)
     one_min_ago = int((now - timedelta(minutes=1)).timestamp() * 1000000)
@@ -689,7 +689,7 @@ def test_e2e_matchallupperandlowercase(create_session, base_url):
 
     session = create_session
     url = base_url
-    org_id = "org_pytest_data"
+    org_id = "default"
     now = datetime.now(timezone.utc)
     end_time = int(now.timestamp() * 1000000)
     one_min_ago = int((now - timedelta(minutes=1)).timestamp() * 1000000)
@@ -720,7 +720,7 @@ def test_e2e_matchallupperlowercase(create_session, base_url):
 
     session = create_session
     url = base_url
-    org_id = "org_pytest_data"
+    org_id = "default"
     now = datetime.now(timezone.utc)
     end_time = int(now.timestamp() * 1000000)
     one_min_ago = int((now - timedelta(minutes=1)).timestamp() * 1000000)
@@ -755,7 +755,7 @@ def test_e2e_cachedscenario(create_session, base_url):
 
     session = create_session
     url = base_url
-    org_id = "org_pytest_data"
+    org_id = "default"
     now = datetime.now(timezone.utc)
     end_time = int(now.timestamp() * 1000000)
     one_min_ago = int((now - timedelta(minutes=1)).timestamp() * 1000000)
@@ -810,7 +810,7 @@ def test_e2e_cachedmultistreams(create_session, base_url):
 
     session = create_session
     url = base_url
-    org_id = "org_pytest_data"
+    org_id = "default"
     now = datetime.now(timezone.utc)
     end_time = int(now.timestamp() * 1000000)
     one_min_ago = int((now - timedelta(minutes=1)).timestamp() * 1000000)
@@ -876,7 +876,7 @@ def test_e2e_eventtimestamp(create_session, base_url):
 
     session = create_session
     url = base_url
-    org_id = "org_pytest_data"
+    org_id = "default"
     now = datetime.now(timezone.utc)
     end_time = int(now.timestamp() * 1000000)
     one_min_ago = int((now - timedelta(minutes=1)).timestamp() * 1000000)
@@ -911,7 +911,7 @@ def test_e2e_distinctqueries(create_session, base_url):
 
     session = create_session
     url = base_url
-    org_id = "org_pytest_data"
+    org_id = "default"
     now = datetime.now(timezone.utc)
     end_time = int(now.timestamp() * 1000000)
     one_min_ago = int((now - timedelta(minutes=1)).timestamp() * 1000000)
@@ -939,7 +939,7 @@ def test_e2e_countcase(create_session, base_url):
 
     session = create_session
     url = base_url
-    org_id = "org_pytest_data"
+    org_id = "default"
     now = datetime.now(timezone.utc)
     end_time = int(now.timestamp() * 1000000)
     one_min_ago = int((now - timedelta(minutes=1)).timestamp() * 1000000)
@@ -966,7 +966,7 @@ def test_e2e_coalesce(create_session, base_url):
 
     session = create_session
     url = base_url
-    org_id = "org_pytest_data"
+    org_id = "default"
     now = datetime.now(timezone.utc)
     end_time = int(now.timestamp() * 1000000)
     one_min_ago = int((now - timedelta(minutes=1)).timestamp() * 1000000)
@@ -993,7 +993,7 @@ def test_e2e_percentile(create_session, base_url):
 
     session = create_session
     url = base_url
-    org_id = "org_pytest_data"
+    org_id = "default"
     now = datetime.now(timezone.utc)
     end_time = int(now.timestamp() * 1000000)
     one_min_ago = int((now - timedelta(minutes=1)).timestamp() * 1000000)
@@ -1020,7 +1020,7 @@ def test_e2e_float(create_session, base_url):
 
     session = create_session
     url = base_url
-    org_id = "org_pytest_data"
+    org_id = "default"
     now = datetime.now(timezone.utc)
     end_time = int(now.timestamp() * 1000000)
     one_min_ago = int((now - timedelta(minutes=1)).timestamp() * 1000000)
@@ -1048,7 +1048,7 @@ def test_e2e_matchallsinglechar(create_session, base_url):
 
     session = create_session
     url = base_url
-    org_id = "org_pytest_data"
+    org_id = "default"
     now = datetime.now(timezone.utc)
     end_time = int(now.timestamp() * 1000000)
     one_min_ago = int((now - timedelta(minutes=1)).timestamp() * 1000000)
@@ -1075,7 +1075,7 @@ def test_e2e_floatvalue(create_session, base_url):
 
     session = create_session
     url = base_url
-    org_id = "org_pytest_data"
+    org_id = "default"
     now = datetime.now(timezone.utc)
     end_time = int(now.timestamp() * 1000000)
     one_min_ago = int((now - timedelta(minutes=1)).timestamp() * 1000000)

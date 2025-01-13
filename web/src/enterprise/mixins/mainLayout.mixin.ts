@@ -22,22 +22,23 @@ const MainLayoutCloudMixin = {
      * @returns linksList.value
      */
     const leftNavigationLinks = (linksList: any, t: any) => {
-      // linksList.value.splice(7, 0, {
-      //   title: t("menu.billings"),
-      //   icon: "payment",
-      //   link: "/billings",
-      // });
       linksList.value.splice(5, 0, {
         title: t("menu.pipeline"),
         iconComponent: markRaw(PipelineIcon),
         link: "/pipeline",
         name: "pipeline",
       });
-      linksList.value.splice(10, 0, {
-        title: t("menu.billings"),
-        icon: "payments",
-        link: "/billings",
-      });
+
+      if(!store.state.zoConfig?.custom_hide_menus
+          ?.split(",")
+          ?.includes("billings")
+      ) {
+        linksList.value.splice(10, 0, {
+          title: t("menu.billings"),
+          icon: "payments",
+          link: "/billings",
+        });
+      }
 
       return linksList.value;
     };
@@ -99,73 +100,73 @@ const MainLayoutCloudMixin = {
         organization.subscription_type == config.freePlan ||
         organization.subscription_type == ""
       ) {
-        await billingService
-          .get_quota_threshold(organization.identifier)
-          .then((res: any) => {
-            const searchData: number = res.data.data.search;
-            const ingestData: number = res.data.data.ingest;
-            // res.data.data.forEach((element: any) => {
-            //   if (element.event == "search") {
-            //     searchData += element.size;
-            //   } else if (element.event == "multi" || element.event == "bulk") {
-            //     ingestData += element.size;
-            //   }
-            // });
-            const searchNearThreshold = Math.floor(
-              (store.state.selectedOrganization.search_threshold *
-                parseInt(config.zincQuotaThreshold)) /
-                100
-            );
+        // await billingService
+        //   .get_quota_threshold(organization.identifier)
+        //   .then((res: any) => {
+        //     const searchData: number = res.data.data.search;
+        //     const ingestData: number = res.data.data.ingest;
+        //     // res.data.data.forEach((element: any) => {
+        //     //   if (element.event == "search") {
+        //     //     searchData += element.size;
+        //     //   } else if (element.event == "multi" || element.event == "bulk") {
+        //     //     ingestData += element.size;
+        //     //   }
+        //     // });
+        //     const searchNearThreshold = Math.floor(
+        //       (store.state.selectedOrganization.search_threshold *
+        //         parseInt(config.zincQuotaThreshold)) /
+        //         100
+        //     );
 
-            const ingestNearThreshold = Math.floor(
-              (store.state.selectedOrganization.ingest_threshold *
-                parseInt(config.zincQuotaThreshold)) /
-                100
-            );
-            let usageMessage = "";
-            if (
-              searchData > searchNearThreshold ||
-              ingestData > ingestNearThreshold
-            ) {
-              if (searchNearThreshold >= 100 || ingestNearThreshold >= 100) {
-                usageMessage =
-                  "You’ve exceeded monthly free limit. Search: [SEARCH_USAGE]%, Ingestion: [INGEST_USAGE]%";
-              } else {
-                usageMessage =
-                  "You’re approaching monthly free limit. Search: [SEARCH_USAGE]%, Ingestion: [INGEST_USAGE]%";
-              }
+        //     const ingestNearThreshold = Math.floor(
+        //       (store.state.selectedOrganization.ingest_threshold *
+        //         parseInt(config.zincQuotaThreshold)) /
+        //         100
+        //     );
+        //     let usageMessage = "";
+        //     if (
+        //       searchData > searchNearThreshold ||
+        //       ingestData > ingestNearThreshold
+        //     ) {
+        //       if (searchNearThreshold >= 100 || ingestNearThreshold >= 100) {
+        //         usageMessage =
+        //           "You’ve exceeded monthly free limit. Search: [SEARCH_USAGE]%, Ingestion: [INGEST_USAGE]%";
+        //       } else {
+        //         usageMessage =
+        //           "You’re approaching monthly free limit. Search: [SEARCH_USAGE]%, Ingestion: [INGEST_USAGE]%";
+        //       }
 
-              const percentageSearchQuota: any =
-                store.state.selectedOrganization.search_threshold > 0
-                  ? (
-                      (searchData /
-                        store.state.selectedOrganization.search_threshold) *
-                      100
-                    ).toFixed(2)
-                  : 0;
+        //       const percentageSearchQuota: any =
+        //         store.state.selectedOrganization.search_threshold > 0
+        //           ? (
+        //               (searchData /
+        //                 store.state.selectedOrganization.search_threshold) *
+        //               100
+        //             ).toFixed(2)
+        //           : 0;
 
-              const percentageIngestQuota: any =
-                store.state.selectedOrganization.ingest_threshold > 0
-                  ? (
-                      (ingestData /
-                        store.state.selectedOrganization.ingest_threshold) *
-                      100
-                    ).toFixed(2)
-                  : 0;
+        //       const percentageIngestQuota: any =
+        //         store.state.selectedOrganization.ingest_threshold > 0
+        //           ? (
+        //               (ingestData /
+        //                 store.state.selectedOrganization.ingest_threshold) *
+        //               100
+        //             ).toFixed(2)
+        //           : 0;
 
-              usageMessage = usageMessage.replace(
-                "[SEARCH_USAGE]",
-                percentageSearchQuota <= 100 ? percentageSearchQuota : 100
-              );
-              usageMessage = usageMessage.replace(
-                "[INGEST_USAGE]",
-                percentageIngestQuota <= 100 ? percentageIngestQuota : 100
-              );
-            }
-            // quotaThresholdMsg.value = usageMessage;
-            store.dispatch("setQuotaThresholdMsg", usageMessage);
-          })
-          .catch((error) => console.log(error));
+        //       usageMessage = usageMessage.replace(
+        //         "[SEARCH_USAGE]",
+        //         percentageSearchQuota <= 100 ? percentageSearchQuota : 100
+        //       );
+        //       usageMessage = usageMessage.replace(
+        //         "[INGEST_USAGE]",
+        //         percentageIngestQuota <= 100 ? percentageIngestQuota : 100
+        //       );
+        //     }
+        //     // quotaThresholdMsg.value = usageMessage;
+        //     store.dispatch("setQuotaThresholdMsg", usageMessage);
+        //   })
+        //   .catch((error) => console.log(error));
       }
     };
 

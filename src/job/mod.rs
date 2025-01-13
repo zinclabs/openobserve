@@ -22,7 +22,10 @@ use regex::Regex;
 use crate::{
     common::{
         infra::config::SYSLOG_ENABLED,
-        meta::{organization::DEFAULT_ORG, user::UserRequest},
+        meta::{
+            organization::DEFAULT_ORG,
+            user::{UserOrgRole, UserRequest},
+        },
     },
     service::{db, self_reporting, users},
 };
@@ -58,31 +61,46 @@ pub async fn init() -> Result<(), anyhow::Error> {
                 "Please set root user email-id & password using ZO_ROOT_USER_EMAIL & ZO_ROOT_USER_PASSWORD environment variables. This can also indicate an invalid email ID. Email ID must comply with ([a-z0-9_+]([a-z0-9_+.-]*[a-z0-9_+])?)@([a-z0-9]+([\\-\\.]{{1}}[a-z0-9]+)*\\.[a-z]{{2,6}})"
             );
         }
-        let _ = users::create_root_user(
+        let _ = crate::service::organization::check_and_create_org_without_ofga(DEFAULT_ORG).await;
+        if let Err(e) = users::create_root_user(
             DEFAULT_ORG,
             UserRequest {
                 email: cfg.auth.root_user_email.clone(),
                 password: cfg.auth.root_user_password.clone(),
-                role: crate::common::meta::user::UserRole::Root,
+                role: UserOrgRole {
+                    base_role: config::meta::user::UserRole::Root,
+                    custom_role: None,
+                },
                 first_name: "root".to_owned(),
                 last_name: "".to_owned(),
                 is_external: false,
             },
         )
-        .await;
+        .await
+        {
+            panic!("Failed to create root user: {e}");
+        }
     }
 
     if !cfg.common.mmdb_disable_download {
         // Try to download the mmdb files, if its not disabled.
         tokio::task::spawn(async move { mmdb_downloader::run().await });
     }
-    // cache users
-    tokio::task::spawn(async move { db::user::watch().await });
-    db::user::cache().await.expect("user cache failed");
 
+    db::user::cache().await.expect("user cache failed");
     db::organization::cache()
         .await
-        .expect("organization cache sync failed");
+        .expect("organizations cache failed");
+    db::org_users::cache().await.expect("org user cache failed");
+
+    db::organization::org_settings_cache()
+        .await
+        .expect("organization settings cache sync failed");
+
+    // watch org users
+    tokio::task::spawn(async move { db::user::watch().await });
+    tokio::task::spawn(async move { db::org_users::watch().await });
+    tokio::task::spawn(async move { db::organization::watch().await });
 
     // check version
     db::version::set().await.expect("db version set failed");
@@ -120,7 +138,8 @@ pub async fn init() -> Result<(), anyhow::Error> {
     tokio::task::spawn(async move { db::alerts::realtime_triggers::watch().await });
     tokio::task::spawn(async move { db::alerts::alert::watch().await });
     tokio::task::spawn(async move { db::dashboards::reports::watch().await });
-    tokio::task::spawn(async move { db::organization::watch().await });
+    tokio::task::spawn(async move { db::organization::org_settings_watch().await });
+
     #[cfg(feature = "enterprise")]
     tokio::task::spawn(async move { db::ofga::watch().await });
 
@@ -210,6 +229,12 @@ pub async fn init() -> Result<(), anyhow::Error> {
             log::error!("OFGA init failed: {}", e);
         }
     }
+
+    // Migrate ofga for cloud
+    #[cfg(feature = "cloud")]
+    o2_enterprise::enterprise::cloud::ofga_migrate()
+        .await
+        .expect("cloud ofga migrations failed");
 
     // Shouldn't serve request until initialization finishes
     log::info!("Job initialization complete");

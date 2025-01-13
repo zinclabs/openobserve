@@ -58,7 +58,7 @@ def test_e2e_try_cast_queries(create_session, base_url, test_name, sql_query, ex
     """Parameterized E2E test for various try_cast SQL queries."""
     session = create_session
     url = base_url
-    org_id = "org_pytest_data"
+    org_id = "default"
     
     # Define time range for the query
     now = datetime.now(timezone.utc)

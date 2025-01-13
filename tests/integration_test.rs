@@ -60,6 +60,7 @@ mod tests {
             env::set_var("ZO_RESULT_CACHE_ENABLED", "false");
             env::set_var("ZO_PRINT_KEY_SQL", "true");
             env::set_var("ZO_SMTP_ENABLED", "true");
+            env::set_var("ZO_CREATE_ORG_THROUGH_INGESTION", "true");
 
             env_logger::init_from_env(
                 env_logger::Env::new().default_filter_or(&get_config().log.level),
@@ -723,7 +724,7 @@ mod tests {
         let body_str = r#"{
                                 "email": "nonadmin@example.com",
                                 "password": "Abcd12345",
-                                "role": "member"
+                                "role": "admin"
                             }"#;
         let app = test::init_service(
             App::new()
@@ -742,6 +743,7 @@ mod tests {
             .set_payload(body_str)
             .to_request();
         let resp = test::call_service(&app, req).await;
+        println!("post user resp: {:?}", resp);
         assert!(resp.status().is_success());
     }
 
@@ -749,8 +751,8 @@ mod tests {
         let auth = setup();
         let body_str = r#"{
                                 "email": "nonadmin@example.com",
-                                "password": "Abcd12345",
-                                "role": "member"
+                                "new_password": "12345678",
+                                "change_password": true
                             }"#;
         let app = test::init_service(
             App::new()

@@ -13,6 +13,7 @@ actix-web-prometheus.workspace = true
 ahash.workspace = true
 anyhow.workspace = true
 arc-swap.workspace = true
+argon2.workspace = true
 arrow.workspace = true
 arrow-json.workspace = true
 arrow-schema.workspace = true

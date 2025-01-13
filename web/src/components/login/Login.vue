@@ -78,91 +78,100 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
       />
     </div>
 
-    <div style="font-size: 22px" class="full-width text-center q-pb-md">
-      Login
+    <div v-if="autoRedirectDexLogin">
+      <p>
+        Redirecting to SSO login page. If you are not redirected, please <a href="#" @click="loginWithSSo">click here</a>.
+      </p>
     </div>
 
-    <div v-if="showSSO" class="flex justify-center">
-      <q-btn
-        data-test="sso-login-btn"
-        class="text-bold no-border"
-        padding="sm lg"
-        color="primary"
-        no-caps
-        style="width: 400px"
-        @click="loginWithSSo"
-      >
-        <div
-          class="flex items-center justify-center full-width text-center relative"
+    <div v-else>
+
+      <div style="font-size: 22px" class="full-width text-center q-pb-md">
+        Login
+      </div>
+
+      <div v-if="showSSO" class="flex justify-center">
+        <q-btn
+          data-test="sso-login-btn"
+          class="text-bold no-border"
+          padding="sm lg"
+          color="primary"
+          no-caps
+          style="width: 400px"
+          @click="loginWithSSo"
         >
-          <img
-            class="absolute"
-            style="width: 30px; left: 16px"
-            :src="getImageURL('images/common/sso.svg')"
-          />
-          <span class="text-center"> Login with SSO</span>
-        </div>
-      </q-btn>
-    </div>
+          <div
+            class="flex items-center justify-center full-width text-center relative"
+          >
+            <img
+              class="absolute"
+              style="width: 30px; left: 16px"
+              :src="getImageURL('images/common/sso.svg')"
+            />
+            <span class="text-center"> Login with SSO</span>
+          </div>
+        </q-btn>
+      </div>
 
-    <div v-if="showSSO && showInternalLogin" class="q-py-md text-center">
-      <a
-        class="cursor-pointer login-internal-link q-py-md"
-        style="text-decoration: underline"
-        @click="loginAsInternalUser = !loginAsInternalUser"
-        >Login as internal user</a
+      <div v-if="showSSO && showInternalLogin" class="q-py-md text-center">
+        <a
+          class="cursor-pointer login-internal-link q-py-md"
+          style="text-decoration: underline"
+          @click="loginAsInternalUser = !loginAsInternalUser"
+          >Login as internal user</a
+        >
+      </div>
+
+      <div
+        v-if="!showSSO || (showSSO && loginAsInternalUser && showInternalLogin)"
+        class="o2-input login-inputs"
       >
-    </div>
-
-    <div
-      v-if="!showSSO || (showSSO && loginAsInternalUser && showInternalLogin)"
-      class="o2-input login-inputs"
-    >
-      <q-form ref="loginform"
-class="q-gutter-md" @submit.prevent="">
-        <q-input
-          v-model="name"
-          data-cy="login-user-id"
-          data-test="login-user-id"
-          outlined
-          :label="`${t('login.userEmail')} *`"
-          placeholder="Email"
-          class="showLabelOnTop no-case"
-          type="email"
-          dense
-          stack-label
-          filled
-        />
-
-        <q-input
-          v-model="password"
-          data-cy="login-password"
-          data-test="login-password"
-          outlined
-          :label="`${t('login.password')} *`"
-          placeholder="Password"
-          class="showLabelOnTop no-case"
-          type="password"
-          dense
-          stack-label
-          filled
-        />
-
-        <div class="q-mt-lg q-mb-xl">
-          <q-btn
-            data-cy="login-sign-in"
-            unelevated
-            class="full-width text-bold no-border"
-            color="primary"
-            type="submit"
-            padding="sm lg"
-            :label="t('login.login')"
-            :loading="submitting"
-            no-caps
-            @click="onSignIn()"
+        <q-form ref="loginform"
+  class="q-gutter-md" @submit.prevent="">
+          <q-input
+            v-model="name"
+            data-cy="login-user-id"
+            data-test="login-user-id"
+            outlined
+            :label="`${t('login.userEmail')} *`"
+            placeholder="Email"
+            class="showLabelOnTop no-case"
+            type="email"
+            dense
+            stack-label
+            filled
           />
-        </div>
-      </q-form>
+
+          <q-input
+            v-model="password"
+            data-cy="login-password"
+            data-test="login-password"
+            outlined
+            :label="`${t('login.password')} *`"
+            placeholder="Password"
+            class="showLabelOnTop no-case"
+            type="password"
+            dense
+            stack-label
+            filled
+          />
+
+          <div class="q-mt-lg q-mb-xl">
+            <q-btn
+              data-cy="login-sign-in"
+              unelevated
+              class="full-width text-bold no-border"
+              color="primary"
+              type="submit"
+              padding="sm lg"
+              :label="t('login.login')"
+              :loading="submitting"
+              no-caps
+              @click="onSignIn()"
+            />
+          </div>
+        </q-form>
+      </div>
     </div>
   </div>
 </template>
@@ -202,6 +211,7 @@ export default defineComponent({
     const email = ref("");
     const loginform = ref();
     const selectedOrg = ref({});
+    const autoRedirectDexLogin = ref(false);
     let orgOptions = ref([{ label: Number, value: String }]);
 
     const submitting = ref(false);
@@ -209,6 +219,13 @@ export default defineComponent({
     const loginAsInternalUser = ref(false);
 
     onBeforeMount(() => {
+      if (
+        showSSO.value &&
+        router.currentRoute.value?.redirectedFrom?.query?.action == "getstarted"
+      ) {
+        autoRedirectDexLogin.value = true;
+        loginWithSSo();
+      }
       if (router.currentRoute.value.query.login_as_internal_user === "true") {
         loginAsInternalUser.value = true;
       }
@@ -428,6 +445,7 @@ export default defineComponent({
       showInternalLogin,
       loginWithSSo,
       config,
+      autoRedirectDexLogin,
     };
   },
   methods: {

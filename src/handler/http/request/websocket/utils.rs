@@ -34,9 +34,9 @@ pub mod enterprise_utils {
     ) -> Result<(), String> {
         use o2_enterprise::enterprise::openfga::meta::mapping::OFGA_MODELS;
 
-        use crate::common::{
-            infra::config::USERS,
-            utils::auth::{is_root_user, AuthExtractor},
+        use crate::{
+            common::utils::auth::{is_root_user, AuthExtractor},
+            service::users::get_user,
         };
 
         // Check if the user is a root user (has all permissions)
@@ -45,10 +45,9 @@ pub mod enterprise_utils {
         }
 
         // Get user details from the USERS cache
-        let user: meta::user::User = USERS
-            .get(&format!("{}/{}", org_id, user_id))
-            .ok_or_else(|| "User not found".to_string())?
-            .clone();
+        let user: config::meta::user::User = get_user(Some(org_id), user_id)
+            .await
+            .ok_or_else(|| "User not found".to_string())?;
 
         // If the user is external, check permissions
         if user.is_external {

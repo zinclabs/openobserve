@@ -68,9 +68,17 @@ export default defineComponent({
       protocol: "",
       tls: "",
     });
-    const url = new URL(store.state.API_ENDPOINT);
+
+    let ingestionURL: string = store.state.API_ENDPOINT;
+    if (
+      Object.hasOwn(store.state.zoConfig, "ingestion_url") &&
+      store.state.zoConfig.ingestion_url !== ""
+    ) {
+      ingestionURL = store.state.zoConfig.ingestion_url;
+    }
+    const url = new URL(ingestionURL);
     endpoint.value = {
-      url: store.state.API_ENDPOINT,
+      url: ingestionURL,
       host: url.hostname,
       port: url.port || (url.protocol === "https:" ? "443" : "80"),
       protocol: url.protocol.replace(":", ""),

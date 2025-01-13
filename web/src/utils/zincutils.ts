@@ -150,18 +150,6 @@ export const invlidateLoginData = () => {
   userService.logout().then((res: any) => {});
 };
 
-export const getLoginURL = () => {
-  return `https://${config.oauth.domain}/oauth/v2/authorize?client_id=${config.aws_user_pools_web_client_id}&response_type=${config.oauth.responseType}&redirect_uri=${config.oauth.redirectSignIn}&scope=${config.oauth.scope}`;
-};
-
-export const getLogoutURL = () => {
-  return `https://${config.oauth.domain}/oidc/v1/end_session?client_id=${
-    config.aws_user_pools_web_client_id
-  }&id_token_hint=${useLocalUserInfo()}&post_logout_redirect_uri=${
-    config.oauth.redirectSignOut
-  }&state=random_string`;
-};
-
 export const getDecodedAccessToken = (token: string) => {
   try {
     const decodedString = b64DecodeStandard(token.split(".")[1]);
@@ -383,7 +371,7 @@ export const getPath = () => {
         ? window.location.pathname.slice(0, pos + 5)
         : "";
   const cloudPath = import.meta.env.BASE_URL;
-  return config.isCloud == "true" ? cloudPath : path;
+  return config.isCloud == "true" ? path : path;
 };
 
 export const routeGuard = async (to: any, from: any, next: any) => {

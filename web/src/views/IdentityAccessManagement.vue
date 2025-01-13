@@ -46,7 +46,7 @@ const tabs = ref([
         org_identifier: store.state.selectedOrganization.identifier,
       },
     },
-    label: t("iam.users"),
+    label: t("iam.basicUsers"),
     class: "tab_content",
   },
   {
@@ -129,7 +129,7 @@ watch(
 );
 
 function setTabs() {
-  const cloud = ["users", "organizations", "serviceAccounts"];
+  const cloud = ["users", "organizations"];
 
   const rbac = ["groups", "roles"];
 

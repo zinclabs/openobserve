@@ -119,6 +119,36 @@ async fn init_cluster_coordinator() -> Box<dyn Db> {
     }
 }
 
+pub async fn put_into_db_coordinator(
+    key: &str,
+    value: Bytes,
+    need_watch: bool,
+    start_dt: Option<i64>,
+) -> Result<()> {
+    let cfg = get_config();
+    let value = if cfg.common.local_mode {
+        value
+    } else {
+        Bytes::from("")
+    };
+    let cluster_coordinator = get_coordinator().await;
+    cluster_coordinator
+        .put(key, value, need_watch, start_dt)
+        .await
+}
+
+pub async fn delete_from_db_coordinator(
+    key: &str,
+    with_prefix: bool,
+    need_watch: bool,
+    start_dt: Option<i64>,
+) -> Result<()> {
+    let cluster_coordinator = get_coordinator().await;
+    cluster_coordinator
+        .delete(key, with_prefix, need_watch, start_dt)
+        .await
+}
+
 async fn init_super_cluster() -> Box<dyn Db> {
     if get_config().common.local_mode {
         panic!("super cluster is not supported in local mode");

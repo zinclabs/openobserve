@@ -8,16 +8,14 @@
 import { defineComponent, ref, onBeforeMount } from "vue";
 import { useStore } from "vuex";
 import { useI18n } from "vue-i18n";
-import UsersCloud from "@/enterprise/components/users/User.vue";
-import UsersOpenSource from "@/components/iam/users/User.vue";
+import Users from "@/components/iam/users/User.vue";
 
 import config from "@/aws-exports";
 
 export default defineComponent({
   name: "UserPage",
   components: {
-    UsersCloud,
-    UsersOpenSource,
+    Users,
   },
   setup() {
     const store = useStore();
@@ -28,12 +26,7 @@ export default defineComponent({
     const loadComponent = ref(false);
 
     onBeforeMount(() => {
-      if (config.isCloud == "true") {
-        componentName.value = "UsersCloud";
-      } else {
-        componentName.value = "UsersOpenSource";
-      }
-
+      componentName.value = "Users";
       loadComponent.value = true;
     });
 

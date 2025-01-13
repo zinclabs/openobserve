@@ -13,11 +13,15 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use std::{fmt, str::FromStr};
-
+use config::meta::user::{DBUser, User, UserOrg, UserRole};
+#[cfg(feature = "cloud")]
+use o2_enterprise::enterprise::cloud::OrgInviteStatus;
 use serde::{Deserialize, Serialize};
-use strum::EnumIter;
+#[cfg(feature = "enterprise")]
+use strum::IntoEnumIterator;
 use utoipa::ToSchema;
+
+use super::organization::OrgRoleMapping;
 
 #[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
 pub struct UserRequest {
@@ -28,7 +32,7 @@ pub struct UserRequest {
     pub last_name: String,
     pub password: String,
     #[serde(skip_serializing)]
-    pub role: UserRole,
+    pub role: UserOrgRole,
     /// Is the user created via ldap flow.
     #[serde(default)]
     pub is_external: bool,
@@ -56,7 +60,7 @@ impl UserRequest {
                 name: org,
                 token,
                 rum_token: Some(rum_token),
-                role: self.role.clone(),
+                role: self.role.base_role.clone(),
             }],
             is_external,
             password_ext: Some(password_ext),
@@ -65,114 +69,39 @@ impl UserRequest {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
-pub struct DBUser {
+pub struct PostUserRequest {
     pub email: String,
     #[serde(default)]
     pub first_name: String,
     #[serde(default)]
     pub last_name: String,
     pub password: String,
-    #[serde(default)]
-    pub salt: String,
-    pub organizations: Vec<UserOrg>,
+    #[serde(skip_serializing, flatten)]
+    pub role: UserRoleRequest,
+    /// Is the user created via ldap flow.
     #[serde(default)]
     pub is_external: bool,
-    pub password_ext: Option<String>,
 }
 
-impl DBUser {
-    pub fn get_user(&self, org_id: String) -> Option<User> {
-        if self.organizations.is_empty() {
-            return None;
+impl From<&PostUserRequest> for UserRequest {
+    fn from(user: &PostUserRequest) -> Self {
+        UserRequest {
+            email: user.email.clone(),
+            first_name: user.first_name.clone(),
+            last_name: user.last_name.clone(),
+            password: user.password.clone(),
+            role: UserOrgRole::from(&user.role),
+            is_external: user.is_external,
         }
-
-        let mut local = self.clone();
-        local.organizations.retain(|org| org.name.eq(&org_id));
-        if local.organizations.is_empty() {
-            return None;
-        }
-
-        let org = local.organizations.first().unwrap();
-        Some(User {
-            email: local.email,
-            first_name: local.first_name,
-            last_name: local.last_name,
-            password: local.password,
-            role: org.role.clone(),
-            org: org.name.clone(),
-            token: org.token.clone(),
-            rum_token: org.rum_token.clone(),
-            salt: local.salt,
-            is_external: self.is_external,
-            password_ext: self.password_ext.clone(),
-        })
-    }
-
-    pub fn get_all_users(&self) -> Vec<User> {
-        let mut ret_val = vec![];
-        if self.organizations.is_empty() {
-            ret_val
-        } else {
-            for org in self.organizations.clone() {
-                ret_val.push(User {
-                    email: self.email.clone(),
-                    first_name: self.first_name.clone(),
-                    last_name: self.last_name.clone(),
-                    password: self.password.clone(),
-                    role: org.role,
-                    org: org.name,
-                    token: org.token,
-                    rum_token: org.rum_token,
-                    salt: self.salt.clone(),
-                    is_external: self.is_external,
-                    password_ext: self.password_ext.clone(),
-                })
-            }
-            ret_val
-        }
-    }
-}
-#[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
-pub struct User {
-    pub email: String,
-    #[serde(default)]
-    pub first_name: String,
-    #[serde(default)]
-    pub last_name: String,
-    pub password: String,
-    #[serde(default)]
-    pub salt: String,
-    #[serde(default)]
-    pub token: String,
-    #[serde(default)]
-    pub rum_token: Option<String>,
-    pub role: UserRole,
-    pub org: String,
-    /// Is the user authenticated and created via LDAP
-    pub is_external: bool,
-    pub password_ext: Option<String>,
-}
-
-#[derive(Clone, Default, Debug, Serialize, Deserialize, ToSchema)]
-pub struct UserOrg {
-    pub name: String,
-    #[serde(default)]
-    pub token: String,
-    #[serde(default)]
-    pub rum_token: Option<String>,
-    #[serde(default)]
-    pub role: UserRole,
-}
-
-impl PartialEq for UserOrg {
-    fn eq(&self, other: &Self) -> bool {
-        !self.name.eq(&other.name)
     }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
 pub struct UserOrgRole {
-    pub role: UserRole,
+    #[serde(rename = "role")]
+    pub base_role: UserRole,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub custom_role: Option<Vec<String>>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, ToSchema, Eq, PartialEq, Default)]
@@ -187,99 +116,44 @@ pub struct UpdateUser {
     pub old_password: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub new_password: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub role: Option<UserRole>,
+    #[serde(skip_serializing_if = "Option::is_none", flatten)]
+    pub role: Option<UserRoleRequest>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub token: Option<String>,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, ToSchema, EnumIter)]
-pub enum UserRole {
-    #[serde(rename = "admin")]
-    Admin,
-    #[serde(rename = "member")] // admin in OpenSource
-    Member,
-    #[serde(rename = "root")]
-    Root,
-    #[cfg(feature = "enterprise")]
-    #[serde(rename = "viewer")] // read only user
-    Viewer,
-    #[cfg(feature = "enterprise")]
-    #[serde(rename = "user")] // No access only login user
-    User,
-    #[cfg(feature = "enterprise")]
-    #[serde(rename = "editor")]
-    Editor,
-    #[serde(rename = "service_account")]
-    ServiceAccount,
-}
-
-impl Default for UserRole {
-    fn default() -> Self {
-        #[cfg(not(feature = "enterprise"))]
-        return UserRole::Admin;
-        #[cfg(feature = "enterprise")]
-        return UserRole::User;
+pub fn get_default_user_org() -> UserOrg {
+    UserOrg {
+        name: "".to_string(),
+        token: "".to_string(),
+        rum_token: None,
+        role: get_default_user_role(),
     }
 }
 
-impl fmt::Display for UserRole {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            UserRole::Admin => write!(f, "admin"),
-            UserRole::Member => write!(f, "member"),
-            UserRole::Root => write!(f, "root"),
-            #[cfg(feature = "enterprise")]
-            UserRole::Viewer => write!(f, "viewer"),
-            #[cfg(feature = "enterprise")]
-            UserRole::Editor => write!(f, "editor"),
-            #[cfg(feature = "enterprise")]
-            UserRole::User => write!(f, "user"),
-            UserRole::ServiceAccount => write!(f, "service_account"),
-        }
+#[cfg(feature = "enterprise")]
+pub fn get_default_user_role() -> UserRole {
+    let mut role = UserRole::Admin;
+    use o2_enterprise::enterprise::common::infra::config::get_config as get_o2_config;
+    if get_o2_config().openfga.enabled {
+        role = get_o2_config().dex.default_role.parse().unwrap();
     }
+    role
 }
 
-impl UserRole {
-    pub fn get_label(&self) -> String {
-        match self {
-            UserRole::Admin => "Admin".to_string(),
-            UserRole::Member => "Member".to_string(),
-            UserRole::Root => "Root".to_string(),
-            #[cfg(feature = "enterprise")]
-            UserRole::Viewer => "Viewer".to_string(),
-            #[cfg(feature = "enterprise")]
-            UserRole::Editor => "Editor".to_string(),
-            #[cfg(feature = "enterprise")]
-            UserRole::User => "User".to_string(),
-            UserRole::ServiceAccount => "Service Account".to_string(),
-        }
-    }
+#[cfg(not(feature = "enterprise"))]
+pub fn get_default_user_role() -> UserRole {
+    UserRole::Admin
 }
 
-// Implementing FromStr for UserRole
-impl FromStr for UserRole {
-    type Err = ();
+#[cfg(feature = "enterprise")]
+pub fn get_roles() -> Vec<UserRole> {
+    UserRole::iter().collect()
+}
 
-    fn from_str(input: &str) -> Result<UserRole, Self::Err> {
-        match input {
-            "admin" => Ok(UserRole::Admin),
-            "member" => Ok(UserRole::Member),
-            "root" => Ok(UserRole::Root),
-            #[cfg(feature = "enterprise")]
-            "viewer" => Ok(UserRole::Viewer),
-            #[cfg(feature = "enterprise")]
-            "editor" => Ok(UserRole::Editor),
-            #[cfg(feature = "enterprise")]
-            "user" => Ok(UserRole::User),
-            #[cfg(feature = "enterprise")]
-            "service_account" => Ok(UserRole::ServiceAccount),
-            #[cfg(feature = "enterprise")]
-            _ => Ok(UserRole::User),
-            #[cfg(not(feature = "enterprise"))]
-            _ => Ok(UserRole::Admin),
-        }
-    }
+#[cfg(not(feature = "enterprise"))]
+pub fn get_roles() -> Vec<UserRole> {
+    vec![UserRole::Admin, UserRole::Root, UserRole::ServiceAccount]
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
@@ -289,14 +163,58 @@ pub struct UserResponse {
     pub first_name: String,
     #[serde(default)]
     pub last_name: String,
-    pub role: UserRole,
+    pub role: String,
     #[serde(default)]
     pub is_external: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub orgs: Option<Vec<OrgRoleMapping>>,
+    pub created_at: i64,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
 pub struct UserList {
     pub data: Vec<UserResponse>,
+}
+
+#[cfg(feature = "cloud")]
+#[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
+pub enum InviteStatus {
+    #[serde(rename = "pending")]
+    Pending,
+    #[serde(rename = "accepted")]
+    Accepted,
+    #[serde(rename = "rejected")]
+    Rejected,
+    #[serde(rename = "expired")]
+    Expired,
+}
+
+#[cfg(feature = "cloud")]
+impl From<&OrgInviteStatus> for InviteStatus {
+    fn from(status: &OrgInviteStatus) -> Self {
+        match status {
+            OrgInviteStatus::Pending => InviteStatus::Pending,
+            OrgInviteStatus::Accepted => InviteStatus::Accepted,
+            OrgInviteStatus::Rejected => InviteStatus::Rejected,
+            OrgInviteStatus::Expired => InviteStatus::Expired,
+        }
+    }
+}
+
+#[cfg(feature = "cloud")]
+#[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
+pub struct UserInvite {
+    pub org_id: String,
+    pub token: String,
+    pub role: String,
+    pub status: InviteStatus,
+    pub expires_at: i64,
+}
+
+#[cfg(feature = "cloud")]
+#[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
+pub struct UserInviteList {
+    pub data: Vec<UserInvite>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
@@ -423,10 +341,11 @@ impl TokenValidationResponseBuilder {
     }
 }
 
-#[derive(Clone, Debug, Default, Serialize, Deserialize, ToSchema)]
+#[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
 pub struct RoleOrg {
     pub role: UserRole,
     pub org: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub custom_role: Option<String>,
 }
 
@@ -445,9 +364,47 @@ pub struct UserGroupRequest {
     pub remove_roles: Option<std::collections::HashSet<String>>,
 }
 
-#[derive(Clone, Debug, Default, Serialize, Deserialize, ToSchema)]
+#[derive(Clone, Debug, Eq, PartialEq, Default, Serialize, Deserialize, ToSchema)]
 pub struct UserRoleRequest {
-    pub name: String,
+    pub role: String,
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        rename = "custom_role"
+    )]
+    pub custom: Option<Vec<String>>,
+}
+
+impl From<&UserRoleRequest> for UserOrgRole {
+    fn from(role: &UserRoleRequest) -> Self {
+        let mut standard_role = get_default_user_role();
+        let mut custom_role = role.custom.clone();
+        let mut is_role_name_standard = false;
+        for user_role in get_roles() {
+            if user_role.to_string().eq(&role.role) {
+                standard_role = user_role;
+                is_role_name_standard = true;
+                break;
+            }
+        }
+        if !is_role_name_standard && custom_role.is_none() {
+            custom_role = Some(vec![role.role.clone()]);
+        }
+        UserOrgRole {
+            base_role: standard_role,
+            custom_role,
+        }
+    }
+}
+
+#[cfg(feature = "enterprise")]
+pub fn is_standard_role(role: &str) -> bool {
+    for user_role in UserRole::iter() {
+        if user_role.to_string().eq_ignore_ascii_case(role) {
+            return true;
+        }
+    }
+    false
 }
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize, ToSchema)]

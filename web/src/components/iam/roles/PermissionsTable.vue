@@ -20,7 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
     v-if="!level"
     class="q-mb-md text-bold"
   >
-    {{ selectedPermissionsHash.size }} Permissions
+     {{ visibleResourceCount }} Permissions
   </div>
   <div
     :data-test="`iam-${

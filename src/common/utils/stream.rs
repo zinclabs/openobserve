@@ -19,14 +19,14 @@ use actix_web::HttpResponse;
 use arrow::array::{Int64Array, RecordBatch};
 use config::{
     get_config,
-    meta::stream::{FileMeta, StreamType},
+    meta::{
+        stream::{FileMeta, StreamType},
+        user::{User, UserRole},
+    },
     FILE_EXT_JSON,
 };
 
-use crate::{
-    common::meta::user::{User, UserRole},
-    service::users,
-};
+use crate::service::users;
 
 #[inline(always)]
 pub fn stream_type_query_param_error() -> Result<HttpResponse, Error> {

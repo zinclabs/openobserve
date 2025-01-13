@@ -152,7 +152,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
               padding="sm lg"
               color="secondary"
               no-caps
-              icon="add"
               dense
               :label="t(`serviceAccounts.add`)"
               @click="addRoutePush({})"
@@ -416,17 +415,16 @@ export default defineComponent({
       value: number | String;
     }
     const perPageOptions: any = [
-      { label: "5", value: 5 },
-      { label: "10", value: 10 },
-      { label: "20", value: 20 },
+      { label: "25", value: 25 },
       { label: "50", value: 50 },
       { label: "100", value: 100 },
-      { label: "All", value: 0 },
+      { label: "250", value: 250 },
+      { label: "500", value: 500 },
     ];
     const maxRecordToReturn = ref<number>(100);
-    const selectedPerPage = ref<number>(20);
+    const selectedPerPage = ref<number>(25);
     const pagination: any = ref({
-      rowsPerPage: 20,
+      rowsPerPage: 25,
     });
 
     const changePagination = (val: { label: string; value: any }) => {

@@ -36,7 +36,10 @@ use opentelemetry_sdk::{
 use tokio::{sync::RwLock, time};
 
 use crate::{
-    common::infra::{cluster::get_cached_online_nodes, config::USERS},
+    common::infra::{
+        cluster::get_cached_online_nodes,
+        config::{ORG_USERS, USERS},
+    },
     service::{
         db,
         exporter::otlp_metrics_exporter::{O2MetricsClient, O2MetricsExporter},
@@ -223,7 +226,7 @@ async fn update_metadata_metrics() -> Result<(), anyhow::Error> {
         .set(users as i64);
     for org_id in &orgs {
         let mut count: i64 = 0;
-        for user in USERS.clone().iter() {
+        for user in ORG_USERS.iter() {
             if user.key().starts_with(&format!("{org_id}/")) {
                 count += 1;
             }

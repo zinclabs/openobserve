@@ -245,7 +245,7 @@
     "repassword": "Reconfirm Password",
     "addOrUpdate": "Add/Update User",
     "editUser": "Update User",
-    "add": "Add User",
+    "add": "Add Basic User",
     "search": "Search User",
     "createdAt": "Updated at",
     "updatedAt": "Created at",
@@ -284,7 +284,9 @@
     "apiKeyNotFound": "User API Key Not Found.",
     "allowedOrg": "Allowed Organization",
     "roles": "Roles",
-    "groups": "Groups"
+    "groups": "Groups",
+    "customRole": "Custom Roles",
+    "status": "Status"
   },
   "serviceAccounts": {
     "header": "Service Accounts",
@@ -307,7 +309,7 @@
     "groups": "User Groups",
     "roles": "Roles",
     "organizations": "Organizations",
-    "addGroup": "Add Group",
+    "addGroup": "Add User Group",
     "addRole": "Add Role",
     "roleName": "Role Name",
     "groupName": "Group Name",
@@ -323,9 +325,11 @@
     "userName": "User Name",
     "resourceName": "Resource Name",
     "searchRole": "Search Role",
-    "searchGroup": "Search Group",
+    "searchGroup": "Search User Group",
     "object": "Object",
-    "serviceAccounts": "Service Accounts"
+    "serviceAccounts": "Service Accounts",
+    "serviceAccountsName": "Service Accounts Name",
+    "basicUsers": "Basic Users"
   },
   "ticket": {
     "header": "Support Tickets",
@@ -353,7 +357,7 @@
   "organization": {
     "header": "Organizations",
     "orgName": "Organization Name",
-    "createOrganization": "Create Organization",
+    "createOrganization": "Add Organization",
     "updateOrganization": "Update Organization",
     "nameHolder": "Type name here",
     "add": "Add Organization",
@@ -382,7 +386,8 @@
     "role": "Role",
     "nameRequired": "Name is required",
     "subscription_type": "Plan Type",
-    "proceed_subscription": "Proceed to Subscription"
+    "proceed_subscription": "Proceed to Subscription",
+    "subscription_plan": "Subscription Plan"
   },
   "template": {
     "header": "Templates",

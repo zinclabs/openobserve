@@ -75,12 +75,23 @@ pub async fn token_validator(
                                 all_users.first().cloned()
                             }
                         }
-                        Err(_) => None,
+                        Err(e) => {
+                            log::error!("Error getting user in token validator: {}", e);
+                            None
+                        }
                     }
                 } else {
                     user = match path.find('/') {
                         Some(index) => {
-                            let org_id = &path[0..index];
+                            // hack for v2 api for alerts and folders
+                            let org_id = if path_columns.len() > 2
+                                && path_columns[0].eq("v2")
+                                && (path_columns[2].eq("alerts") || path_columns[2].eq("folders"))
+                            {
+                                path_columns[1]
+                            } else {
+                                &path[0..index]
+                            };
                             users::get_user(Some(org_id), user_id).await
                         }
                         None => users::get_user(None, user_id).await,

@@ -51,7 +51,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
         :removed-roles="removedRoles"
       />
       <GroupServiceAccounts
-      v-show="activeTab === 'serviceAccounts'"
+        v-if="config.isCloud == 'false'"
+        v-show="activeTab === 'serviceAccounts'"
         :groupUsers="groupDetails.users"
         :activeTab="activeTab"
         :added-users="addedUsers"
@@ -104,6 +105,7 @@ import { useStore } from "vuex";
 import usePermissions from "@/composables/iam/usePermissions";
 import { useQuasar } from "quasar";
 import GroupServiceAccounts from "./GroupServiceAccounts.vue";
+import config from "@/aws-exports";
 
 onBeforeMount(() => {
   getGroupDetails();
@@ -142,11 +144,14 @@ const tabs = [
     value: "users",
     label: "Users",
   },
-  {
+];
+
+if (config.isCloud == "false") {
+  tabs.push({
     value: "serviceAccounts",
     label: "Service Accounts",
-  },
-];
+  });
+}
 
 const getGroupDetails = () => {
   const groupName: string = router.currentRoute.value.params

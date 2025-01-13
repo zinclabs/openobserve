@@ -63,7 +63,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
         :rows="rows"
         :columns="columns"
         pagination
-        :rows-per-page="20"
+        :rows-per-page="25"
         :filter="{
           value: filterQuery,
           method: filterGroups,
@@ -178,10 +178,11 @@ onBeforeMount(() => {
 });
 
 const updateTable = () => {
+  let counter = 1;
   rows.value = cloneDeep(
     groupsState.groups.map((group: { group_name: string }, index: number) => ({
       ...group,
-      "#": index + 1,
+      "#": counter <= 9 ? `0${counter++}` : counter++,
     }))
   );
 };

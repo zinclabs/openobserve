@@ -14,13 +14,15 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use actix_web::HttpResponse;
-use config::meta::stream::StreamType;
+use config::meta::{stream::StreamType, user::User};
 use o2_enterprise::enterprise::openfga::meta::mapping::OFGA_MODELS;
 
-use crate::common::{
-    infra::config::USERS,
-    meta::{self, http::HttpResponse as MetaHttpResponse},
-    utils::auth::{is_root_user, AuthExtractor},
+use crate::{
+    common::{
+        meta::http::HttpResponse as MetaHttpResponse,
+        utils::auth::{is_root_user, AuthExtractor},
+    },
+    service::users::get_user,
 };
 
 // Check permissions on stream
@@ -31,7 +33,7 @@ pub async fn check_stream_permissions(
     stream_type: &StreamType,
 ) -> Option<HttpResponse> {
     if !is_root_user(user_id) {
-        let user: meta::user::User = USERS.get(&format!("{org_id}/{}", user_id)).unwrap().clone();
+        let user: User = get_user(Some(org_id), user_id).await.unwrap();
         let stream_type_str = stream_type.to_string();
 
         if !crate::handler::http::auth::validator::check_permissions(

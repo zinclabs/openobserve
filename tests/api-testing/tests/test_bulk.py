@@ -6,7 +6,7 @@ def test_e2e_bulk_ingest(create_session, base_url):
     This includes both positive (valid payload) and negative (invalid payload) cases.
     """
     session = create_session
-    org_id = "pytests"
+    org_id = "default"
     url = f"{base_url}api/{org_id}/_bulk"
     headers = {"Content-Type": "application/json"}
 

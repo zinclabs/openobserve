@@ -23,10 +23,10 @@ const users = {
     page_size: number,
     sort_by: string,
     desc: boolean,
-    name: string
+    name: string,
   ) => {
     return http().get(
-      `/api/users?page_num=${page_num}&page_size=${page_size}&sort_by=${sort_by}&desc=${desc}&name=${name}`
+      `/api/users?page_num=${page_num}&page_size=${page_size}&sort_by=${sort_by}&desc=${desc}&name=${name}`,
     );
   },
   create: (data: any, org_identifier: string) => {
@@ -38,7 +38,7 @@ const users = {
   updateexistinguser: (
     data: any,
     org_identifier: string,
-    user_email: string
+    user_email: string,
   ) => {
     return http().post(`/api/${org_identifier}/users/${user_email}`, data);
   },
@@ -51,21 +51,8 @@ const users = {
   addNewUser: (data: any) => {
     return http().post(`/api/users/new_user`, data);
   },
-  orgUsers: (
-    page_num: number,
-    page_size: number,
-    sort_by: string,
-    desc: boolean,
-    name: string,
-    org_identifier: string
-  ) => {
-    if (config.isCloud === "true") {
-      return http().get(
-        `/api/${org_identifier}/org_users?page_num=${page_num}&page_size=${page_size}&sort_by=${sort_by}&desc=${desc}&name=${name}`
-      );
-    } else {
-      return http().get(`/api/${org_identifier}/users`);
-    }
+  orgUsers: (org_identifier: string) => {
+    return http().get(`/api/${org_identifier}/users`);
   },
   getRefreshToken: () => {
     return http().get(`/api/auth/refresh_token`);
@@ -76,6 +63,12 @@ const users = {
   logout: () => {
     return http().get(`/config/logout`);
   },
+  getUserGroups:(orgId:any, userEmail:any) => {
+    return http().get(`api/${orgId}/users/${userEmail}/groups`);
+  },
+  getUserRoles:(orgId:any, userEmail:any) => {
+    return http().get(`api/${orgId}/users/${userEmail}/roles`);
+  }
 };
 
 export default users;

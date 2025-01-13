@@ -584,6 +584,8 @@ pub struct Common {
     #[env_config(name = "ZO_INSTANCE_NAME", default = "")]
     pub instance_name: String,
     pub instance_name_short: String,
+    #[env_config(name = "ZO_INGESTION_URL", default = "")]
+    pub ingestion_url: String,
     #[env_config(name = "ZO_WEB_URL", default = "http://localhost:5080")]
     pub web_url: String,
     #[env_config(name = "ZO_BASE_URI", default = "")] // /abc
@@ -919,6 +921,20 @@ pub struct Common {
     pub fake_es_version: String,
     #[env_config(name = "ZO_WEBSOCKET_ENABLED", default = false)]
     pub websocket_enabled: bool,
+    #[env_config(name = "ZO_ES_VERSION", default = "")]
+    pub es_version: String,
+    #[env_config(
+        name = "ZO_CREATE_ORG_THROUGH_INGESTION",
+        default = false,
+        help = "If true (default false), new org can be automatically created through ingestion for root user. This can be changed in the runtime."
+    )]
+    pub create_org_through_ingestion: bool,
+    #[env_config(
+        name = "ZO_ORG_INVITE_EXPIRY",
+        default = 7,
+        help = "The number of days (default 7) an invitation token will be valid for. This can be changed in the runtime."
+    )]
+    pub org_invite_expiry: u32,
     #[env_config(
         name = "ZO_MIN_AUTO_REFRESH_INTERVAL",
         default = 300,

@@ -256,7 +256,7 @@ def test_e2e_createalertsql(create_session, base_url):
 
     session = create_session
     url = base_url
-    org_id = "org_pytest_data"
+    org_id = "default"
     skip_tls_verify_value = False
 
     headers = {"Content-Type": "application/json", "Custom-Header": "value"}
@@ -311,7 +311,7 @@ def test_e2e_createalertsql(create_session, base_url):
     # ingest logs
     session = create_session
     url = base_url
-    org_id = "org_pytest_data"
+    org_id = "default"
     stream_name = "newpy_tests"
     payload = [
         {
@@ -409,7 +409,7 @@ def test_e2e_createalertfloat(create_session, base_url):
 
     session = create_session
     url = base_url
-    org_id = "org_pytest_data"
+    org_id = "default"
     skip_tls_verify_value = False
 
     headers = {"Content-Type": "application/json", "Custom-Header": "value"}
@@ -464,7 +464,7 @@ def test_e2e_createalertfloat(create_session, base_url):
     # ingest logs
     session = create_session
     url = base_url
-    org_id = "org_pytest_data"
+    org_id = "default"
     stream_name = "newpy_tests"
     payload = [
           {

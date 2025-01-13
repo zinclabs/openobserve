@@ -204,6 +204,7 @@ async fn main() -> Result<(), anyhow::Error> {
                 job_init_tx.send(false).ok();
                 panic!("infra init failed: {}", e);
             }
+
             if let Err(e) = common_infra::init().await {
                 job_init_tx.send(false).ok();
                 panic!("common infra init failed: {}", e);
@@ -232,6 +233,13 @@ async fn main() -> Result<(), anyhow::Error> {
             if let Err(e) = infra::table::migrate().await {
                 job_init_tx.send(false).ok();
                 panic!("infra sea_orm migrate failed: {}", e);
+            }
+
+            // cloud-related migrations
+            #[cfg(feature = "cloud")]
+            if let Err(e) = o2_enterprise::enterprise::cloud::migrate().await {
+                job_init_tx.send(false).ok();
+                panic!("cloud sea_orm migrate failed: {}", e);
             }
 
             // migrate dashboards

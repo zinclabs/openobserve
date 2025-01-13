@@ -30,22 +30,58 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
     >
       <template #no-data><NoData /></template>
 
+      <!-- <template #body-cell-actions="props">
+        <q-td :props="props">
+          <q-btn
+            v-if="props.row.role == 'Admin'"
+            icon="group"
+            :title="t('organization.invite')"
+            padding="sm"
+            unelevated
+            size="sm"
+            round
+            flat
+            @click="redirectToInviteMember(props)"
+          ></q-btn>
+        </q-td>
+      </template> -->
+
       <template #top="scope">
-        <div class="full-width q-mb-md">
+        <div
+          class="full-width flex justify-between items-start"
+          style="margin-bottom: 2px; height: 44px"
+        >
           <div class="q-table__title">{{ t("organization.header") }}</div>
         </div>
-        <q-input
-          v-model="filterQuery"
-          filled
-          dense
-          class="q-ml-none q-mb-xs"
-          style="width: 400px"
-          :placeholder="t('organization.search')"
-        >
-          <template #prepend>
-            <q-icon name="search" />
-          </template>
-        </q-input>
+        <div class="full-width row q-mb-xs items-start">
+          <div class="col">
+            <q-input
+              v-model="filterQuery"
+              filled
+              dense
+              class="col-6 q-pr-sm"
+              style="width: 400px"
+              :placeholder="t('organization.search')"
+            >
+              <template #prepend>
+                <q-icon name="search" />
+              </template>
+            </q-input>
+          </div>
+          <div class="col-3">
+            <q-btn
+              v-if="config.isEnterprise == 'true' || config.isCloud == 'true'"
+              class="q-ml-md q-mb-xs text-bold no-border float-right"
+              padding="sm lg"
+              color="secondary"
+              no-caps
+              dense
+              :label="t(`organization.add`)"
+              @click="addOrganization"
+              data-test="Add Organization"
+            />
+          </div>
+        </div>
 
         <QTablePagination
           :scope="scope"
@@ -62,35 +98,49 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
           :scope="scope"
           :resultTotal="resultTotal"
           :perPageOptions="perPageOptions"
-          :maxRecordToReturn="maxRecordToReturn"
           position="bottom"
           @update:changeRecordPerPage="changePagination"
-          @update:maxRecordToReturn="changeMaxRecordToReturn"
         />
+        <!-- :maxRecordToReturn="maxRecordToReturn" -->
+        <!-- @update:maxRecordToReturn="changeMaxRecordToReturn" -->
       </template>
     </q-table>
+    <q-dialog
+      v-model="showAddOrganizationDialog"
+      position="right"
+      full-height
+      maximized
+      @before-hide="hideAddOrgDialog"
+    >
+      <add-update-organization @updated="updateOrganizationList" />
+    </q-dialog>
   </q-page>
 </template>
 
 <script lang="ts">
 // @ts-nocheck
-import { defineComponent, ref } from "vue";
+import { defineComponent, ref, watch, onMounted, onBeforeMount, onUpdated } from "vue";
 import { useStore } from "vuex";
 import { useRouter } from "vue-router";
-import { useQuasar } from "quasar";
+import { useQuasar, date, copyToClipboard } from "quasar";
 import { useI18n } from "vue-i18n";
 
 import organizationsService from "@/services/organizations";
+import JoinOrganization from "./JoinOrganization.vue";
 import QTablePagination from "@/components/shared/grid/Pagination.vue";
+import AddUpdateOrganization from "@/components/iam/organizations/AddUpdateOrganization.vue";
 import NoData from "@/components/shared/grid/NoData.vue";
+import segment from "@/services/segment_analytics";
 import { convertToTitleCase } from "@/utils/zincutils";
-import { onBeforeMount } from "vue";
+import config from "@/aws-exports";
 
 export default defineComponent({
   name: "PageOrganization",
   components: {
+    AddUpdateOrganization,
     QTablePagination,
     NoData,
+    AddUpdateOrganization,
   },
   setup() {
     const store = useStore();
@@ -99,6 +149,10 @@ export default defineComponent({
     const $q = useQuasar();
     const organizations = ref([]);
     const organization = ref({});
+    const showAddOrganizationDialog = ref(false);
+    const showJoinOrganizationDialog = ref(false);
+    const showOrgAPIKeyDialog = ref(false);
+    const organizationAPIKey = ref("");
     const qTable: any = ref(null);
     const columns = ref<QTableProps["columns"]>([
       {
@@ -128,41 +182,90 @@ export default defineComponent({
         align: "left",
         sortable: true,
       },
-      {
-        name: "owner",
-        field: "owner",
-        label: t("organization.owner"),
-        align: "left",
-        sortable: true,
-      },
     ]);
+
+    if (config.isCloud == "true") {
+      columns.value.push({
+        name: "plan",
+        field: "plan",
+        label: t("organization.subscription_plan"),
+        align: "center",
+        sortable: true,
+      });
+    }
+
     const perPageOptions = [
-      { label: "5", value: 5 },
-      { label: "10", value: 10 },
-      { label: "20", value: 20 },
+      { label: "25", value: 25 },
       { label: "50", value: 50 },
       { label: "100", value: 100 },
-      { label: "All", value: 0 },
+      { label: "250", value: 250 },
+      { label: "500", value: 500 },
     ];
     const resultTotal = ref<number>(0);
-    const maxRecordToReturn = ref<number>(100);
-    const selectedPerPage = ref<number>(20);
+    // const maxRecordToReturn = ref<number>(500);
+    const selectedPerPage = ref<number>(25);
     const pagination: any = ref({
-      rowsPerPage: 20,
+      rowsPerPage: 25,
+    });
+    const isCloudOrEnterprise = () => {
+      return config.isCloud === "true" || config.isEnterprise === "true";
+    };
+
+    watch(
+      () => router.currentRoute.value.query?.action,
+      (action) => {
+        if (action == "add" && isCloudOrEnterprise()) {
+          showAddOrganizationDialog.value = true;
+        }
+      },
+    );
+
+    onMounted(() => {
+      if (
+        router.currentRoute.value.query.action == "add" &&
+        isCloudOrEnterprise()
+      ) {
+        showAddOrganizationDialog.value = true;
+      }
     });
 
-    onBeforeMount(() => {
-      getOrganizations();
+    onUpdated(() => {
+      if (
+        router.currentRoute.value.query.action == "add" &&
+        isCloudOrEnterprise()
+      ) {
+        showAddOrganizationDialog.value = true;
+      }
+
+      if (router.currentRoute.value.query.action == "invite") {
+        organizations.value.map((org) => {
+          if (org.identifier == router.currentRoute.value.query.id) {
+            organization.value = org;
+            showJoinOrganizationDialog.value = true;
+          }
+        });
+      }
     });
+
+    onMounted(() => {
+      if (router.currentRoute.value.query?.action == "add") {
+        showAddOrganizationDialog.value = true;
+      }
+    });
+
+    watch(
+      () => router.currentRoute.value.query?.action,
+      (value) => {
+        if (value == "add") {
+          showAddOrganizationDialog.value = true;
+        }
+      },
+    );
 
     const changePagination = (val: { label: string; value: any }) => {
       selectedPerPage.value = val.value;
       pagination.value.rowsPerPage = val.value;
       qTable.value.setPagination(pagination.value);
-    };
-    const changeMaxRecordToReturn = (val: any) => {
-      maxRecordToReturn.value = val;
-      getOrganizations();
     };
 
     const getOrganizations = () => {
@@ -170,23 +273,121 @@ export default defineComponent({
         spinner: true,
         message: "Please wait while loading organizations...",
       });
-      organizationsService.list(0, 100000, "name", false, "").then((res) => {
+      organizationsService.list(0, 1000000, "name", false, "").then((res) => {
         // Updating store so that organizations in navbar also gets updated
         store.dispatch("setOrganizations", res.data.data);
 
         resultTotal.value = res.data.data.length;
         let counter = 1;
-        organizations.value = res.data.data.map((data: any) => {
-          return {
+        const billingPlans = {
+          0: "Free Forever",
+          1: "Pay As You Go",
+          2: "Enterprise",
+        };
+        organizations.value = res.data.data.map((data) => {
+          // Common fields for all configurations
+
+          const commonOrganization = {
             "#": counter <= 9 ? `0${counter++}` : counter++,
             name: data.name,
             identifier: data.identifier,
             type: convertToTitleCase(data.type),
-            owner: data.user_email,
+            plan: billingPlans[data.plan] || "-",
           };
+
+          // Additional fields and logic for cloud configuration
+          // if (config.isCloud === "true") {
+          //   const memberrole = data.OrganizationMemberObj.filter(
+          //     (v) =>
+          //       v.user_id === store.state.currentuser.id && v.role === "admin",
+          //   );
+
+          //   // If invited, pass props to inviteTeam function
+          //   // if (
+          //   //   router.currentRoute.value.query.action === "invite" &&
+          //   //   data.identifier === router.currentRoute.value.query.id
+          //   // ) {
+          //   //   const props = {
+          //   //     row: {
+          //   //       id: data.id,
+          //   //       name: data.name,
+          //   //       identifier: data.identifier,
+          //   //       role: data.role,
+          //   //       member_lists: [],
+          //   //     },
+          //   //   };
+          //   //   inviteTeam(props);
+          //   // }
+
+          //   const role = memberrole.length ? memberrole[0].role : "member";
+
+          //   // Extend common fields with cloud-specific data
+          //   return {
+          //     ...commonOrganization,
+          //     id: data.id,
+          //     created: date.formatDate(data.created_at, "YYYY-MM-DDTHH:mm:ssZ"),
+          //     role: convertToTitleCase(role),
+          //     status: convertToTitleCase(data.status),
+          //     plan_type:
+          //       data.CustomerBillingObj.subscription_type === config.freePlan ||
+          //       data.CustomerBillingObj.subscription_type === ""
+          //         ? "Developer"
+          //         : "Pro",
+          //   };
+          // }
+
+          // For open-source or enterprise, return only common fields
+          return commonOrganization;
         });
 
         dismiss();
+      });
+    };
+
+    getOrganizations();
+
+    const addOrganization = (evt) => {
+      router.push({
+        query: {
+          action: "add",
+          org_identifier: store.state.selectedOrganization.identifier,
+        },
+      });
+
+      if (evt) {
+        let button_txt = evt.target.innerText;
+        segment.track("Button Click", {
+          button: button_txt,
+          user_org: store.state.selectedOrganization.identifier,
+          user_id: store.state.userInfo.email,
+          page: "Organizations",
+        });
+      }
+    };
+
+    const hideAddOrgDialog = () => {
+      router.push({
+        query: {
+          org_identifier: store.state.selectedOrganization.identifier,
+        },
+      });
+    };
+
+    const inviteTeam = (props: any) => {
+      organization.value = {
+        id: props.row.id,
+        name: props.row.name,
+        role: props.row.role,
+        identifier: props.row.identifier,
+        member_lists: [],
+      };
+      showJoinOrganizationDialog.value = true;
+
+      segment.track("Button Click", {
+        button: "Invite Member",
+        user_org: store.state.selectedOrganization.identifier,
+        user_id: store.state.userInfo.email,
+        page: "Organizations",
       });
     };
 
@@ -195,18 +396,23 @@ export default defineComponent({
       store,
       router,
       qTable,
+      config,
       loading: ref(false),
       organizations,
       organization,
       columns,
+      showAddOrganizationDialog,
+      showJoinOrganizationDialog,
+      showOrgAPIKeyDialog,
+      organizationAPIKey,
+      addOrganization,
       getOrganizations,
+      inviteTeam,
       pagination,
       resultTotal,
       perPageOptions,
       selectedPerPage,
       changePagination,
-      maxRecordToReturn,
-      changeMaxRecordToReturn,
       filterQuery: ref(""),
       filterData(rows: string | any[], terms: string) {
         const filtered = [];
@@ -218,7 +424,50 @@ export default defineComponent({
         }
         return filtered;
       },
+      hideAddOrgDialog,
     };
+  },
+  methods: {
+    updateOrganizationList() {
+      this.router.push({
+        name: "organizations",
+        query: {
+          org_identifier: this.store.state.selectedOrganization.identifier,
+        },
+      });
+      this.showAddOrganizationDialog = false;
+      this.getOrganizations();
+
+      this.$q.notify({
+        type: "positive",
+        message: `Organization added successfully.`,
+      });
+    },
+    joinOrganization() {
+      this.$q.notify({
+        type: "positive",
+        message: "Request completed successfully.",
+        timeout: 5000,
+      });
+      this.showJoinOrganizationDialog = false;
+    },
+    copyAPIKey() {
+      copyToClipboard(this.organizationAPIKey)
+        .then(() => {
+          this.$q.notify({
+            type: "positive",
+            message: "API Key Copied Successfully!",
+            timeout: 5000,
+          });
+        })
+        .catch(() => {
+          this.$q.notify({
+            type: "negative",
+            message: "Error while copy API Key.",
+            timeout: 5000,
+          });
+        });
+    },
   },
 });
 </script>

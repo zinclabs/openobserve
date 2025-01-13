@@ -59,6 +59,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
           :removed-users="removedUsers"
         />
         <GroupServiceAccounts
+          v-if="config.isCloud == 'false'"
           data-test="edit-role-users-section"
           v-show="activeTab === 'serviceAccounts'"
           :groupUsers="roleUsers"
@@ -135,7 +136,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                   filled
                   dense
                   class="q-mb-xs no-border q-mr-md"
-                  :placeholder="t('common.search')"
+                  :placeholder="`Search Permissions`"
                   style="width: 300px"
                   @update:model-value="onResourceChange"
                 >
@@ -350,6 +351,7 @@ import AppTabs from "@/components/common/AppTabs.vue";
 import GroupUsers from "../groups/GroupUsers.vue";
 import { nextTick } from "vue";
 import GroupServiceAccounts from "../groups/GroupServiceAccounts.vue";
+import config from "@/aws-exports";
 
 const QueryEditor = defineAsyncComponent(
   () => import("@/components/QueryEditor.vue")
@@ -420,11 +422,14 @@ const tabs = [
     value: "users",
     label: "Users",
   },
-  {
+];
+
+if (config.isCloud == "false") {
+  tabs.push({
     value: "serviceAccounts",
     label: "Service Accounts",
-  },
-];
+  });
+}
 
 const permissionDisplayOptions = [
   {
@@ -559,7 +564,9 @@ const setDefaultPermissions = () => {
     }
 
     modifyResourcePermissions(resourcePermission);
-
+    if (resourcePermission.name === 'org' && store.state.selectedOrganization.identifier !== store.state.zoConfig.meta_org) {
+      return; // Skip adding 'org' resource if the organization is not _meta
+    }
     permissionsState.permissions.push(resourcePermission as Resource);
   });
 
@@ -567,7 +574,6 @@ const setDefaultPermissions = () => {
     (resource) => !resource.parent
   );
 };
-
 const modifyResourcePermissions = (resource: Resource) => {
   if (resource.resourceName === "settings") {
     resource.permission.AllowList.show = false;

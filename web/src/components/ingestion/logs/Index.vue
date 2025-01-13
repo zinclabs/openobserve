@@ -114,7 +114,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
           content-class="tab_content"
         />
         <q-route-tab
-          v-if="showSyslog"
           name="syslogNg"
           :to="{
             name: 'syslogNg',

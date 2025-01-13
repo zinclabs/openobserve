@@ -24,6 +24,7 @@ publish = false
 [features]
 default = []
 enterprise = []
+cloud = []
 mimalloc = ["dep:mimalloc"]
 jemalloc = ["dep:tikv-jemallocator"]
 profiling = ["dep:pyroscope", "dep:pyroscope_pprofrs"]

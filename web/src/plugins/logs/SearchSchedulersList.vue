@@ -391,9 +391,9 @@ export default defineComponent({
         }
       ]);
 
-    onMounted(async ()=>{
-      await fetchSearchHistory();
-    })
+    // onMounted(async ()=>{
+    //   await fetchSearchHistory();
+    // })
 
 
     const resultTotal = ref<number>(0);

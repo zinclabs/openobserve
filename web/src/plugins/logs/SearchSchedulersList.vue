@@ -10,7 +10,7 @@
     <div class="flex tw-justify-between tw-items-center">
       <div class="flex items-center q-py-sm q-pl-md">
         <div
-          data-test="search-history-alert-back-btn"
+          data-test="search-schedule-alert-back-btn"
           class="flex justify-center items-center q-mr-md cursor-pointer"
           style="
             border: 1.5px solid;
@@ -23,7 +23,7 @@
         >
           <q-icon name="arrow_back_ios_new" size="14px" />
         </div>
-        <div class="text-h6" data-test="add-alert-title">
+        <div class="text-h6" data-test="search-scheduler-title">
           Search Job Scheduler
         </div>
       </div>

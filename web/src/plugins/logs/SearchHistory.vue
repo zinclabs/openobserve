@@ -491,12 +491,6 @@
           return data.sort((a, b) => a.rawExecutedTime - b.rawExecutedTime);
 
         }
-
-
-
-        
-
-        // return a.rawDuration - b.rawDuration;
       }
       const  copyToClipboard = (text,type) => {
       navigator.clipboard.writeText(text).then(() => {

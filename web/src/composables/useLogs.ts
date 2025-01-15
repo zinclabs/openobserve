@@ -144,6 +144,8 @@ const defaultObject = {
       },
       showPagination: true,
     },
+    jobId: "",
+    jobRecords: "100",
     scrollInfo: {},
     pageType: "logs", // 'logs' or 'stream
     regions: [],
@@ -598,7 +600,7 @@ const useLogs = () => {
     const query = generateURLQuery(false);
     if (
       Object.hasOwn(query, "type") &&
-      query.type == "search_history_re_apply"
+      query.type == "search_history_re_apply" || query.type == "search_scheduler"
     ) {
       delete query.type;
     }
@@ -1497,6 +1499,7 @@ const useLogs = () => {
       // window will have more priority
       // if window has use_web_socket property then use that
       // else use organization settings
+      searchObj.meta.jobId = "";
       const shouldUseWebSocket = isWebSocketEnabled();
 
       const isMultiStreamSearch =
@@ -1821,6 +1824,89 @@ const useLogs = () => {
       notificationMsg.value = "";
     }
   };
+  const getJobData = async (isPagination = false) => {
+    try {
+      // get websocket enable config from store
+      // window will have more priority
+      // if window has use_web_socket property then use that
+      // else use organization settings
+      const queryReq: any = buildSearch();
+      if (queryReq == false) {
+        throw new Error(notificationMsg.value || "Something went wrong.");
+      }
+      if (searchObj.meta.jobId == "") {
+        queryReq.query.size = parseInt(searchObj.meta.jobRecords);
+      }
+      // reset query data and get partition detail for given query.
+
+      if (queryReq != null) {
+        // in case of live refresh, reset from to 0
+        if (
+          searchObj.meta.refreshInterval > 0 &&
+          router.currentRoute.value.name == "logs"
+        ) {
+          queryReq.query.from = 0;
+          searchObj.meta.refreshHistogram = true;
+        }
+
+        // get function definition
+        if (
+          searchObj.data.tempFunctionContent != "" &&
+          searchObj.meta.toggleFunction
+        ) {
+          queryReq.query["query_fn"] =
+            b64EncodeUnicode(searchObj.data.tempFunctionContent) || "";
+        }
+
+        // in case of relative time, set start_time and end_time to query
+        // it will be used in pagination request
+        if (searchObj.data.datetime.type === "relative") {
+          if (!isPagination) initialQueryPayload.value = cloneDeep(queryReq);
+          else {
+            if (
+              searchObj.meta.refreshInterval == 0 &&
+              router.currentRoute.value.name == "logs" &&
+              searchObj.data.queryResults.hasOwnProperty("hits")
+            ) {
+              const start_time: number =
+                initialQueryPayload.value?.query?.start_time || 0;
+              const end_time: number =
+                initialQueryPayload.value?.query?.end_time || 0;
+              queryReq.query.start_time = start_time;
+              queryReq.query.end_time = end_time;
+            }
+          }
+        }
+        delete queryReq.aggs;
+
+      }
+              searchObj.data.queryResults.subpage = 1;
+            if (searchObj.meta.jobId == "") {
+              searchService
+              .schedule_search(
+              {
+                org_identifier: searchObj.organizationIdentifier,
+                query: queryReq,
+                page_type: searchObj.data.stream.streamType,
+              },
+              "UI",
+            ).then((res: any) => {
+                console.log(res, "res");
+            })
+            }
+            else {
+              await getPaginatedData(queryReq);
+            }
+
+    } catch (e: any) {
+      searchObj.loading = false;
+      showErrorNotification(
+        notificationMsg.value || "Error occurred during the search operation.",
+      );
+      throw e;
+      // notificationMsg.value = "";
+    }
+  };
 
   function resetHistogramWithError(errorMsg: string, errorCode: number = 0) {
     searchObj.data.histogram = {
@@ -1967,6 +2053,7 @@ const useLogs = () => {
 
       const { traceparent, traceId } = generateTraceContext();
       addTraceId(traceId);
+      console.log('here it is running 1')
 
       searchService
         .search(
@@ -2094,7 +2181,9 @@ const useLogs = () => {
         showCancelSearchNotification();
         return;
       }
-
+      if (searchObj.meta.jobId != ""){
+        searchObj.meta.resultGrid.rowsPerPage = queryReq.query.size;
+      }
       const parsedSQL: any = fnParsedSQL();
       searchObj.meta.resultGrid.showPagination = true;
       if (searchObj.meta.sqlMode == true) {
@@ -2121,13 +2210,16 @@ const useLogs = () => {
       }
 
       const { traceparent, traceId } = generateTraceContext();
+      console.log(queryReq,'query req')
       addTraceId(traceId);
-
-      searchService
-        .search(
+      const decideSearch = searchObj.meta.jobId
+        ? "get_scheduled_search_result"
+        : "search";
+      searchService[decideSearch](
           {
             org_identifier: searchObj.organizationIdentifier,
             query: queryReq,
+            jobId: searchObj.meta.jobId ? searchObj.meta.jobId : "",
             page_type: searchObj.data.stream.streamType,
             traceparent,
           },
@@ -2174,19 +2266,21 @@ const useLogs = () => {
           // check for total records update for the partition and update pagination accordingly
           // searchObj.data.queryResults.partitionDetail.partitions.forEach(
           //   (item: any, index: number) => {
-          for (const [
-            index,
-            item,
-          ] of searchObj.data.queryResults.partitionDetail.partitions.entries()) {
-            if (
-              searchObj.data.queryResults.partitionDetail.partitionTotal[
-                index
-              ] == -1 &&
-              queryReq.query.start_time == item[0]
-            ) {
-              searchObj.data.queryResults.partitionDetail.partitionTotal[
-                index
-              ] = res.data.total;
+          if (searchObj.meta.jobId == ""){
+            for (const [
+              index,
+              item,
+            ] of searchObj.data.queryResults.partitionDetail.partitions.entries()) {
+              if (
+                searchObj.data.queryResults.partitionDetail.partitionTotal[
+                  index
+                ] == -1 &&
+                queryReq.query.start_time == item[0]
+              ) {
+                searchObj.data.queryResults.partitionDetail.partitionTotal[
+                  index
+                ] = res.data.total;
+              }
             }
           }
 
@@ -2209,8 +2303,9 @@ const useLogs = () => {
           }
           // if total records in partition is greater than recordsPerPage then we need to update pagination
           // setting up forceFlag to true to update pagination as we have check for pagination already created more than currentPage + 3 pages.
-          refreshPartitionPagination(regeratePaginationFlag);
-
+          if (searchObj.meta.jobId == "") {
+            refreshPartitionPagination(regeratePaginationFlag);
+          }
           // Scan-size and took time in histogram title
           // For the initial request, we get histogram and logs data. So, we need to sum the scan_size and took time of both the requests.
           // For the pagination request, we only get logs data. So, we need to consider scan_size and took time of only logs request.
@@ -2246,6 +2341,11 @@ const useLogs = () => {
               );
               searchObj.data.queryResults.hits = res.data.hits;
             } else {
+              if (searchObj.meta.jobId != ""){
+                searchObj.data.queryResults.total = res.data.total;
+                console.log(searchObj.data.queryResults.total,'total happenig here')
+                
+              }
               if (!queryReq.query.hasOwnProperty("track_total_hits")) {
                 delete res.data.total;
               }
@@ -2259,6 +2359,7 @@ const useLogs = () => {
           // check for pagination request for the partition and check for subpage if we have to pull data from multiple partitions
           // it will check for subpage and if subpage is present then it will send pagination request for next partition
           if (
+            searchObj.meta.jobId == "" &&
             searchObj.data.queryResults.partitionDetail.paginations[
               searchObj.data.resultGrid.currentPage - 1
             ].length > searchObj.data.queryResults.subpage &&
@@ -2297,6 +2398,11 @@ const useLogs = () => {
               // }
             }, 0);
             await getPaginatedData(queryReq, true);
+          }
+          if (searchObj.meta.jobId != ""){
+            searchObj.meta.resultGrid.rowsPerPage = queryReq.query.size;
+            console.log(searchObj.meta.resultGrid.rowsPerPage,'rows per age')
+            refreshJobPagination(true);
           }
 
           await processPostPaginationData();
@@ -2422,7 +2528,7 @@ const useLogs = () => {
         const { traceparent, traceId } = generateTraceContext();
         addTraceId(traceId);
         queryReq.query.size = -1;
-
+        console.log('here it is running')
         searchService
           .search(
             {
@@ -3329,6 +3435,7 @@ const useLogs = () => {
   };
 
   function getHistogramTitle() {
+    console.log(searchObj.data,'search obbj')
     try {
       const currentPage = searchObj.data.resultGrid.currentPage - 1 || 0;
       const startCount =
@@ -3339,6 +3446,7 @@ const useLogs = () => {
         searchObj.data.queryResults.hits?.length,
         searchObj.data.queryResults.total,
       );
+      console.log(totalCount,'total count')
 
       if (!searchObj.meta.resultGrid.showPagination) {
         endCount = searchObj.data.queryResults.hits?.length;
@@ -3747,7 +3855,25 @@ const useLogs = () => {
       // await getSavedViews();
       await getFunctions();
       await extractFields();
-      await getQueryData();
+      if (searchObj.meta.jobId == ""){
+        await getQueryData();
+      }
+      else{
+        await getJobData();
+      }
+      refreshData();
+    } catch (e: any) {
+      searchObj.loading = false;
+      console.log("Error while loading logs data");
+    }
+  };
+  const loadJobData = async () => {
+    try {
+      resetFunctions();
+      await getStreamList();
+      await getFunctions();
+      await extractFields();
+      await getJobData();
       refreshData();
     } catch (e: any) {
       searchObj.loading = false;
@@ -5313,6 +5439,8 @@ const useLogs = () => {
       const { rowsPerPage } = searchObj.meta.resultGrid;
       const { currentPage } = searchObj.data.resultGrid;
 
+      if(searchObj.meta.jobId != "") searchObj.meta.resultGrid.rowsPerPage = 100;
+
       let total = 0;
       let totalPages = 0;
 
@@ -5332,6 +5460,36 @@ const useLogs = () => {
       searchObj.data.queryResults.pagination = [];
 
       totalPages = Math.ceil(total / rowsPerPage);
+
+      for (let i = 0; i < totalPages; i++) {
+        if (i + 1 > currentPage + 10) {
+          break;
+        }
+        searchObj.data.queryResults.pagination.push({
+          from: i * rowsPerPage + 1,
+          size: rowsPerPage,
+        });
+      }
+    } catch (e: any) {
+      console.log("Error while refreshing partition pagination", e);
+      notificationMsg.value = "Error while refreshing partition pagination.";
+      return false;
+    }
+  };
+  const refreshJobPagination = (regenrateFlag: boolean = false) => {
+    try {
+      const { rowsPerPage } = searchObj.meta.resultGrid;
+      const { currentPage } = searchObj.data.resultGrid;
+
+      if (searchObj.meta.jobId != "") {
+        // searchObj.meta.resultGrid.rowsPerPage = 100;
+      }
+
+      let totalPages = 0;
+
+      searchObj.data.queryResults.pagination = [];
+
+      totalPages = Math.ceil(searchObj.data.queryResults.total / rowsPerPage);
 
       for (let i = 0; i < totalPages; i++) {
         if (i + 1 > currentPage + 10) {
@@ -5472,6 +5630,7 @@ const useLogs = () => {
     fieldValues,
     extractFields,
     getQueryData,
+    getJobData,
     searchAroundData,
     updateGridColumns,
     refreshData,
@@ -5506,6 +5665,8 @@ const useLogs = () => {
     extractValueQuery,
     initialQueryPayload,
     refreshPagination,
+    loadJobData,
+    refreshJobPagination,
     enableRefreshInterval,
   };
 };

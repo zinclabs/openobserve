@@ -223,6 +223,135 @@ const search = {
       payload, // Send the payload as the request body
     );
   },
+  schedule_search: (
+    {
+      org_identifier,
+      query,
+      page_type = "logs",
+      traceparent,
+    }: {
+      org_identifier: string;
+      query: any;
+      page_type: string;
+      traceparent?: string;
+    },
+    search_type: string = "UI",
+  ) => {
+    if (!traceparent) traceparent = generateTraceContext()?.traceparent;
+    const use_cache: boolean =
+      (window as any).use_cache !== undefined
+        ? (window as any).use_cache
+        : true;
+    const url = `/api/${org_identifier}/search_jobs?type=${page_type}&search_type=${search_type}&use_cache=${use_cache}`;
+    return http({ headers: { traceparent } }).post(url, query);
+  },
+  cancel_scheduled_search: (
+    {
+      org_identifier,
+      jobId,
+      traceparent,
+    }: {
+      org_identifier: string;
+      jobId: string;
+      traceparent?: string;
+    },
+    search_type: string = "UI",
+  ) => {
+    if (!traceparent) traceparent = generateTraceContext()?.traceparent;
+    const use_cache: boolean =
+      (window as any).use_cache !== undefined
+        ? (window as any).use_cache
+        : true;
+    const url = `/api/${org_identifier}/search_jobs/${jobId}/cancel`;
+    return http({ headers: { traceparent } }).post(url);
+  },
+  retry_scheduled_search: (
+    {
+      org_identifier,
+      jobId,
+      traceparent,
+    }: {
+      org_identifier: string;
+      jobId: string;
+      traceparent?: string;
+    },
+    search_type: string = "UI",
+  ) => {
+    if (!traceparent) traceparent = generateTraceContext()?.traceparent;
+    const use_cache: boolean =
+      (window as any).use_cache !== undefined
+        ? (window as any).use_cache
+        : true;
+    const url = `/api/${org_identifier}/search_jobs/${jobId}/retry`;
+    return http({ headers: { traceparent } }).post(url);
+  },
+  delete_scheduled_search: (
+    {
+      org_identifier,
+      jobId,
+      traceparent,
+    }: {
+      org_identifier: string;
+      jobId: string;
+      traceparent?: string;
+    },
+    search_type: string = "UI",
+  ) => {
+    if (!traceparent) traceparent = generateTraceContext()?.traceparent;
+    const use_cache: boolean =
+      (window as any).use_cache !== undefined
+        ? (window as any).use_cache
+        : true;
+    const url = `/api/${org_identifier}/search_jobs/${jobId}`;
+    return http({ headers: { traceparent } }).delete(url);
+  },
+  get_scheduled_search_list: (
+    {
+      org_identifier,
+      page_type = "logs",
+      traceparent,
+    }: {
+      org_identifier: string;
+      page_type: string;
+      traceparent?: string;
+    },
+    search_type: string = "UI",
+  ) => {
+    if (!traceparent) traceparent = generateTraceContext()?.traceparent;
+    const use_cache: boolean =
+      (window as any).use_cache !== undefined
+        ? (window as any).use_cache
+        : true;
+    const url = `/api/${org_identifier}/search_jobs?type=${page_type}&search_type=${search_type}&use_cache=${use_cache}`;
+    return http({ headers: { traceparent } }).get(url);
+  },
+  get_scheduled_search_result: (
+    {
+      org_identifier,
+      page_type = "logs",
+      jobId,
+      traceparent,
+      query,
+    }: {
+      org_identifier: string;
+      jobId: string;
+      page_type: string;
+      traceparent?: string;
+      query: any;
+    },
+    search_type: string = "UI",
+  ) => {
+    if (!traceparent) traceparent = generateTraceContext()?.traceparent;
+    const { size, from } = query.query;
+    const use_cache: boolean =
+      (window as any).use_cache !== undefined
+        ? (window as any).use_cache
+        : true;
+        let url = `/api/${org_identifier}/search_jobs/${jobId}/result?type=${page_type}&search_type=${search_type}&use_cache=${use_cache}`;
+          url += `&size=${size}&from=${from}`;
+
+    return http({ headers: { traceparent } }).get(url);
+  },
 };
 
 export default search;

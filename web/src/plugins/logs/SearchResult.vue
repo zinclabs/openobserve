@@ -49,7 +49,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
             :max="
               Math.max(
                 1,
-                (searchObj.communicationMethod === 'ws'
+                (searchObj.communicationMethod === 'ws' ||
+                searchObj.meta.jobId != ''
                   ? searchObj.data.queryResults?.pagination?.length
                   : searchObj.data.queryResults?.partitionDetail?.paginations
                       ?.length) || 0,
@@ -310,14 +311,25 @@ export default defineComponent({
       } else if (actionType == "recordsPerPage") {
         this.searchObj.data.resultGrid.currentPage = 1;
         this.pageNumberInput = this.searchObj.data.resultGrid.currentPage;
-        this.searchObj.communicationMethod === "ws"
-          ? this.refreshPagination()
-          : this.refreshPartitionPagination(true);
+        if (this.searchObj.communicationMethod === "ws") {
+            if (this.searchObj.meta.jobId === "") {
+              this.refreshPagination();
+            } else {
+              this.refreshJobPagination();
+            }
+          } else {
+            if (this.searchObj.meta.jobId !== "") {
+              this.refreshJobPagination();
+            } else {
+              this.refreshPartitionPagination(true);
+            }
+          }
         this.$emit("update:recordsPerPage");
         this.scrollTableToTop(0);
       } else if (actionType == "pageChange") {
         const maxPages =
-          this.searchObj.communicationMethod === "ws"
+          this.searchObj.communicationMethod === "ws" ||
+          this.searchObj.meta.jobId != ""
             ? this.searchObj.data.queryResults.pagination.length
             : this.searchObj.data.queryResults.partitionDetail.paginations
                 .length;
@@ -391,6 +403,7 @@ export default defineComponent({
       reorderSelectedFields,
       getFilterExpressionByFieldType,
       refreshPagination,
+      refreshJobPagination,
     } = useLogs();
     const pageNumberInput = ref(1);
     const totalHeight = ref(0);
@@ -609,6 +622,7 @@ export default defineComponent({
       reorderSelectedFields,
       getPaginations,
       refreshPagination,
+      refreshJobPagination,
     };
   },
   computed: {
@@ -633,6 +647,7 @@ export default defineComponent({
       this.extractFTSFields();
     },
     updateTitle() {
+      console.log( this.searchObj.data.histogram.chartParams.title,'title in index')
       this.noOfRecordsTitle = this.searchObj.data.histogram.chartParams.title;
     },
     reDrawChartData: {

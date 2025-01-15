@@ -399,6 +399,44 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
             </q-list>
           </q-btn-dropdown>
         </q-btn-group>
+        <q-btn-group class=" no-outline q-pa-none no-border">
+          <q-btn-dropdown
+            data-test="logs-search-bar-reset-function-btn"
+            class="q-mr-xs download-logs-btn q-px-xs "
+            size="sm"
+            icon="schedule_send"
+            :title="t('search.exportLogs')"
+          >
+            <q-list>
+              <q-item
+                class="q-pa-sm saved-view-item"
+                clickable
+                v-close-popup
+              >
+                <q-item-section
+                  @click="searchSchedulerJob = true"
+                  v-close-popup
+                >
+                  <q-item-label>
+                    <q-icon name='save' />
+                    Create Scheduled Search</q-item-label>
+                </q-item-section>
+              </q-item>
+              <q-separator />
+              <q-item class="q-pa-sm saved-view-item" clickable v-close-popup>
+                <q-item-section
+                  @click.stop="routeToSearchSchedule"
+                  v-close-popup
+                >
+                  <q-item-label>
+                    <q-icon name='list' />
+
+                    List Scheduled Search</q-item-label>
+                </q-item-section>
+              </q-item>
+            </q-list>
+          </q-btn-dropdown>
+        </q-btn-group>
         <q-btn-group class="no-outline q-pa-none no-border">
           <q-btn-dropdown
             data-test="logs-search-bar-reset-function-btn"
@@ -952,12 +990,108 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
         </q-card-actions>
       </q-card>
     </q-dialog>
+    <q-dialog v-model="searchSchedulerJob">
+      <q-card style="width: 700px; max-width: 80vw">
+        <q-card-section>
+          <div class="text-h6">Schedule Search Job</div>
+        </q-card-section>
+
+        <q-card-section class="q-pt-none">
+          <div>
+            <div class="text-left q-mb-xs">
+                No of Records:
+                <q-icon
+            name="info"
+            size="17px"
+            class="q-ml-xs cursor-pointer"
+
+          >
+            <q-tooltip
+              anchor="center right"
+              self="center left"
+              max-width="300px"
+            >
+              <span style="font-size: 14px"
+                >Number of records can be specified eg: if the no. of records is 1000 then user can get maximum of 1000 records</span
+              >
+            </q-tooltip>
+          </q-icon>
+            </div>
+            <q-input
+              type="number"
+              data-test="custom-download-initial-number-input"
+              v-model="searchObj.meta.jobRecords"
+              default-value="100"
+              color="input-border"
+              bg-color="input-bg"
+              class="showLabelOnTop"
+              stack-label
+              outlined
+              filled
+              dense
+              tabindex="0"
+              min="100"
+          />
+          
+          </div>
+          <div class="text-left">
+            Maximum 10000 events can be returned in schedule job
+          </div>
+          <div style="opacity: 0.8;" class="text-left mapping-warning-msg q-mt-md">
+                    <q-icon name="warning" color="red" class="q-mr-sm" />
+                    <span>Histogram will be disabled for the schedule job</span>
+                    </div>
+        </q-card-section>
+           
+
+        <q-card-actions align="right" class=" text-teal">
+          <q-btn
+            data-test="saved-function-dialog-cancel-btn"
+            unelevated
+            no-caps
+            class="q-mr-sm text-bold"
+            :label="t('confirmDialog.cancel')"
+            color="secondary"
+            v-close-popup
+            @click="searchSchedulerJob = false"
+          />
+          <q-btn
+            data-test="saved-view-dialog-save-btn"
+            v-if="!saveFunctionLoader"
+            unelevated
+            no-caps
+            :label="t('confirmDialog.ok')"
+            color="primary"
+            class="text-bold"
+            @click="addJobScheduler"
+            v-close-popup
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
     <ConfirmDialog
       title="Delete Saved View"
       message="Are you sure you want to delete saved view?"
       @update:ok="confirmDeleteSavedViews"
       @update:cancel="confirmDelete = false"
       v-model="confirmDelete"
+    />
+    <!-- <ConfirmDialogWithInput
+      title="Search Scheduler Job"
+      message="Are you sure you want save this as search scheduler job?"
+      inputRecords="100"
+      @update:cancel="searchSchedulerJob = false"
+      @update:ok="addJobScheduler"
+
+      v-model="searchSchedulerJob"
+    /> -->
+    <ConfirmDialog
+      title="Search Scheduler Job"
+      message="This search is taking long time. Do you want to save this as a search scheduler job?"
+      @update:cancel="autoSearchSchedulerJob = false"
+      @update:ok="addJobScheduler"
+
+      v-model="autoSearchSchedulerJob"
     />
     <ConfirmDialog
       title="Update Saved View"
@@ -1026,7 +1160,6 @@ import QueryEditor from "@/components/QueryEditor.vue";
 import useCancelQuery from "@/composables/dashboard/useCancelQuery";
 import { computed } from "vue";
 import { useLoading } from "@/composables/useLoading";
-
 const defaultValue: any = () => {
   return {
     name: "",
@@ -1043,8 +1176,7 @@ export default defineComponent({
     QueryEditor,
     SyntaxGuide,
     AutoRefreshInterval,
-    ConfirmDialog,
-  },
+    ConfirmDialog,  },
   emits: [
     "searchdata",
     "onChangeInterval",
@@ -1191,6 +1323,7 @@ export default defineComponent({
       extractFields,
       cancelQuery,
       setSelectedStreams,
+      getJobData
     } = useLogs();
     const queryEditorRef = ref(null);
 
@@ -1212,6 +1345,8 @@ export default defineComponent({
 
     const confirmDialogVisible: boolean = ref(false);
     const confirmSavedViewDialogVisible: boolean = ref(false);
+    const searchSchedulerJob = ref(false);
+    const autoSearchSchedulerJob = ref(false);
     let confirmCallback;
     let streamName = "";
 
@@ -1267,6 +1402,22 @@ export default defineComponent({
       () => searchObj.data.stream.selectedStreamFields,
       (fields) => {
         if (fields != undefined && fields.length) updateFieldKeywords(fields);
+      },
+      { immediate: true, deep: true },
+    );
+    watch(
+      () => searchObj.meta.showHistogram,
+      (val) => {
+        if(val == true && searchObj.meta.jobId != ""){
+          $q.notify({
+              message: "Histogram is not available for scheduled search",
+              color: "negative",
+              position: "bottom",
+              timeout: 2000,
+            });
+            searchObj.meta.showHistogram = false;
+            searchObj.loadingHistogram = false;
+        }
       },
       { immediate: true, deep: true },
     );
@@ -2817,6 +2968,37 @@ export default defineComponent({
         )
       );
     });
+    const addJobScheduler = async () => {
+
+      try{
+        searchSchedulerJob.value = false
+        await getJobData();
+      }
+      catch (e){
+        return;
+      }
+      $q.notify({
+        type: "positive",
+        message: "Job Added Succesfully",
+        timeout: 10000,
+        actions: [
+          {
+            label: "Go To Job Scheduler",
+            color: "white",
+            handler: () => routeToSearchSchedule(),
+          },
+        ],
+      });
+    };
+
+    const routeToSearchSchedule = () => {
+      router.push({
+        query:{
+          action: "search_scheduler",
+          org_identifier: store.state.selectedOrganization.identifier,
+        }
+      });
+    }
 
     // [END] cancel running queries
 
@@ -2909,6 +3091,10 @@ export default defineComponent({
       fnParsedSQL,
       iconRight,
       functionToggleIcon,
+      searchSchedulerJob,
+      autoSearchSchedulerJob,
+      addJobScheduler,
+      routeToSearchSchedule,
       searchTerm,
       filteredFunctionOptions,
       confirmUpdate,

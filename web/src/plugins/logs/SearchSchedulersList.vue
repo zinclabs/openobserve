@@ -134,6 +134,7 @@
                       "
                       @click="retrySearchJob(props.row)"
                     ></q-btn>
+                    {{ props.row.status_code}}
                     <q-btn
                       icon="search"
                       :title="'cancel'"
@@ -143,7 +144,7 @@
                       size="sm"
                       round
                       :disable="
-                        props.row.status_code == 0 || props.row.status.code == 3
+                        props.row.status_code == 0 || props.row.status_code == 3
                       "
                       flat
                       color="green"
@@ -642,7 +643,18 @@ export default defineComponent({
             message: "Search Job has been cancelled successfully",
             timeout: 2000,
           });
-        });
+        }).catch((e)=> {
+          if(e.response.status.code != 403){
+            $q.notify({
+            type: "negative",
+            message: e.response?.data?.message ||  "Failed to cancel search job",
+            timeout: 2000,
+          });
+          }
+          
+        }).finally(()=> {
+          fetchSearchHistory();
+        })
     };
     const retrySearchJob = (row) => {
       searchService
@@ -656,7 +668,19 @@ export default defineComponent({
             message: "Search Job has been restarted successfully",
             timeout: 2000,
           });
-        });
+        }).catch((e)=> {
+          if(e.response.status.code != 403){
+            $q.notify({
+            type: "negative",
+            message: e.response?.data?.message ||  "Failed to restart search job",
+            timeout: 2000,
+          });
+          }
+          
+        }).finally(()=> {
+          fetchSearchHistory();
+
+        })
     };
     const confirmDeleteJob = (row) => {
       confirmDelete.value = true;

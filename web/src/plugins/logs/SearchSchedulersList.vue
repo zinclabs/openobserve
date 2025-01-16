@@ -334,6 +334,8 @@ import ConfirmDialog from "@/components/ConfirmDialog.vue";
 import AppTabs from "@/components/common/AppTabs.vue";
 import JsonPreview from "./JsonPreview.vue";
 import QueryEditor from "@/components/QueryEditor.vue";
+import config from "@/aws-exports";
+
 
 export default defineComponent({
   name: "SearchSchedulersList",
@@ -564,6 +566,9 @@ export default defineComponent({
     }
 
     const fetchSearchHistory = async () => {
+      if(config.isEnterprise == "false"){
+        return;
+      }
       columnsToBeRendered.value = [];
       dataToBeLoaded.value = [];
       expandedRow.value = [];
@@ -986,7 +991,7 @@ export default defineComponent({
       dataToBeLoaded,
       columnsToBeRendered,
       expandedColumns,
-
+      config,
       t,
       route,
       isLoading,

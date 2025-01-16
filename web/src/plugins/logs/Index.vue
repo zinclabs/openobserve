@@ -655,7 +655,12 @@ export default defineComponent({
         router.currentRoute.value.query.hasOwnProperty("action") &&
         router.currentRoute.value.query.action == "search_scheduler"
       ) {
-        showSearchScheduler.value = true;
+        if(config.isEnterprise == 'true'){
+          showSearchScheduler.value = true;
+        }
+        else{
+          router.back();
+        }
       }
     });
 
@@ -701,7 +706,12 @@ export default defineComponent({
           router.currentRoute.value.query.hasOwnProperty("action") &&
           router.currentRoute.value.query.action == "search_scheduler"
         ) {
-          showSearchScheduler.value = true;
+          if(config.isEnterprise == 'true'){
+            showSearchScheduler.value = true;
+          }
+          else{
+          router.back();
+        }
         }
       },
       // (action) => {

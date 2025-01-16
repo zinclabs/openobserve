@@ -399,7 +399,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
             </q-list>
           </q-btn-dropdown>
         </q-btn-group>
-        <q-btn-group class=" no-outline q-pa-none no-border">
+        <q-btn-group v-if="config.isEnterprise == 'true'" class=" no-outline q-pa-none no-border">
           <q-btn-dropdown
             data-test="logs-search-bar-reset-function-btn"
             class="q-mr-xs download-logs-btn q-px-xs "

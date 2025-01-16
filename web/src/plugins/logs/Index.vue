@@ -756,15 +756,15 @@ export default defineComponent({
           resetSearchObj();
 
           // As when redirecting from search history to logs page, date type was getting set as absolute, so forcefully keeping it relative.
-          searchBarRef.value.dateTimeRef.setRelativeTime(
-            router.currentRoute.value.query.period,
+          searchBarRef.value.dateTimeRef.setAbsoluteTime(
+            router.currentRoute.value.query.from,
+            router.currentRoute.value.query.to,
           );
-          searchObj.data.datetime.type = "relative";
+          searchObj.data.datetime.type = "absolute";
           searchObj.meta.searchApplied = false;
           resetStreamData();
-          restoreUrlQueryParams();
+          await restoreUrlQueryParams();
           await loadLogsData();
-
         }
       },
     );

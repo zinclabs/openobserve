@@ -33,9 +33,27 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
             :htmlContent="searchObj.data.countErrorMsg"
           />
         </div>
-        <div v-else class="col-6 text-left q-pl-lg q-mt-xs warning">
+        <div v-else class="col-6 text-left q-pl-lg q-mt-xs warning flex">
           {{ noOfRecordsTitle }}
+          <span v-if="searchObj.loadingCounter" class="q-ml-md">
+            <q-spinner-hourglass
+            color="primary"
+            size="25px"
+            style="margin: 0 auto; display: block"
+          />
+          <q-tooltip
+              anchor="center right"
+              self="center left"
+              max-width="300px"
+            >
+              <span style="font-size: 14px"
+                >Fetching the search events</span
+              >
+            </q-tooltip>
+
+          </span>
         </div>
+
         <div class="col-6 text-right q-pr-md q-gutter-xs pagination-block">
           <q-pagination
             v-if="searchObj.meta.resultGrid.showPagination"

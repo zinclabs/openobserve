@@ -81,6 +81,7 @@ const defaultObject = {
   runQuery: false,
   loading: false,
   loadingHistogram: false,
+  loadingCounter: false,
   loadingStream: false,
   loadingSavedView: false,
   shouldIgnoreWatcher: false,
@@ -1330,6 +1331,9 @@ const useLogs = () => {
   };
 
   const refreshPartitionPagination = (regenrateFlag: boolean = false) => {
+    if (searchObj.meta.jobId != "") {
+      return;
+    }
     try {
       const { rowsPerPage } = searchObj.meta.resultGrid;
       const { currentPage } = searchObj.data.resultGrid;
@@ -2043,102 +2047,113 @@ const useLogs = () => {
 
   const getPageCount = async (queryReq: any) => {
     return new Promise((resolve, reject) => {
-      searchObj.data.countErrorMsg = "";
-      queryReq.query.size = 0;
-      delete queryReq.query.from;
-      delete queryReq.query.quick_mode;
-      queryReq.query["sql_mode"] = "full";
-
-      queryReq.query.track_total_hits = true;
-
-      const { traceparent, traceId } = generateTraceContext();
-      addTraceId(traceId);
-      console.log('here it is running 1')
-
-      searchService
-        .search(
-          {
-            org_identifier: searchObj.organizationIdentifier,
-            query: queryReq,
-            page_type: searchObj.data.stream.streamType,
-            traceparent,
-          },
-          "UI",
-        )
-        .then(async (res) => {
-          // check for total records update for the partition and update pagination accordingly
-          // searchObj.data.queryResults.partitionDetail.partitions.forEach(
-          //   (item: any, index: number) => {
-          searchObj.data.queryResults.scan_size += res.data.scan_size;
-          searchObj.data.queryResults.took += res.data.took;
-          for (const [
-            index,
-            item,
-          ] of searchObj.data.queryResults.partitionDetail.partitions.entries()) {
-            if (
-              (searchObj.data.queryResults.partitionDetail.partitionTotal[
-                index
-              ] == -1 ||
-                searchObj.data.queryResults.partitionDetail.partitionTotal[
-                  index
-                ] < res.data.total) &&
-              queryReq.query.start_time == item[0]
-            ) {
-              searchObj.data.queryResults.partitionDetail.partitionTotal[
-                index
-              ] = res.data.total;
+      try {
+        searchObj.loadingCounter = true;
+        searchObj.data.countErrorMsg = "";
+        queryReq.query.size = 0;
+        delete queryReq.query.from;
+        delete queryReq.query.quick_mode;
+        queryReq.query["sql_mode"] = "full";
+  
+        queryReq.query.track_total_hits = true;
+  
+        const { traceparent, traceId } = generateTraceContext();
+        addTraceId(traceId);
+  
+        searchService
+          .search(
+            {
+              org_identifier: searchObj.organizationIdentifier,
+              query: queryReq,
+              page_type: searchObj.data.stream.streamType,
+              traceparent,
+            },
+            "UI",
+          )
+          .then(async (res) => {
+            // check for total records update for the partition and update pagination accordingly
+            // searchObj.data.queryResults.partitionDetail.partitions.forEach(
+            //   (item: any, index: number) => {
+            searchObj.data.queryResults.scan_size += res.data.scan_size;
+            searchObj.data.queryResults.took += res.data.took;
+            if (searchObj.meta.jobId == "") {
+              for (const [
+                index,
+                item,
+              ] of searchObj.data.queryResults.partitionDetail.partitions.entries()) {
+                if (
+                  (searchObj.data.queryResults.partitionDetail.partitionTotal[
+                    index
+                  ] == -1 ||
+                    searchObj.data.queryResults.partitionDetail.partitionTotal[
+                      index
+                    ] < res.data.total) &&
+                  queryReq.query.start_time == item[0]
+                ) {
+                  searchObj.data.queryResults.partitionDetail.partitionTotal[
+                    index
+                  ] = res.data.total;
+                }
+              }
             }
-          }
-
-          let regeratePaginationFlag = false;
-          if (res.data.hits.length != searchObj.meta.resultGrid.rowsPerPage) {
-            regeratePaginationFlag = true;
-          }
-          // if total records in partition is greater than recordsPerPage then we need to update pagination
-          // setting up forceFlag to true to update pagination as we have check for pagination already created more than currentPage + 3 pages.
-          refreshPartitionPagination(regeratePaginationFlag);
-          searchObj.data.histogram.chartParams.title = getHistogramTitle();
-          resolve(true);
-        })
-        .catch((err) => {
-          searchObj.loading = false;
-
+  
+  
+            let regeratePaginationFlag = false;
+            if (res.data.hits.length != searchObj.meta.resultGrid.rowsPerPage) {
+              regeratePaginationFlag = true;
+            }
+            // if total records in partition is greater than recordsPerPage then we need to update pagination
+            // setting up forceFlag to true to update pagination as we have check for pagination already created more than currentPage + 3 pages.
+            refreshPartitionPagination(regeratePaginationFlag);
+            searchObj.data.histogram.chartParams.title = getHistogramTitle();
+            searchObj.loadingCounter = false;
+            resolve(true);
+          })
+          .catch((err) => {
+            searchObj.loading = false;
+            searchObj.loadingCounter = false;
+  
           // Reset cancel query on search error
           searchObj.data.isOperationCancelled = false;
 
           let trace_id = "";
-          searchObj.data.countErrorMsg =
-            "Error while retrieving total events: ";
-          if (err.response != undefined) {
-            if (err.response.data.hasOwnProperty("trace_id")) {
-              trace_id = err.response.data?.trace_id;
+            searchObj.data.countErrorMsg =
+              "Error while retrieving total events: ";
+            if (err.response != undefined) {
+              if (err.response.data.hasOwnProperty("trace_id")) {
+                trace_id = err.response.data?.trace_id;
+              }
+            } else {
+              if (err.hasOwnProperty("trace_id")) {
+                trace_id = err?.trace_id;
+              }
             }
-          } else {
-            if (err.hasOwnProperty("trace_id")) {
-              trace_id = err?.trace_id;
+  
+            const customMessage = logsErrorMessage(err?.response?.data.code);
+            searchObj.data.errorCode = err?.response?.data.code;
+  
+            notificationMsg.value = searchObj.data.countErrorMsg;
+  
+            if (err?.request?.status >= 429) {
+              notificationMsg.value = err?.response?.data?.message;
+              searchObj.data.countErrorMsg += err?.response?.data?.message;
             }
-          }
+  
+            if (trace_id) {
+              searchObj.data.countErrorMsg += " TraceID:" + trace_id;
+              notificationMsg.value += " TraceID:" + trace_id;
+              trace_id = "";
+            }
+            reject(false);
+          })
+          .finally(() => {
+            removeTraceId(traceId);
+          });
+      } catch (e) {
+        searchObj.loadingCounter = false;
+        reject(false);
+      }
 
-          const customMessage = logsErrorMessage(err?.response?.data.code);
-          searchObj.data.errorCode = err?.response?.data.code;
-
-          notificationMsg.value = searchObj.data.countErrorMsg;
-
-          if (err?.request?.status >= 429) {
-            notificationMsg.value = err?.response?.data?.message;
-            searchObj.data.countErrorMsg += err?.response?.data?.message;
-          }
-
-          if (trace_id) {
-            searchObj.data.countErrorMsg += " TraceID:" + trace_id;
-            notificationMsg.value += " TraceID:" + trace_id;
-            trace_id = "";
-          }
-          reject(false);
-        })
-        .finally(() => {
-          removeTraceId(traceId);
-        });
     });
   };
 

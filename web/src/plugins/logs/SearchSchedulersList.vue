@@ -6,34 +6,33 @@
         : 'light-theme-history-page light-theme'
     "
   >
-   <div v-if="!showSearchResults" >
-    <div class="flex tw-justify-between tw-items-center">
-      <div class="flex items-center q-py-sm q-pl-md">
-        <div
-          data-test="search-schedule-alert-back-btn"
-          class="flex justify-center items-center q-mr-md cursor-pointer"
-          style="
-            border: 1.5px solid;
-            border-radius: 50%;
-            width: 22px;
-            height: 22px;
-          "
-          title="Go Back"
-          @click="closeSearchHistory"
-        >
-          <q-icon name="arrow_back_ios_new" size="14px" />
-        </div>
-        <div class="text-h6" data-test="search-scheduler-title">
-          Search Job Scheduler
+    <div v-if="!showSearchResults">
+      <div class="flex tw-justify-between tw-items-center">
+        <div class="flex items-center q-py-sm q-pl-md">
+          <div
+            data-test="search-schedule-alert-back-btn"
+            class="flex justify-center items-center q-mr-md cursor-pointer"
+            style="
+              border: 1.5px solid;
+              border-radius: 50%;
+              width: 22px;
+              height: 22px;
+            "
+            title="Go Back"
+            @click="closeSearchHistory"
+          >
+            <q-icon name="arrow_back_ios_new" size="14px" />
+          </div>
+          <div class="text-h6" data-test="search-scheduler-title">
+            Search Job Scheduler
+          </div>
         </div>
       </div>
-    </div>
 
-    <div >
-      <q-page>
-        <q-table
-          ref="qTable"
-          
+      <div>
+        <q-page>
+          <q-table
+            ref="qTable"
             dense
             :rows="dataToBeLoaded"
             :columns="columnsToBeRendered"
@@ -43,189 +42,203 @@
             class="custom-table search-job-list-table"
             style="width: 100%"
             :sort-method="sortMethod"
-        >
-          <template v-slot:body="props">
-            <q-tr
-              :data-test="`stream-association-table-${props.row.trace_id}-row`"
-              :props="props"
-              style="cursor: pointer"
-              @click="triggerExpand(props)"
-            >
-              <q-td>
-                <q-btn
-                  dense
-                  flat
-                  size="xs"
-                  :icon="
-                    expandedRow != props.row.trace_id
-                      ? 'expand_more'
-                      : 'expand_less'
-                  "
-                />
-              </q-td>
-
-              <q-td
-            v-for="(col, index) in columnsToBeRendered.slice(1)"
-            :key="col.name"
-            :props="props"
           >
-            <!-- Render the content for all but the last item -->
-            <template v-if="index < columnsToBeRendered.slice(1).length - 1 && col.field != 'status'">
-              {{ props.row[col.field] }}
-            </template>
-            <template v-else-if="col.field === 'status'">
-              <div class="status-cell "> 
-                <q-icon
-                  :name="getStatusIcon(props.row[col.field])"
-                  size="xs"
-                  class="q-mr-xs"
-                  :color="getStatusColor(props.row[col.field])"
-                />
-                {{ getStatusText(props.row[col.field]) }}
-              </div>
-            </template>
-            <template v-else>
-              <q-btn
-             
-              icon="cancel"
-              :title="'cancel'"
-              class="q-ml-xs"
-              padding="sm"
-              unelevated
-              size="sm"
-              round
-              flat
-              :disable="props.row.status_code !== 0 && props.row.status_code !== 1"
-              color="gray"
-              @click="cancelSearchJob(props.row)"
-            ></q-btn>
-            
-            <q-btn
-              icon="delete"
-              :title="'cancel'"
-              class="q-ml-xs"
-              padding="sm"
-              unelevated
-              size="sm"
-              round
-              color="red"
-              flat
-              @click="confirmDeleteJob(props.row)"
-            ></q-btn>
-            <q-btn
-              icon="refresh"
-              :title="'restart'"
-              class="q-ml-xs"
-              padding="sm"
-              unelevated
-              size="sm"
-              round
-              color="orange"
-              flat
-              :disable="props.row.status_code !== 2 && props.row.status_code !== 3"
-              @click="retrySearchJob(props.row)"
-            ></q-btn>
-             <q-btn
-              icon="search"
-              :title="'cancel'"
-              class="q-ml-xs"
-              padding="sm"
-              unelevated
-              size="sm"
-              round
-              flat
-              color="green"
-              @click="fetchSearchResults(props.row)"
-            ></q-btn>
-            </template>
-          </q-td>
-            </q-tr>
+            <template v-slot:body="props">
+              <q-tr
+                :data-test="`stream-association-table-${props.row.trace_id}-row`"
+                :props="props"
+                style="cursor: pointer"
+                @click="triggerExpand(props)"
+              >
+                <q-td>
+                  <q-btn
+                    dense
+                    flat
+                    size="xs"
+                    :icon="
+                      expandedRow != props.row.trace_id
+                        ? 'expand_more'
+                        : 'expand_less'
+                    "
+                  />
+                </q-td>
 
-            <q-tr v-show="expandedRow === props.row.trace_id" :props="props">
-              <q-td colspan="100%">
+                <q-td
+                  v-for="(col, index) in columnsToBeRendered.slice(1)"
+                  :key="col.name"
+                  :props="props"
+                >
+                  <!-- Render the content for all but the last item -->
+                  <template
+                    v-if="
+                      index < columnsToBeRendered.slice(1).length - 1 &&
+                      col.field != 'status'
+                    "
+                  >
+                    {{ props.row[col.field] }}
+                  </template>
+                  <template v-else-if="col.field === 'status'">
+                    <div class="status-cell">
+                      <q-icon
+                        :name="getStatusIcon(props.row[col.field])"
+                        size="xs"
+                        class="q-mr-xs"
+                        :color="getStatusColor(props.row[col.field])"
+                      />
+                      {{ getStatusText(props.row[col.field]) }}
+                    </div>
+                  </template>
+                  <template v-else>
+                    <q-btn
+                      icon="cancel"
+                      :title="'cancel'"
+                      class="q-ml-xs"
+                      padding="sm"
+                      unelevated
+                      size="sm"
+                      round
+                      flat
+                      :disable="
+                        props.row.status_code !== 0 &&
+                        props.row.status_code !== 1
+                      "
+                      color="gray"
+                      @click="cancelSearchJob(props.row)"
+                    ></q-btn>
+
+                    <q-btn
+                      icon="delete"
+                      :title="'cancel'"
+                      class="q-ml-xs"
+                      padding="sm"
+                      unelevated
+                      size="sm"
+                      round
+                      color="red"
+                      flat
+                      @click="confirmDeleteJob(props.row)"
+                    ></q-btn>
+                    <q-btn
+                      icon="refresh"
+                      :title="'restart'"
+                      class="q-ml-xs"
+                      padding="sm"
+                      unelevated
+                      size="sm"
+                      round
+                      color="orange"
+                      flat
+                      :disable="
+                        props.row.status_code !== 2 &&
+                        props.row.status_code !== 3
+                      "
+                      @click="retrySearchJob(props.row)"
+                    ></q-btn>
+                    <q-btn
+                      icon="search"
+                      :title="'cancel'"
+                      class="q-ml-xs"
+                      padding="sm"
+                      unelevated
+                      size="sm"
+                      round
+                      :disable="
+                        props.row.status_code == 0 || props.row.status.code == 3
+                      "
+                      flat
+                      color="green"
+                      @click="fetchSearchResults(props.row)"
+                    ></q-btn>
+                  </template>
+                </q-td>
+              </q-tr>
+
+              <q-tr v-show="expandedRow === props.row.trace_id" :props="props">
+                <q-td colspan="100%">
                   <div class="app-tabs-schedule-list report-list-tabs">
                     <app-tabs
                       data-test="expanded-list-tabs"
-                      class="q-mr-md "
+                      class="q-mr-md"
                       :tabs="tabs"
                       v-model:active-tab="activeTab"
                     />
                   </div>
                   <div v-if="activeTab == 'query'">
-                  <div class="text-left tw-px-2 q-mb-sm expanded-content">
-                    <div class="tw-flex tw-items-center q-py-sm">
-                      <strong
-                        >SQL Query :
-                        <span>
-                          <q-btn
-                            @click.stop="
-                              copyToClipboard(props.row.sql, 'SQL Query')
-                            "
-                            size="xs"
-                            dense
-                            flat
-                            icon="content_copy"
-                            class="copy-btn-sql tw-ml-2 tw-py-2 tw-px-2" /></span
-                      ></strong>
-                      <q-btn
-                        @click.stop="goToLogs(props.row)"
-                        size="xs"
-                        label="Logs"
-                        dense
-                        class="copy-btn tw-py-2 tw-mx-2 tw-px-2"
-                        icon="search"
-                        flat
-                        style="
-                          color: #f2452f;
-                          border: #f2452f 1px solid;
-                          font-weight: bolder;
-                        "
-                      />
-                    </div>
-                    <div class="tw-flex tw-items-start tw-justify-center">
-                      <div class="scrollable-content expanded-sql">
-                        <pre style="text-wrap: wrap">{{ props.row?.sql }}</pre>
+                    <div class="text-left tw-px-2 q-mb-sm expanded-content">
+                      <div class="tw-flex tw-items-center q-py-sm">
+                        <strong
+                          >SQL Query :
+                          <span>
+                            <q-btn
+                              @click.stop="
+                                copyToClipboard(props.row.sql, 'SQL Query')
+                              "
+                              size="xs"
+                              dense
+                              flat
+                              icon="content_copy"
+                              class="copy-btn-sql tw-ml-2 tw-py-2 tw-px-2" /></span
+                        ></strong>
+                        <q-btn
+                          @click.stop="goToLogs(props.row)"
+                          size="xs"
+                          label="Logs"
+                          dense
+                          class="copy-btn tw-py-2 tw-mx-2 tw-px-2"
+                          icon="search"
+                          flat
+                          style="
+                            color: #f2452f;
+                            border: #f2452f 1px solid;
+                            font-weight: bolder;
+                          "
+                        />
                       </div>
-
-                    </div>
-                  </div>
-                  <div
-                    v-if="props.row?.function"
-                    class="text-left q-mb-sm tw-px-2 expanded-content"
-                  >
-                    <div class="tw-flex tw-items-center q-py-sm">
-                      <strong
-                        >Function Definition :
-                        <span>
-                          <q-btn
-                            @click.stop="
-                              copyToClipboard(
-                                props.row.function,
-                                'Function Defination',
-                              )
-                            "
-                            size="xs"
-                            dense
-                            flat
-                            icon="content_copy"
-                            class="copy-btn-function tw-ml-2 tw-py-2 tw-px-2" /></span
-                      ></strong>
-                    </div>
-
-                    <div class="tw-flex tw-items-start tw-justify-center">
-                      <div class="scrollable-content expanded-function">
-                        <pre style="text-wrap: wrap">{{
-                          props.row?.function
-                        }}</pre>
+                      <div class="tw-flex tw-items-start tw-justify-center">
+                        <div class="scrollable-content expanded-sql">
+                          <pre style="text-wrap: wrap">{{
+                            props.row?.sql
+                          }}</pre>
+                        </div>
                       </div>
                     </div>
+                    <div
+                      v-if="props.row?.function"
+                      class="text-left q-mb-sm tw-px-2 expanded-content"
+                    >
+                      <div class="tw-flex tw-items-center q-py-sm">
+                        <strong
+                          >Function Definition :
+                          <span>
+                            <q-btn
+                              @click.stop="
+                                copyToClipboard(
+                                  props.row.function,
+                                  'Function Defination',
+                                )
+                              "
+                              size="xs"
+                              dense
+                              flat
+                              icon="content_copy"
+                              class="copy-btn-function tw-ml-2 tw-py-2 tw-px-2" /></span
+                        ></strong>
+                      </div>
+
+                      <div class="tw-flex tw-items-start tw-justify-center">
+                        <div class="scrollable-content expanded-function">
+                          <pre style="text-wrap: wrap">{{
+                            props.row?.function
+                          }}</pre>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  </div>
-              <div class="q-py-md" v-else>
+                  <div class="q-py-md" v-else>
                     <div
                       class="text-left tw-px-2 q-mb-sm expanded-content flex tw-flex-col"
                     >
-                    <query-editor
+                      <query-editor
                         style="height: 130px"
                         :key="props.row.trace_id"
                         :ref="`QueryEditorRef${props.row.trace_id}`"
@@ -236,66 +249,68 @@
                         language="json"
                         read-only
                       />
-                </div>
-              </div>
-              </q-td>
-            </q-tr>
-          </template>
-          <template #bottom="scope">
-            <div class="tw-ml-auto tw-mr-2">Max Limit : <b>1000</b></div>
-            <q-separator
-              style="height: 1.5rem; margin: auto 0"
-              vertical
-              inset
-              class="q-mr-md"
-            />
-
-            <div class="q-pl-md">
-              <QTablePagination
-                :scope="scope"
-                :position="'bottom'"
-                :resultTotal="resultTotal"
-                :perPageOptions="perPageOptions"
-                @update:changeRecordPerPage="changePagination"
+                    </div>
+                  </div>
+                </q-td>
+              </q-tr>
+            </template>
+            <template #bottom="scope">
+              <div class="tw-ml-auto tw-mr-2">Max Limit : <b>1000</b></div>
+              <q-separator
+                style="height: 1.5rem; margin: auto 0"
+                vertical
+                inset
+                class="q-mr-md"
               />
-            </div>
-          </template>
-          <template #no-data>
-            <div v-if="!isLoading" class="tw-flex tw-mx-auto">
-              <NoData />
-            </div>
-          </template>
-        </q-table>
 
-        <div
-          v-if="isLoading"
-          class="text-center full-width full-height q-mt-lg tw-flex tw-justify-center"
-        >
-          <q-spinner-hourglass color="primary" size="lg" />
-        </div>
-      </q-page>
-      <ConfirmDialog
-      title="Delete Scheduled Search"
-      message="Are you sure you want to delete this scheduled search?"
-      @update:ok="deleteSearchJob"
-      @update:cancel="confirmDelete = false"
-      v-model="confirmDelete"
-    />
+              <div class="q-pl-md">
+                <QTablePagination
+                  :scope="scope"
+                  :position="'bottom'"
+                  :resultTotal="resultTotal"
+                  :perPageOptions="perPageOptions"
+                  @update:changeRecordPerPage="changePagination"
+                />
+              </div>
+            </template>
+            <template #no-data>
+              <div v-if="!isLoading" class="tw-flex tw-mx-auto">
+                <NoData />
+              </div>
+            </template>
+          </q-table>
+
+          <div
+            v-if="isLoading"
+            class="text-center full-width full-height q-mt-lg tw-flex tw-justify-center"
+          >
+            <q-spinner-hourglass color="primary" size="lg" />
+          </div>
+        </q-page>
+        <ConfirmDialog
+          title="Delete Scheduled Search"
+          message="Are you sure you want to delete this scheduled search?"
+          @update:ok="deleteSearchJob"
+          @update:cancel="confirmDelete = false"
+          v-model="confirmDelete"
+        />
+      </div>
     </div>
-   </div>
- </div>
-    
-
-
-   
-
-
+  </div>
 
   <!-- Show NoData component if there's no data to display -->
 </template>
 <script lang="ts">
 //@ts-nocheck
-import { ref, watch, onMounted, nextTick, computed, onBeforeMount, onActivated } from "vue";
+import {
+  ref,
+  watch,
+  onMounted,
+  nextTick,
+  computed,
+  onBeforeMount,
+  onActivated,
+} from "vue";
 import {
   timestampToTimezoneDate,
   b64EncodeUnicode,
@@ -329,7 +344,7 @@ export default defineComponent({
     ConfirmDialog,
     AppTabs,
     JsonPreview,
-    QueryEditor
+    QueryEditor,
   },
   props: {
     isClicked: {
@@ -364,12 +379,12 @@ export default defineComponent({
       endTime: 0,
     });
     const columnsToBeRendered = ref([]);
-    const expandedColumns = ref([])
+    const expandedColumns = ref([]);
     const expandedRow = ref([]); // Array to track expanded rows
     const isLoading = ref(false);
     const isDateTimeChanged = ref(false);
     const showSearchResults = ref(false);
-    const activeTab = ref("query")
+    const activeTab = ref("query");
     const query = ref("");
 
     const perPageOptions: any = [
@@ -380,21 +395,20 @@ export default defineComponent({
       { label: "100", value: 100 },
       { label: "All", value: 0 },
     ];
-    const tabs = reactive ([
+    const tabs = reactive([
       {
-          label: "Query / Function",
-          value: "query",
-        },
-        {
-          label: "More Details",
-          value: "more_details",
-        }
-      ]);
+        label: "Query / Function",
+        value: "query",
+      },
+      {
+        label: "More Details",
+        value: "more_details",
+      },
+    ]);
 
     // onMounted(async ()=>{
     //   await fetchSearchHistory();
     // })
-
 
     const resultTotal = ref<number>(0);
 
@@ -419,45 +433,50 @@ export default defineComponent({
         { key: "Actions", label: "Actions" },
       ];
 
-
       return desiredColumns.map(({ key, label }) => {
         let columnWidth = 150;
 
         let align = "center";
         let sortable = true;
-        if(key === "user_id") {
+        if (key === "user_id") {
           columnWidth = 200;
-          align="center";
+          align = "center";
         }
-        if(key === "Actions") {
+        if (key === "Actions") {
           columnWidth = 200;
-          align="left";
+          align = "left";
         }
-        if(key == "trace_id"){
-          columnWidth = 250
+        if (key == "trace_id") {
+          columnWidth = 250;
           sortable = false;
         }
-        if(key == "duration"){
-          align='left'
-          columnWidth = 100
+        if (key == "duration") {
+          align = "left";
+          columnWidth = 100;
         }
-        if( key == 'start_time' || key == 'end_time' || key == "created_at" || key == "started_at" || key == "ended_at"){
-          columnWidth = 200;
-          sortable = false;
-        }
-        if(key == 'sql'){
-          columnWidth = 300
-          sortable = false;
-        }
-        if(key == 'status'){
-          align='left'
+        if (
+          key == "start_time" ||
+          key == "end_time" ||
+          key == "created_at" ||
+          key == "started_at" ||
+          key == "ended_at"
+        ) {
           columnWidth = 200;
           sortable = false;
         }
-        if(key == "#"){
-          columnWidth = 100
+        if (key == "sql") {
+          columnWidth = 300;
           sortable = false;
-          align = "left"
+        }
+        if (key == "status") {
+          align = "left";
+          columnWidth = 200;
+          sortable = false;
+        }
+        if (key == "#") {
+          columnWidth = 100;
+          sortable = false;
+          align = "left";
         }
 
         // Custom width for each column
@@ -472,7 +491,6 @@ export default defineComponent({
       });
     };
     const generateExpandedRows = (row: any) => {
-
       // Define the desired column order and names
       const desiredColumns = [
         { key: "trace_id", label: "Trace ID" },
@@ -483,31 +501,35 @@ export default defineComponent({
         { key: "ended_at", label: "Job Ended At" },
       ];
 
-
       return desiredColumns.map(({ key, label }) => {
         let columnWidth = 150;
 
         let align = "center";
         let sortable = true;
-        if(key === "Actions") {
+        if (key === "Actions") {
           columnWidth = 200;
-          align="left";
+          align = "left";
         }
-        if(key == "trace_id"){
-          columnWidth = 250
+        if (key == "trace_id") {
+          columnWidth = 250;
           sortable = false;
         }
-        if( key == 'start_time' || key == 'end_time' || key == "created_at" || key == "started_at" || key == "ended_at"){
+        if (
+          key == "start_time" ||
+          key == "end_time" ||
+          key == "created_at" ||
+          key == "started_at" ||
+          key == "ended_at"
+        ) {
           columnWidth = 180;
           sortable = false;
-
         }
-        if(key == 'sql'){
-          columnWidth = 300
+        if (key == "sql") {
+          columnWidth = 300;
           sortable = false;
         }
-        if(key == 'status'){
-          align='left'
+        if (key == "status") {
+          align = "left";
           columnWidth = 200;
           sortable = false;
         }
@@ -532,12 +554,12 @@ export default defineComponent({
         { key: "started_at", label: "Job Started At" },
         { key: "ended_at", label: "Job Ended At" },
       ];
-        return desiredColumns.reduce((filtered, column) => {
-          if (row[column.key] !== undefined) {
-            filtered[column.key] = row[column.key];
-          }
-          return filtered;
-        }, {});
+      return desiredColumns.reduce((filtered, column) => {
+        if (row[column.key] !== undefined) {
+          filtered[column.key] = row[column.key];
+        }
+        return filtered;
+      }, {});
     }
 
     const fetchSearchHistory = async () => {
@@ -549,41 +571,51 @@ export default defineComponent({
         isLoading.value = true;
         if (dateTimeToBeSent.value.valueType === "relative") {
           let responseToBeFetched = [];
-          searchService.get_scheduled_search_list(
-            {
+          searchService
+            .get_scheduled_search_list({
               org_identifier: store.state.selectedOrganization.identifier,
-            }
-          ).then((res)=>{
-             responseToBeFetched = res.data;
+            })
+            .then((res) => {
+              responseToBeFetched = res.data;
+              resultTotal.value = res.data.length;
 
-             columnsToBeRendered.value = generateColumns(responseToBeFetched[0]);
-             expandedColumns.value = generateExpandedRows(responseToBeFetched[0]);
-          responseToBeFetched.forEach((element) => {
-            element["duration"] = calculateDuration(
-              element.start_time,
-              element.end_time,
-            ).formatted;
-            element.toBeStoredStartTime = element.start_time;
-            element.toBeStoredEndTime = element.end_time;
-            element.start_time = convertUnixToQuasarFormat(element.start_time);
-            element.end_time = convertUnixToQuasarFormat(element.end_time);
-            element.created_at = convertUnixToQuasarFormat(element.created_at);
-            element.started_at = convertUnixToQuasarFormat(element.started_at);
-            element.ended_at = convertUnixToQuasarFormat(element.ended_at);
-            element.status_code = element.status;
-            element["sql"] = JSON.parse(element.payload).query.sql;
-  
-            if(JSON.parse(element.payload).query.query_fn){
-    element["function"] = b64DecodeUnicode(
+              columnsToBeRendered.value = generateColumns(
+                responseToBeFetched[0],
+              );
+              expandedColumns.value = generateExpandedRows(
+                responseToBeFetched[0],
+              );
+              responseToBeFetched.forEach((element) => {
+                element["duration"] = calculateDuration(
+                  element.start_time,
+                  element.end_time,
+                ).formatted;
+                element.toBeStoredStartTime = element.start_time;
+                element.toBeStoredEndTime = element.end_time;
+                element.start_time = convertUnixToQuasarFormat(
+                  element.start_time,
+                );
+                element.end_time = convertUnixToQuasarFormat(element.end_time);
+                element.created_at = convertUnixToQuasarFormat(
+                  element.created_at,
+                );
+                element.started_at = convertUnixToQuasarFormat(
+                  element.started_at,
+                );
+                element.ended_at = convertUnixToQuasarFormat(element.ended_at);
+                element.status_code = element.status;
+                element["sql"] = JSON.parse(element.payload).query.sql;
+
+                if (JSON.parse(element.payload).query.query_fn) {
+                  element["function"] = b64DecodeUnicode(
                     JSON.parse(element.payload).query.query_fn,
                   );
                 }
-          });
+              });
 
-          dataToBeLoaded.value = responseToBeFetched;
-          isLoading.value = false;
-          })
-
+              dataToBeLoaded.value = responseToBeFetched;
+              isLoading.value = false;
+            });
         }
       } catch (error) {
         $q.notify({
@@ -599,50 +631,52 @@ export default defineComponent({
     };
     //this method needs to revamped / can be made shorter
     const cancelSearchJob = (row) => {
-      searchService.cancel_scheduled_search({
-        org_identifier: store.state.selectedOrganization.identifier,
-        jobId: row.id
-      }).then((res)=>{
-        $q.notify({
-          type: "positive",
-          message: "Search Job has been cancelled successfully",
-          timeout: 2000,
-        });
+      searchService
+        .cancel_scheduled_search({
+          org_identifier: store.state.selectedOrganization.identifier,
+          jobId: row.id,
         })
-
-    }
+        .then((res) => {
+          $q.notify({
+            type: "positive",
+            message: "Search Job has been cancelled successfully",
+            timeout: 2000,
+          });
+        });
+    };
     const retrySearchJob = (row) => {
-      searchService.retry_scheduled_search({
-        org_identifier: store.state.selectedOrganization.identifier,
-        jobId: row.id
-      }).then((res)=>{
-        $q.notify({
-          type: "positive",
-          message: "Search Job has been restarted successfully",
-          timeout: 2000,
-        });
+      searchService
+        .retry_scheduled_search({
+          org_identifier: store.state.selectedOrganization.identifier,
+          jobId: row.id,
         })
-
-    }
+        .then((res) => {
+          $q.notify({
+            type: "positive",
+            message: "Search Job has been restarted successfully",
+            timeout: 2000,
+          });
+        });
+    };
     const confirmDeleteJob = (row) => {
       confirmDelete.value = true;
       toBeDeletedJob.value = row;
-    }
+    };
     const deleteSearchJob = () => {
-
-      searchService.delete_scheduled_search({
-        org_identifier: store.state.selectedOrganization.identifier,
-        jobId: toBeDeletedJob.value.id
-      }).then((res)=>{
-        fetchSearchHistory();
-        $q.notify({
-          type: "positive",
-          message: "Search Job has been deleted successfully",
-          timeout: 2000,
-        });
+      searchService
+        .delete_scheduled_search({
+          org_identifier: store.state.selectedOrganization.identifier,
+          jobId: toBeDeletedJob.value.id,
         })
-
-    }
+        .then((res) => {
+          fetchSearchHistory();
+          $q.notify({
+            type: "positive",
+            message: "Search Job has been deleted successfully",
+            timeout: 2000,
+          });
+        });
+    };
     const sortMethod = (rows, sortBy, descending) => {
       const data = [...rows];
       if (sortBy === "duration") {
@@ -799,25 +833,29 @@ export default defineComponent({
       } else {
         // Otherwise, expand the clicked row and collapse any other row
         expandedRow.value = props.row.trace_id;
-
       }
     };
-    const   goToLogs = ( row) => {
-        const duration_suffix = row.duration.split(" ")[1];
-        // emit('closeSearchHistory');
-          const stream: string =
-          row.stream_names[0];
-          const from =
-          row.toBeStoredStartTime;
-          const to =
-          row.toBeStoredEndTime ;
-          const refresh = 0;
+    const goToLogs = (row) => {
+      const duration_suffix = row.duration.split(" ")[1];
+      // emit('closeSearchHistory');
+      // const stream: string = row.stream_names;
+      const from = row.toBeStoredStartTime;
+      const to = row.toBeStoredEndTime;
+      const refresh = 0;
 
       const query = b64EncodeUnicode(row.sql);
+      
+      const rawStreamNames = JSON.parse(row.stream_names)
+      const stream_name =
+        rawStreamNames.length > 1
+          ? rawStreamNames.join(",")
+          : rawStreamNames[0];
+
+      // const stream_name = JSON.parse(row.stream_names).map((stream) => stream.name);
 
       const queryObject = {
         stream_type: "logs",
-        stream:"default",
+        stream: stream_name,
         from: from,
         to: to,
         refresh,
@@ -827,14 +865,13 @@ export default defineComponent({
         org_identifier: row.org_id,
         quick_mode: "false",
         show_histogram: "false",
-        type: "search_scheduler"
+        type: "search_scheduler",
       };
 
-      if(row.hasOwnProperty('function') && row.function){
+      if (row.hasOwnProperty("function") && row.function) {
         const functionContent = b64EncodeUnicode(row.function);
-        queryObject['functionContent'] = functionContent;
+        queryObject["functionContent"] = functionContent;
       }
-
 
       router.push({
         path: "/logs",
@@ -861,7 +898,7 @@ export default defineComponent({
         }
       },
     );
-        const getStatusText = (status) => {
+    const getStatusText = (status) => {
       switch (status) {
         case 0:
           return "Pending";
@@ -876,34 +913,34 @@ export default defineComponent({
       }
     };
 
-      const getStatusIcon = (status) => {
-        switch (status) {
-          case 0:
-            return "hourglass_empty"; // Icon for pending
-          case 1:
-            return "pause_circle"; // Icon for running
-          case 2:
-            return "check_circle"; // Icon for finished
-          case 3:
-            return "cancel"; // Icon for cancelled
-          default:
-            return "help"; // Icon for unknown
-        }
-      };
-      const getStatusColor = (status) => {
-        switch (status) {
-          case 0:
-            return "orange"; // Pending color
-          case 1:
-            return "blue"; // Running color
-          case 2:
-            return "green"; // Finished color
-          case 3:
-            return "gray"; // Cancelled color
-          default:
-            return "gray"; // Unknown color
-        }
-      };
+    const getStatusIcon = (status) => {
+      switch (status) {
+        case 0:
+          return "hourglass_empty"; // Icon for pending
+        case 1:
+          return "pause_circle"; // Icon for running
+        case 2:
+          return "check_circle"; // Icon for finished
+        case 3:
+          return "cancel"; // Icon for cancelled
+        default:
+          return "help"; // Icon for unknown
+      }
+    };
+    const getStatusColor = (status) => {
+      switch (status) {
+        case 0:
+          return "orange"; // Pending color
+        case 1:
+          return "blue"; // Running color
+        case 2:
+          return "green"; // Finished color
+        case 3:
+          return "gray"; // Cancelled color
+        default:
+          return "gray"; // Unknown color
+      }
+    };
 
     function convertUnixToQuasarFormat(unixMicroseconds: any) {
       if (!unixMicroseconds) return "";
@@ -913,10 +950,10 @@ export default defineComponent({
       return date.formatDate(formattedDate, "YYYY-MM-DDTHH:mm:ssZ");
     }
     const fetchSearchResults = (row) => {
-      searchObj.meta.jobId = row.id
+      searchObj.meta.jobId = row.id;
       goToLogs(row);
-      console.log(row.stream_names,'row ')
-    }
+      console.log(row.stream_names, "row ");
+    };
     return {
       searchObj,
       store,
@@ -960,7 +997,7 @@ export default defineComponent({
       activeTab,
       filterRow,
       query,
-        };
+    };
     // Watch the searchObj for changes
   },
 });
@@ -1018,7 +1055,6 @@ export default defineComponent({
   border-left: #0a7ebc 3px solid;
 }
 
-
 .search-job-list-table {
   th:last-child,
   td:last-child {
@@ -1029,15 +1065,13 @@ export default defineComponent({
     box-shadow: -4px 0px 4px 0 rgba(0, 0, 0, 0.1);
   }
 }
-td:nth-child(2){
-    text-align: center !important;
-  }
+td:nth-child(2) {
+  text-align: center !important;
+}
 th:first-child,
-  td:first-child {
-    width: 50px;
-  }
-
-
+td:first-child {
+  width: 50px;
+}
 
 .dark-theme {
   th:last-child,

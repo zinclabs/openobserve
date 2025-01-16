@@ -989,6 +989,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
       </div>
     </span>
     <q-separator />
+    <DashboardJoinsOption
+    :dashboardData="dashboardData"
+    ></DashboardJoinsOption>
+    <q-separator />
     <!-- filters container -->
     <DashboardFiltersOption
       :dashboardData="dashboardData"
@@ -1013,6 +1017,7 @@ import CommonAutoComplete from "@/components/dashboards/addPanel/CommonAutoCompl
 import SanitizedHtmlRenderer from "@/components/SanitizedHtmlRenderer.vue";
 import useNotifications from "@/composables/useNotifications";
 import DashboardFiltersOption from "@/views/Dashboards/addPanel/DashboardFiltersOption.vue";
+import DashboardJoinsOption from "@/views/Dashboards/addPanel/DashboardJoinsOption.vue";
 import DynamicFunctionPopUp from "@/components/dashboards/addPanel/dynamicFunction/DynamicFunctionPopUp.vue";
 import { buildSQLQueryFromInput } from "@/utils/dashboard/convertDataIntoUnitValue";
 
@@ -1027,6 +1032,7 @@ export default defineComponent({
     CommonAutoComplete,
     SanitizedHtmlRenderer,
     DashboardFiltersOption,
+    DashboardJoinsOption,
     DynamicFunctionPopUp,
   },
   props: ["dashboardData"],

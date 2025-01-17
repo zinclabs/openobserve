@@ -108,7 +108,7 @@
 
                     <q-btn
                       icon="delete"
-                      :title="'cancel'"
+                      :title="'delete'"
                       class="q-ml-xs"
                       padding="sm"
                       unelevated
@@ -181,7 +181,7 @@
                               class="copy-btn-sql tw-ml-2 tw-py-2 tw-px-2" /></span
                         ></strong>
                         <q-btn
-                          @click.stop="goToLogs(props.row)"
+                          @click.stop="fetchSearchResults(props.row)"
                           size="xs"
                           label="Logs"
                           dense
@@ -570,12 +570,11 @@ export default defineComponent({
         return;
       }
       columnsToBeRendered.value = [];
-      dataToBeLoaded.value = [];
+      // dataToBeLoaded.value = [];
       expandedRow.value = [];
       try {
         const { org_identifier } = router.currentRoute.value.query;
         isLoading.value = true;
-        if (dateTimeToBeSent.value.valueType === "relative") {
           let responseToBeFetched = [];
           searchService
             .get_scheduled_search_list({
@@ -622,7 +621,6 @@ export default defineComponent({
               dataToBeLoaded.value = responseToBeFetched;
               isLoading.value = false;
             });
-        }
       } catch (error) {
         $q.notify({
           type: "negative",
@@ -866,22 +864,16 @@ export default defineComponent({
     };
     const goToLogs = (row) => {
       const duration_suffix = row.duration.split(" ")[1];
-      // emit('closeSearchHistory');
-      // const stream: string = row.stream_names;
       const from = row.toBeStoredStartTime;
       const to = row.toBeStoredEndTime;
       const refresh = 0;
 
       const query = b64EncodeUnicode(row.sql);
-      
       const rawStreamNames = JSON.parse(row.stream_names)
       const stream_name =
         rawStreamNames.length > 1
           ? rawStreamNames.join(",")
           : rawStreamNames[0];
-
-      // const stream_name = JSON.parse(row.stream_names).map((stream) => stream.name);
-
       const queryObject = {
         stream_type: "logs",
         stream: stream_name,
@@ -981,7 +973,6 @@ export default defineComponent({
     const fetchSearchResults = (row) => {
       searchObj.meta.jobId = row.id;
       goToLogs(row);
-      console.log(row.stream_names, "row ");
     };
     return {
       searchObj,

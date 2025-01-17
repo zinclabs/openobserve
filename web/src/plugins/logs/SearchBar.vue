@@ -412,26 +412,28 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                 class="q-pa-sm saved-view-item"
                 clickable
                 v-close-popup
+                @click="createScheduleJob"
               >
-                <q-item-section
-                  @click="searchSchedulerJob = true"
-                  v-close-popup
-                >
+                <q-item-section @click="open" v-close-popup>
                   <q-item-label>
-                    <q-icon name='save' />
-                    Create Scheduled Search</q-item-label>
+                    <q-icon name="save" />
+                    Create Scheduled Search</q-item-label
+                  >
                 </q-item-section>
               </q-item>
               <q-separator />
-              <q-item class="q-pa-sm saved-view-item" clickable v-close-popup>
-                <q-item-section
-                  @click.stop="routeToSearchSchedule"
-                  v-close-popup
-                >
+              <q-item
+                class="q-pa-sm saved-view-item"
+                clickable
+                v-close-popup
+                @click="routeToSearchSchedule"
+              >
+                <q-item-section v-close-popup>
                   <q-item-label>
-                    <q-icon name='list' />
+                    <q-icon name="list" />
 
-                    List Scheduled Search</q-item-label>
+                    List Scheduled Search</q-item-label
+                  >
                 </q-item-section>
               </q-item>
             </q-list>
@@ -1057,7 +1059,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
           />
           <q-btn
             data-test="saved-view-dialog-save-btn"
-            v-if="!saveFunctionLoader"
             unelevated
             no-caps
             :label="t('confirmDialog.ok')"
@@ -1076,21 +1077,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
       @update:cancel="confirmDelete = false"
       v-model="confirmDelete"
     />
-    <!-- <ConfirmDialogWithInput
-      title="Search Scheduler Job"
-      message="Are you sure you want save this as search scheduler job?"
-      inputRecords="100"
-      @update:cancel="searchSchedulerJob = false"
-      @update:ok="addJobScheduler"
-
-      v-model="searchSchedulerJob"
-    /> -->
     <ConfirmDialog
       title="Search Scheduler Job"
       message="This search is taking long time. Do you want to save this as a search scheduler job?"
       @update:cancel="autoSearchSchedulerJob = false"
       @update:ok="addJobScheduler"
-
       v-model="autoSearchSchedulerJob"
     />
     <ConfirmDialog
@@ -2971,10 +2962,19 @@ export default defineComponent({
     const addJobScheduler = async () => {
 
       try{
-        searchSchedulerJob.value = false
         if(searchObj.meta.jobId != ""){
           searchObj.meta.jobId = "";
         }
+        if (searchObj.meta.jobRecords > 100000) {
+          $q.notify({
+            type: "negative",
+            message: "Job Scheduler can't be added for more than 100000 records",
+            timeout: 10000,
+          });
+          return;
+        }
+        searchSchedulerJob.value = false
+
         await getJobData();
         $q.notify({
         type: "positive",
@@ -3007,6 +3007,11 @@ export default defineComponent({
           org_identifier: store.state.selectedOrganization.identifier,
         }
       });
+    }
+
+    const createScheduleJob = () => {
+      searchSchedulerJob.value = true;
+      searchObj.meta.jobRecords = 100;
     }
 
     // [END] cancel running queries
@@ -3104,6 +3109,7 @@ export default defineComponent({
       autoSearchSchedulerJob,
       addJobScheduler,
       routeToSearchSchedule,
+      createScheduleJob,
       searchTerm,
       filteredFunctionOptions,
       confirmUpdate,

@@ -415,7 +415,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                 v-close-popup
                 @click="createScheduleJob"
               >
-                <q-item-section @click="open" v-close-popup>
+                <q-item-section v-close-popup>
                   <q-item-label data-test="search-scheduler-create-new-label"
                   >
                     <q-icon name="save" />

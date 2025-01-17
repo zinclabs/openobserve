@@ -401,7 +401,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
         </q-btn-group>
         <q-btn-group v-if="config.isEnterprise == 'true'" class=" no-outline q-pa-none no-border">
           <q-btn-dropdown
-            data-test="logs-search-bar-reset-function-btn"
+            data-test="search-scheduler-dropdown-btn-group"
             class="q-mr-xs download-logs-btn q-px-xs "
             size="sm"
             icon="schedule_send"
@@ -409,13 +409,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
           >
             <q-list>
               <q-item
+                data-test="search-scheduler-create-new-btn"
                 class="q-pa-sm saved-view-item"
                 clickable
                 v-close-popup
                 @click="createScheduleJob"
               >
                 <q-item-section @click="open" v-close-popup>
-                  <q-item-label>
+                  <q-item-label data-test="search-scheduler-create-new-label"
+                  >
                     <q-icon name="save" />
                     Create Scheduled Search</q-item-label
                   >
@@ -423,13 +425,16 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
               </q-item>
               <q-separator />
               <q-item
+                data-test="search-scheduler-list-btn"
+
                 class="q-pa-sm saved-view-item"
                 clickable
                 v-close-popup
                 @click="routeToSearchSchedule"
               >
                 <q-item-section v-close-popup>
-                  <q-item-label>
+                  <q-item-label data-test="search-scheduler-list-label"
+                  >
                     <q-icon name="list" />
 
                     List Scheduled Search</q-item-label
@@ -1021,7 +1026,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
             </div>
             <q-input
               type="number"
-              data-test="custom-download-initial-number-input"
+              data-test="search-scheuduler-max-number-of-records-input"
               v-model="searchObj.meta.jobRecords"
               default-value="100"
               color="input-border"
@@ -1048,7 +1053,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
         <q-card-actions align="right" class=" text-teal">
           <q-btn
-            data-test="saved-function-dialog-cancel-btn"
+            data-test="search-scheduler-max-records-cancel-btn"
             unelevated
             no-caps
             class="q-mr-sm text-bold"
@@ -1058,7 +1063,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
             @click="searchSchedulerJob = false"
           />
           <q-btn
-            data-test="saved-view-dialog-save-btn"
+            data-test="search-scheduler-max-records-submit-btn"
             unelevated
             no-caps
             :label="t('confirmDialog.ok')"

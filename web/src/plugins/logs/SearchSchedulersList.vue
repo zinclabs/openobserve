@@ -32,7 +32,8 @@
       <div>
         <q-page>
           <q-table
-            ref="qTable"
+            data-test="search-scheduler-table"
+            ref="qTableSchedule"
             dense
             :rows="dataToBeLoaded"
             :columns="columnsToBeRendered"
@@ -42,16 +43,18 @@
             class="custom-table search-job-list-table"
             style="width: 100%"
             :sort-method="sortMethod"
+
           >
             <template v-slot:body="props">
               <q-tr
-                :data-test="`stream-association-table-${props.row.trace_id}-row`"
+                :data-test="`search-scheduler-table-${props.row.trace_id}-row`"
                 :props="props"
                 style="cursor: pointer"
                 @click="triggerExpand(props)"
               >
                 <q-td>
                   <q-btn
+                   data-test="search-scheduler-expand-btn"
                     dense
                     flat
                     size="xs"
@@ -90,6 +93,7 @@
                   </template>
                   <template v-else>
                     <q-btn
+                      data-test="search-scheduler-cancel-btn"
                       icon="cancel"
                       :title="'cancel'"
                       class="q-ml-xs"
@@ -107,6 +111,7 @@
                     ></q-btn>
 
                     <q-btn
+                      data-test="search-scheduler-delete-btn"
                       icon="delete"
                       :title="'delete'"
                       class="q-ml-xs"
@@ -119,6 +124,7 @@
                       @click="confirmDeleteJob(props.row)"
                     ></q-btn>
                     <q-btn
+                    data-test="search-scheduler-restart-btn"
                       icon="refresh"
                       :title="'restart'"
                       class="q-ml-xs"
@@ -134,8 +140,8 @@
                       "
                       @click="retrySearchJob(props.row)"
                     ></q-btn>
-                    {{ props.row.status_code}}
                     <q-btn
+                      data-test="search-scheduler-explore-btn"
                       icon="search"
                       :title="'cancel'"
                       class="q-ml-xs"
@@ -174,6 +180,8 @@
                               @click.stop="
                                 copyToClipboard(props.row.sql, 'SQL Query')
                               "
+                              data-test="search-scheduler-copy-sql-btn"
+
                               size="xs"
                               dense
                               flat
@@ -182,6 +190,7 @@
                         ></strong>
                         <q-btn
                           @click.stop="fetchSearchResults(props.row)"
+                          data-test="search-scheduler-go-to-logs-btn"
                           size="xs"
                           label="Logs"
                           dense
@@ -327,7 +336,7 @@ import searchService from "@/services/search";
 import NoData from "@/components/shared/grid/NoData.vue";
 import DateTime from "@/components/DateTime.vue";
 import { useI18n } from "vue-i18n";
-import { date, QTable, useQuasar } from "quasar";
+import { date, qTable, useQuasar } from "quasar";
 import type { Ref } from "vue";
 import QTablePagination from "@/components/shared/grid/Pagination.vue";
 import ConfirmDialog from "@/components/ConfirmDialog.vue";
@@ -370,8 +379,8 @@ export default defineComponent({
     const confirmDelete = ref(false);
     const toBeDeletedJob = ref({});
 
-    const qTable: Ref<InstanceType<typeof QTable> | null> = ref(null);
-    const qTableRef: Ref<InstanceType<typeof QTable> | null> = ref(null);
+    const qTableSchedule: Ref<InstanceType<typeof qTable> | null> = ref(null);
+    const qTableRef: Ref<InstanceType<typeof qTableSchedule> | null> = ref(null);
     const searchDateTimeRef = ref(null);
     const { searchObj, extractTimestamps } = useLogs();
     const dataToBeLoaded: any = ref([]);
@@ -444,10 +453,12 @@ export default defineComponent({
         if (key === "user_id") {
           columnWidth = 200;
           align = "center";
+          sortable = true;
         }
         if (key === "Actions") {
           columnWidth = 200;
           align = "left";
+          sortable = false;
         }
         if (key == "trace_id") {
           columnWidth = 250;
@@ -456,6 +467,7 @@ export default defineComponent({
         if (key == "duration") {
           align = "left";
           columnWidth = 100;
+          sortable = true;
         }
         if (
           key == "start_time" ||
@@ -465,7 +477,7 @@ export default defineComponent({
           key == "ended_at"
         ) {
           columnWidth = 200;
-          sortable = false;
+          sortable = true;
         }
         if (key == "sql") {
           columnWidth = 300;
@@ -493,61 +505,7 @@ export default defineComponent({
         };
       });
     };
-    const generateExpandedRows = (row: any) => {
-      // Define the desired column order and names
-      const desiredColumns = [
-        { key: "trace_id", label: "Trace ID" },
-        { key: "start_time", label: "Start Time" },
-
-        { key: "end_time", label: "End Time" },
-        { key: "started_at", label: "Job Started At" },
-        { key: "ended_at", label: "Job Ended At" },
-      ];
-
-      return desiredColumns.map(({ key, label }) => {
-        let columnWidth = 150;
-
-        let align = "center";
-        let sortable = true;
-        if (key === "Actions") {
-          columnWidth = 200;
-          align = "left";
-        }
-        if (key == "trace_id") {
-          columnWidth = 250;
-          sortable = false;
-        }
-        if (
-          key == "start_time" ||
-          key == "end_time" ||
-          key == "created_at" ||
-          key == "started_at" ||
-          key == "ended_at"
-        ) {
-          columnWidth = 180;
-          sortable = false;
-        }
-        if (key == "sql") {
-          columnWidth = 300;
-          sortable = false;
-        }
-        if (key == "status") {
-          align = "left";
-          columnWidth = 200;
-          sortable = false;
-        }
-
-        // Custom width for each column
-        return {
-          name: key, // Field name
-          label: label, // Column label
-          field: key, // Field accessor
-          align: align,
-          sortable: sortable,
-          style: `max-width: ${columnWidth}px; width: ${columnWidth}px;`,
-        };
-      });
-    };
+  
     function filterRow(row) {
       const desiredColumns = [
         { key: "trace_id", label: "Trace ID" },
@@ -587,16 +545,15 @@ export default defineComponent({
               columnsToBeRendered.value = generateColumns(
                 responseToBeFetched[0],
               );
-              expandedColumns.value = generateExpandedRows(
-                responseToBeFetched[0],
-              );
               responseToBeFetched.forEach((element) => {
-                element["duration"] = calculateDuration(
-                  element.start_time,
-                  element.end_time,
-                ).formatted;
+                const {formatted, raw} = calculateDuration(element.start_time, element.end_time);
+
+                element.rawDuration = raw;
+
+                element["duration"] = formatted;
                 element.toBeStoredStartTime = element.start_time;
                 element.toBeStoredEndTime = element.end_time;
+                element.toBeCreatedAt = element.created_at;
                 element.start_time = convertUnixToQuasarFormat(
                   element.start_time,
                 );
@@ -706,39 +663,17 @@ export default defineComponent({
     };
     const sortMethod = (rows, sortBy, descending) => {
       const data = [...rows];
+      if(sortBy === "user_id"){
+        if (descending) {
+          return data.sort((a, b) => b.user_id - a.user_id);
+        }
+        return data.sort((a, b) => a.user_id - b.user_id);
+      }
       if (sortBy === "duration") {
         if (descending) {
           return data.sort((a, b) => b.rawDuration - a.rawDuration);
         }
         return data.sort((a, b) => a.rawDuration - b.rawDuration);
-      }
-
-      if (sortBy === "took") {
-        if (descending) {
-          return data.sort((a, b) => b.rawTook - a.rawTook);
-        }
-        return data.sort((a, b) => a.rawTook - b.rawTook);
-      }
-      if (sortBy === "scan_records") {
-        if (descending) {
-          return data.sort((a, b) => b.rawScanRecords - a.rawScanRecords);
-        }
-        // console.log(data.sort((a, b) => a.rawScanRecords - b.rawScanRecords), "data")
-        return data.sort((a, b) => a.rawScanRecords - b.rawScanRecords);
-      }
-      if (sortBy === "scan_size") {
-        if (descending) {
-          return data.sort((a, b) => b.rawScanSize - a.rawScanSize);
-        }
-        // console.log(data.sort((a, b) => a.rawScanRecords - b.rawScanRecords), "data")
-        return data.sort((a, b) => a.rawScanSize - b.rawScanSize);
-      }
-      if (sortBy === "cached_ratio") {
-        if (descending) {
-          return data.sort((a, b) => b.rawCachedRatio - a.rawCachedRatio);
-        }
-        // console.log(data.sort((a, b) => a.rawScanRecords - b.rawScanRecords), "data")
-        return data.sort((a, b) => a.rawCachedRatio - b.rawCachedRatio);
       }
       if (sortBy == "start_time") {
         if (descending) {
@@ -750,19 +685,18 @@ export default defineComponent({
           (a, b) => a.toBeStoredStartTime - b.toBeStoredStartTime,
         );
       }
-
-      if (sortBy == "end_time") {
+      if (sortBy == "created_at") {
         if (descending) {
-          return data.sort((a, b) => b.toBeStoredEndTime - a.toBeStoredEndTime);
+          return data.sort((a, b) => b.toBeCreatedAt - a.toBeCreatedAt);
         }
-        return data.sort((a, b) => a.toBeStoredEndTime - b.toBeStoredEndTime);
+        return data.sort((a, b) => a.toBeCreatedAt - b.toBeCreatedAt);
       }
-      if (sortBy == "executed_time") {
-        if (descending) {
-          return data.sort((a, b) => b.rawExecutedTime - a.rawExecutedTime);
-        }
-        return data.sort((a, b) => a.rawExecutedTime - b.rawExecutedTime);
-      }
+      // if(sortBy == "status"){
+      //   if (descending) {
+      //     return data.sort((a, b) => b.status - a.status);
+      //   }
+      //   return data.sort((a, b) => a.status - b.status);
+      // }
 
       // return a.rawDuration - b.rawDuration;
     };
@@ -906,7 +840,7 @@ export default defineComponent({
       }
       selectedPerPage.value = val.value;
       pagination.value.rowsPerPage = val.value;
-      qTable.value.setPagination(pagination.value);
+      qTableSchedule.value.setPagination(pagination.value);
 
       // pagination.value.page = 1;
     };
@@ -986,7 +920,7 @@ export default defineComponent({
       t,
       route,
       isLoading,
-      qTable,
+      qTableSchedule,
       updateDateTime,
       pagination,
       searchDateTimeRef,

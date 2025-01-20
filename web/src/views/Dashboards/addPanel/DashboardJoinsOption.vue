@@ -60,8 +60,8 @@
                 dense
                 :data-test="`dashboard-y-item-${itemY?.column}-remove`"
                 icon="close"
-                />
-                <!-- @click="removeYAxisItem(itemY?.column)" -->
+              />
+              <!-- @click="removeYAxisItem(itemY?.column)" -->
             </div>
           </q-btn-group>
         </div>
@@ -79,6 +79,10 @@
     <q-dialog v-model="showAddJoinPopUp">
       <AddJoinPopUp
         :class="store.state.theme == 'dark' ? 'dark-mode' : 'bg-white'"
+        v-model="addJoinModel"
+        :isEditMode="false"
+        mainStream="default"
+        @close="showAddJoinPopUp = false"
       />
     </q-dialog>
   </div>
@@ -112,6 +116,19 @@ export default defineComponent({
 
     const showAddJoinPopUp = ref(false);
 
+    const addJoinModel = ref({
+      stream: "default1",
+      joinType: "inner",
+      conditions: [
+        {
+          field1: "",
+          field2: "",
+          logicalOperator: "",
+          operation: "",
+        },
+      ],
+    });
+
     return {
       t,
       store,
@@ -119,6 +136,7 @@ export default defineComponent({
       removeFilterItem,
       loadFilterItem,
       showAddJoinPopUp,
+      addJoinModel,
     };
   },
 });

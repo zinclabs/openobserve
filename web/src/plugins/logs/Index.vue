@@ -487,7 +487,7 @@ export default defineComponent({
         //   this.searchObj.data.resultGrid.currentPage + 1;
         this.searchObj.loading = true;
         if(this.searchObj.meta.jobId == ""){
-          await this.getQueryData(false);
+          await this.getQueryData(true);
           this.refreshHistogramChart();
         }
         else{
@@ -724,6 +724,8 @@ export default defineComponent({
       () => router.currentRoute.value.query.type,
       async (type) => {
         if (type == "search_history_re_apply") {
+          searchObj.meta.jobId = "";
+
           searchObj.organizationIdetifier =
             router.currentRoute.value.query.org_identifier;
           searchObj.data.stream.selectedStream.value =
@@ -1671,7 +1673,10 @@ export default defineComponent({
           this.resetHistogramWithError(
             "Histogram is not available for multi stream search.",
           );
-        } else if (this.searchObj.meta.histogramDirtyFlag == true) {
+        } else if (
+          this.searchObj.meta.histogramDirtyFlag == true &&
+          this.searchObj.meta.jobId == ""
+        ) {
           this.searchObj.meta.histogramDirtyFlag = false;
           // this.handleRunQuery();
           this.searchObj.loadingHistogram = true;

@@ -101,7 +101,7 @@
                 filled
                 label="Select Field"
                 :data-test="`dashboard-join-condition-field1-${argIndex}`"
-                class="tw-w-40 tw-min-w-40"
+                class="tw-w-1/3"
               />
 
               <!-- operator selector -->
@@ -115,7 +115,7 @@
                 filled
                 label="Select Operation"
                 :data-test="`dashboard-join-condition-operation-${argIndex}`"
-                class="tw-w-40 tw-min-w-40"
+                class="tw-w-1/3"
               />
 
               <q-select
@@ -131,7 +131,7 @@
                 filled
                 label="Select Field"
                 :data-test="`dashboard-join-condition-field2-${argIndex}`"
-                class="tw-w-40 tw-min-w-40"
+                class="tw-w-1/3"
               />
 
               <!-- Remove argument button -->
@@ -242,7 +242,7 @@ export default defineComponent({
         field1: "",
         field2: "",
         logicalOperator: "and",
-        operation: "",
+        operation: "=",
       });
     };
 

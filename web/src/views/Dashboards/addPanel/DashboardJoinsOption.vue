@@ -123,8 +123,8 @@ export default defineComponent({
         {
           field1: "",
           field2: "",
-          logicalOperator: "",
-          operation: "",
+          logicalOperator: "AND",
+          operation: "=",
         },
       ],
     });

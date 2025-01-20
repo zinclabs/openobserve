@@ -330,7 +330,7 @@ export default defineComponent({
         this.searchObj.data.resultGrid.currentPage = 1;
         this.pageNumberInput = this.searchObj.data.resultGrid.currentPage;
         if (this.searchObj.communicationMethod === "ws") {
-            if (this.searchObj.meta.jobId === "") {
+            if (this.searchObj.meta.jobId == "") {
               this.refreshPagination();
             } else {
               this.refreshJobPagination();
@@ -345,14 +345,17 @@ export default defineComponent({
         this.$emit("update:recordsPerPage");
         this.scrollTableToTop(0);
       } else if (actionType == "pageChange") {
+      //here at first the queryResults is undefined so we are checking if it is undefined then we are setting it to empty array
+        if(this.searchObj.meta.jobId != "" && this.searchObj.data.queryResults.paginations == undefined){
+          this.searchObj.data.queryResults.pagination = [];
+        }
         const maxPages =
           this.searchObj.communicationMethod === "ws" ||
           this.searchObj.meta.jobId != ""
             ? this.searchObj.data.queryResults.pagination.length
-            : this.searchObj.data.queryResults.partitionDetail.paginations
+            : this.searchObj.data.queryResults?.partitionDetail?.paginations
                 .length;
-
-        if (this.pageNumberInput > Math.ceil(maxPages)) {
+        if (this.pageNumberInput > Math.ceil(maxPages) && this.searchObj.meta.jobId == "") {
           this.$q.notify({
             type: "negative",
             message:

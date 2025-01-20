@@ -2969,13 +2969,13 @@ export default defineComponent({
     const addJobScheduler = async () => {
 
       try{
-        if(searchObj.meta.jobId != ""){
-          searchObj.meta.jobId = "";
-        }
-        if (searchObj.meta.jobRecords > 100000) {
+        // if(searchObj.meta.jobId != ""){
+        //   searchObj.meta.jobId = "";
+        // }
+        if (searchObj.meta.jobRecords > 100000 || searchObj.meta.jobRecords == 0 || searchObj.meta.jobRecords < 0) {
           $q.notify({
             type: "negative",
-            message: "Job Scheduler can't be added for more than 100000 records",
+            message: "Job Scheduler should be between 1 and 100000",
             timeout: 10000,
           });
           return;

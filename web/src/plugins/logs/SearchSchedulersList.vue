@@ -7,31 +7,38 @@
     "
   >
     <div v-if="!showSearchResults">
-      <div class="flex tw-justify-between tw-items-center">
+      <div class="flex tw-justify-between tw-items-center" >
         <div class="flex items-center q-py-sm q-pl-md">
           <div
-            data-test="search-schedule-alert-back-btn"
-            class="flex justify-center items-center q-mr-md cursor-pointer"
-            style="
-              border: 1.5px solid;
-              border-radius: 50%;
-              width: 22px;
-              height: 22px;
-            "
-            title="Go Back"
-            @click="closeSearchHistory"
-          >
-            <q-icon name="arrow_back_ios_new" size="14px" />
-          </div>
-          <div class="text-h6" data-test="search-scheduler-title">
-            Search Job Scheduler
-          </div>
+          data-test="search-history-alert-back-btn"
+          class="flex justify-center items-center q-mr-md cursor-pointer"
+          style="border: 1.5px solid; border-radius: 50%; width: 22px; height: 22px;"
+          title="Go Back"
+          @click="closeSearchHistory">
+          <q-icon name="arrow_back_ios_new" size="14px" />
+        </div>
+        <div class="text-h6" data-test="add-alert-title">
+          Search Job Scheduler
+        </div>
+        </div>
+        <div class="flex items-center q-py-sm q-pr-md">
+            <div>
+              <q-btn
+                color="secondary"
+                label="Get Jobs"
+                @click="fetchSearchHistory"
+                class="q-ml-md"
+                :disable="isLoading"
+              />
+            </div>
+  
         </div>
       </div>
 
       <div>
         <q-page>
           <q-table
+          v-if="!isLoading"
             data-test="search-scheduler-table"
             ref="qTableSchedule"
             dense
@@ -95,7 +102,7 @@
                     <q-btn
                       data-test="search-scheduler-cancel-btn"
                       icon="cancel"
-                      :title="'cancel'"
+                      :title="'Cancel'"
                       class="q-ml-xs"
                       padding="sm"
                       unelevated
@@ -107,13 +114,13 @@
                         props.row.status_code !== 1
                       "
                       color="gray"
-                      @click="cancelSearchJob(props.row)"
+                      @click="confirmCancelJob(props.row)"
                     ></q-btn>
 
                     <q-btn
                       data-test="search-scheduler-delete-btn"
                       icon="delete"
-                      :title="'delete'"
+                      :title="'Delete'"
                       class="q-ml-xs"
                       padding="sm"
                       unelevated
@@ -126,7 +133,7 @@
                     <q-btn
                     data-test="search-scheduler-restart-btn"
                       icon="refresh"
-                      :title="'restart'"
+                      :title="'Restart'"
                       class="q-ml-xs"
                       padding="sm"
                       unelevated
@@ -143,7 +150,7 @@
                     <q-btn
                       data-test="search-scheduler-explore-btn"
                       icon="search"
-                      :title="'cancel'"
+                      :title="'Explore'"
                       class="q-ml-xs"
                       padding="sm"
                       unelevated
@@ -201,6 +208,10 @@
                             color: #f2452f;
                             border: #f2452f 1px solid;
                             font-weight: bolder;
+                          "
+                          :disable="
+                            props.row.status_code == 0 ||
+                            props.row.status_code == 3
                           "
                         />
                       </div>
@@ -289,7 +300,6 @@
               </div>
             </template>
           </q-table>
-
           <div
             v-if="isLoading"
             class="text-center full-width full-height q-mt-lg tw-flex tw-justify-center"
@@ -304,8 +314,16 @@
           @update:cancel="confirmDelete = false"
           v-model="confirmDelete"
         />
+        <ConfirmDialog
+          title="Cancel Scheduled Search"
+          message="Are you sure you want to cancel this scheduled search?"
+          @update:ok="cancelSearchJob"
+          @update:cancel="confirmCancel = false"
+          v-model="confirmCancel"
+        />
       </div>
     </div>
+    
   </div>
 
   <!-- Show NoData component if there's no data to display -->
@@ -396,6 +414,8 @@ export default defineComponent({
     const isLoading = ref(false);
     const isDateTimeChanged = ref(false);
     const showSearchResults = ref(false);
+    const toBeCancelled = ref({});
+    const confirmCancel = ref(false);
     const activeTab = ref("query");
     const query = ref("");
 
@@ -527,11 +547,11 @@ export default defineComponent({
       if(config.isEnterprise == "false"){
         return;
       }
-      columnsToBeRendered.value = [];
-      // dataToBeLoaded.value = [];
-      expandedRow.value = [];
+
       try {
         const { org_identifier } = router.currentRoute.value.query;
+        // columnsToBeRendered.value = [];
+        // dataToBeLoaded.value = [];
         isLoading.value = true;
           let responseToBeFetched = [];
           searchService
@@ -545,10 +565,12 @@ export default defineComponent({
               columnsToBeRendered.value = generateColumns(
                 responseToBeFetched[0],
               );
+
               responseToBeFetched.forEach((element) => {
                 const {formatted, raw} = calculateDuration(element.start_time, element.end_time);
 
                 element.rawDuration = raw;
+                
 
                 element["duration"] = formatted;
                 element.toBeStoredStartTime = element.start_time;
@@ -584,18 +606,15 @@ export default defineComponent({
           message: "Failed to fetch search history. Please try again later.",
           timeout: 5000,
         });
-        console.log(error, "error");
-        isLoading.value = false;
-      } finally {
         isLoading.value = false;
       }
     };
     //this method needs to revamped / can be made shorter
-    const cancelSearchJob = (row) => {
+    const cancelSearchJob = () => {
       searchService
         .cancel_scheduled_search({
           org_identifier: store.state.selectedOrganization.identifier,
-          jobId: row.id,
+          jobId: toBeCancelled.value.id,
         })
         .then((res) => {
           $q.notify({
@@ -646,6 +665,10 @@ export default defineComponent({
       confirmDelete.value = true;
       toBeDeletedJob.value = row;
     };
+    const confirmCancelJob = (row) => {
+      confirmCancel.value = true;
+      toBeCancelled.value = row;
+    };
     const deleteSearchJob = () => {
       searchService
         .delete_scheduled_search({
@@ -663,11 +686,11 @@ export default defineComponent({
     };
     const sortMethod = (rows, sortBy, descending) => {
       const data = [...rows];
-      if(sortBy === "user_id"){
+      if (sortBy === "user_id") {
         if (descending) {
-          return data.sort((a, b) => b.user_id - a.user_id);
+          return data.sort((a, b) => b.user_id.localeCompare(a.user_id));
         }
-        return data.sort((a, b) => a.user_id - b.user_id);
+        return data.sort((a, b) => a.user_id.localeCompare(b.user_id));
       }
       if (sortBy === "duration") {
         if (descending) {
@@ -951,6 +974,10 @@ export default defineComponent({
       activeTab,
       filterRow,
       query,
+      confirmCancelJob,
+      toBeCancelled,
+      confirmCancel,
+
     };
     // Watch the searchObj for changes
   },

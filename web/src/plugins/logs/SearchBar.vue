@@ -3016,15 +3016,7 @@ export default defineComponent({
         // if(searchObj.meta.jobId != ""){
         //   searchObj.meta.jobId = "";
         // }
-        if (searchObj.meta.jobRecords > 100000 || searchObj.meta.jobRecords == 0 || searchObj.meta.jobRecords < 0) {
-          $q.notify({
-            type: "negative",
-            message: "Job Scheduler should be between 1 and 100000",
-            timeout: 10000,
-          });
-          return;
-        }
-        if(searchObj.meta.jobId != ""){
+        if (searchObj.meta.jobId != "") {
           $q.notify({
             type: "negative",
             message: "Job Already Scheduled , please change some parameters to schedule new job",
@@ -3032,6 +3024,19 @@ export default defineComponent({
           });
           return;
         }
+        if (
+          searchObj.meta.jobRecords > 10000 ||
+          searchObj.meta.jobRecords == 0 ||
+          searchObj.meta.jobRecords < 0
+        ) {
+          $q.notify({
+            type: "negative",
+            message: "Job Scheduler should be between 1 and 10000",
+            timeout: 10000,
+          });
+          return;
+        }
+
         searchSchedulerJob.value = false;
 
         await getJobData();

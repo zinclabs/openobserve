@@ -63,6 +63,8 @@
           filled
           v-model="modelValue.stream"
           :options="streamOptions"
+          emit-value
+          map-options
           label="On Stream"
           class="q-py-md showLabelOnTop tw-w-1/3"
           stack-label
@@ -86,8 +88,7 @@
               >
             </div>
             <div class="tw-flex tw-gap-x-3">
-              <!-- field1 selector -->
-              <!-- @filter="filterFunctionsOptions" -->
+              <!-- leftField selector -->
               <q-select
                 input-debounce="0"
                 behavior="menu"
@@ -95,12 +96,13 @@
                 borderless
                 hide-selected
                 fill-input
-                v-model="modelValue.conditions[argIndex].field1"
-                :options="getFieldList()"
+                v-model="modelValue.conditions[argIndex].leftField"
+                :options="leftFieldOptions"
+                @filter="filterLeftFieldFn"
                 dense
                 filled
                 label="Select Field"
-                :data-test="`dashboard-join-condition-field1-${argIndex}`"
+                :data-test="`dashboard-join-condition-leftField-${argIndex}`"
                 class="tw-w-1/3"
               />
 
@@ -108,7 +110,6 @@
               <q-select
                 behavior="menu"
                 borderless
-                hide-selected
                 v-model="modelValue.conditions[argIndex].operation"
                 :options="operationOptions"
                 dense
@@ -125,12 +126,13 @@
                 borderless
                 hide-selected
                 fill-input
-                v-model="modelValue.conditions[argIndex].field2"
-                :options="getFieldList()"
+                v-model="modelValue.conditions[argIndex].rightField"
+                @filter="filterRightFieldFn"
+                :options="rightFieldOptions"
                 dense
                 filled
                 label="Select Field"
-                :data-test="`dashboard-join-condition-field2-${argIndex}`"
+                :data-test="`dashboard-join-condition-rightField-${argIndex}`"
                 class="tw-w-1/3"
               />
 
@@ -187,10 +189,13 @@
 </template>
 
 <script lang="ts">
-import { inject } from "vue";
-import { defineComponent } from "vue";
+import { defineComponent, watch, onMounted, inject, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { useStore } from "vuex";
+import { useLoading } from "@/composables/useLoading";
+import useStreams from "@/composables/useStreams";
+import useDashboardPanelData from "@/composables/useDashboardPanel";
+
 export default defineComponent({
   name: "AddJoinPopUp",
   components: {},
@@ -211,8 +216,8 @@ export default defineComponent({
           joinType: "inner",
           conditions: [
             {
-              field1: "",
-              field2: "",
+              leftField: "",
+              rightField: "",
               logicalOperator: "and",
               operation: "=",
             },
@@ -225,13 +230,131 @@ export default defineComponent({
   setup(props, { emit }) {
     const { t } = useI18n();
     const store = useStore();
+    const { getStreams, getStream } = useStreams();
 
-    const streamOptions = ["default1", "default2", "default3"];
+    const dashboardPanelDataPageKey: any = inject(
+      "dashboardPanelDataPageKey",
+      "dashboard",
+    );
+
+    const { dashboardPanelData } = useDashboardPanelData(
+      dashboardPanelDataPageKey,
+    );
+
+    const streamOptions = ref([]);
+    const leftFieldOptions = ref<string[]>([]);
+    const rightFieldOptions = ref<string[]>([]);
+
+    // get the stream list by making an API call
+    const getStreamList = async (stream_type: any) => {
+      await getStreams(stream_type, false).then((res: any) => {
+        console.log("getStreamList", res);
+
+        streamOptions.value = res.list.map((stream: any) => {
+          return {
+            label: stream.name,
+            value: stream.name,
+          };
+        });
+
+        if (streamOptions.value.length > 0) {
+          // check if current selected stream is in the list
+          // if not select first stream
+          const selectedStream = streamOptions.value.find((option: any) => {
+            if (option.value === props.modelValue.stream) {
+              return option;
+            }
+          });
+
+          if (!selectedStream) {
+            props.modelValue.stream = res.list[0].name;
+          }
+        }
+      });
+    };
+
+    // get stream list
+    const streamDataLoading = useLoading(async (stream_type: any) => {
+      await getStreamList(stream_type);
+    });
+
+    // get the stream list based on the selected stream type
+    const loadStreamsListBasedOnType = async () => {
+      streamDataLoading.execute(
+        dashboardPanelData.data.queries[
+          dashboardPanelData.layout.currentQueryIndex
+        ].fields.stream_type,
+      );
+    };
+
+    // watch the stream type and load the stream list
+    watch(
+      () =>
+        dashboardPanelData.data.queries[
+          dashboardPanelData.layout.currentQueryIndex
+        ].fields.stream_type,
+      async () => {
+        loadStreamsListBasedOnType();
+      },
+    );
+
+    onMounted(() => {
+      loadStreamsListBasedOnType();
+    });
+
     const joinOptions = ["inner", "left", "right"];
 
-    const getFieldList = () => {
-      return ["field1", "field2", "field3"];
+    async function loadStreamFields(streamName: string) {
+      try {
+        if (streamName != "") {
+          return await getStream(
+            streamName,
+            dashboardPanelData.data.queries[
+              dashboardPanelData.layout.currentQueryIndex
+            ].fields.stream_type ?? "logs",
+            true,
+          ).then((res) => {
+            return res;
+          });
+        } else {
+        }
+        return;
+      } catch (e: any) {
+        console.log("Error while loading stream fields");
+      }
+    }
+
+    const updateLeftFieldOptions = async (streamName: string) => {
+      const streamData = await loadStreamFields(streamName);
+      leftFieldOptions.value = streamData?.schema?.map((field: any) => {
+        return field?.name;
+      });
     };
+
+    const updateRightFieldOptions = async (streamName: string) => {
+      const streamData = await loadStreamFields(streamName);
+      rightFieldOptions.value = streamData?.schema?.map((field: any) => {
+        return field?.name;
+      });
+    };
+
+    // Watch for changes in `mainStream` and update left field options
+    watch(
+      () => props.mainStream,
+      async (newStream) => {
+        await updateLeftFieldOptions(newStream);
+      },
+      { immediate: true },
+    );
+
+    // Watch for changes in `modelValue.stream` and update right field options
+    watch(
+      () => props.modelValue.stream,
+      async (newStream) => {
+        await updateRightFieldOptions(newStream);
+      },
+      { immediate: true },
+    );
 
     const removeCondition = (argIndex: number) => {
       props.modelValue.conditions.splice(argIndex, 1);
@@ -239,8 +362,8 @@ export default defineComponent({
 
     const addCondition = () => {
       props.modelValue.conditions.push({
-        field1: "",
-        field2: "",
+        leftField: "",
+        rightField: "",
         logicalOperator: "and",
         operation: "=",
       });
@@ -248,14 +371,44 @@ export default defineComponent({
 
     const operationOptions = ["=", "!=", ">", "<", ">=", "<="];
 
+    const filterLeftFieldFn = async (val: string, update: any) => {
+      await updateLeftFieldOptions(props.mainStream);
+      if (val !== "") {
+        update(() => {
+          const needle = val.toLowerCase();
+          leftFieldOptions.value = leftFieldOptions.value.filter(
+            (v: any) => v.toLowerCase().indexOf(needle) > -1,
+          );
+        });
+      } else {
+        update(() => {});
+      }
+    };
+    const filterRightFieldFn = async (val: string, update: any) => {
+      await updateRightFieldOptions(props.modelValue.stream);
+      if (val !== "") {
+        update(() => {
+          const needle = val.toLowerCase();
+          rightFieldOptions.value = rightFieldOptions.value.filter(
+            (v: any) => v.toLowerCase().indexOf(needle) > -1,
+          );
+        });
+      } else {
+        update(() => {});
+      }
+    };
+
     return {
       t,
       streamOptions,
       joinOptions,
-      getFieldList,
+      leftFieldOptions,
+      rightFieldOptions,
       removeCondition,
       addCondition,
       operationOptions,
+      filterLeftFieldFn,
+      filterRightFieldFn,
     };
   },
 });

@@ -117,12 +117,12 @@ export default defineComponent({
     const showAddJoinPopUp = ref(false);
 
     const addJoinModel = ref({
-      stream: "default1",
+      stream: "",
       joinType: "inner",
       conditions: [
         {
-          field1: "",
-          field2: "",
+          leftField: "",
+          rightField: "",
           logicalOperator: "AND",
           operation: "=",
         },

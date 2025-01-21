@@ -55,6 +55,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
         </div>
 
         <div class="col-6 text-right q-pr-md q-gutter-xs pagination-block">
+          
           <q-pagination
             v-if="searchObj.meta.resultGrid.showPagination"
             :disable="searchObj.loading == true"
@@ -668,7 +669,6 @@ export default defineComponent({
       this.extractFTSFields();
     },
     updateTitle() {
-      console.log( this.searchObj.data.histogram.chartParams.title,'title in index')
       this.noOfRecordsTitle = this.searchObj.data.histogram.chartParams.title;
     },
     reDrawChartData: {

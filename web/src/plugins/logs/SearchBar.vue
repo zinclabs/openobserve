@@ -1406,7 +1406,6 @@ export default defineComponent({
     watch(
       () => searchObj.meta.functionEditorPlaceholderFlag,
       (val) => {
-        console.log(searchObj.data.tempFunctionContent,'temp')
         if (
           searchObj.meta.jobId != "" &&
           val == true &&
@@ -1415,12 +1414,13 @@ export default defineComponent({
           if (!checkFnQuery(searchObj.data.tempFunctionContent)) {
             $q.notify({
               message: "Job Context have been removed",
-              color: "negative",
+              color: "warning",
               position: "bottom",
               timeout: 2000,
             });
             searchObj.meta.jobId = "";
-            getQueryData(false);
+            searchObj.data.queryResults.hits = [];
+            // getQueryData(false);
           }
         }
       },
@@ -1623,12 +1623,13 @@ export default defineComponent({
           if (!checkQuery(value)) {
             $q.notify({
               message: "Job Context have been removed",
-              color: "negative",
+              color: "warning",
               position: "bottom",
               timeout: 2000,
             });
             searchObj.meta.jobId = "";
-            getQueryData(false);
+            searchObj.data.queryResults.hits = [];
+            // getQueryData(false);
           }
        }
       } catch (e) {

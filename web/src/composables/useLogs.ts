@@ -1620,7 +1620,6 @@ const useLogs = () => {
           JSON.stringify(queryReq),
         );
 
-        console.log('calling here 1')
 
         // get the current page detail and set it into query request
         queryReq.query.start_time =
@@ -1639,7 +1638,6 @@ const useLogs = () => {
           searchObj.data.queryResults.partitionDetail.paginations[
             searchObj.data.resultGrid.currentPage - 1
           ][0].size;
-          console.log('calling here 2')
 
         // setting subpage for pagination to handle below scenario
         // for one particular page, if we have to fetch data from multiple partitions in that case we need to set subpage
@@ -1693,7 +1691,6 @@ const useLogs = () => {
           searchObj.meta.refreshHistogram = false;
           if (searchObj.data.queryResults.hits.length > 0) {
             if (searchObj.data.stream.selectedStream.length > 1) {
-              console.log("call 4")
 
               searchObj.data.histogram = {
                 xData: [],
@@ -1804,7 +1801,6 @@ const useLogs = () => {
           }
 
           if (searchObj.data.stream.selectedStream.length > 1) {
-            console.log("call 5")
 
             searchObj.data.histogram = {
               xData: [],
@@ -1924,7 +1920,7 @@ const useLogs = () => {
   };
 
   function resetHistogramWithError(errorMsg: string, errorCode: number = 0) {
-    console.log('call 7')
+
     searchObj.data.histogram = {
       xData: [],
       yData: [],
@@ -2118,7 +2114,7 @@ const useLogs = () => {
             // if total records in partition is greater than recordsPerPage then we need to update pagination
             // setting up forceFlag to true to update pagination as we have check for pagination already created more than currentPage + 3 pages.
             refreshPartitionPagination(regeratePaginationFlag);
-            console.log('call 8')
+
             searchObj.data.histogram.chartParams.title = getHistogramTitle();
             searchObj.loadingCounter = false;
             resolve(true);
@@ -2181,9 +2177,6 @@ const useLogs = () => {
     updateGridColumns();
 
     filterHitsColumns();
-    // console.log('does this calling')
-    console.log('call 9')
-    console.log(searchObj.data.histogram.chartParams.title.length,'call length')
       searchObj.data.histogram.chartParams.title = getHistogramTitle();
 
   };
@@ -2374,7 +2367,6 @@ const useLogs = () => {
             } else {
               if (searchObj.meta.jobId != ""){
                 searchObj.data.queryResults.total = res.data.total;
-                console.log(searchObj.data.queryResults.total,'total happenig here')
                 
               }
               if (!queryReq.query.hasOwnProperty("track_total_hits")) {
@@ -2559,7 +2551,6 @@ const useLogs = () => {
         const { traceparent, traceId } = generateTraceContext();
         addTraceId(traceId);
         queryReq.query.size = -1;
-        console.log('here it is running')
         searchService
           .search(
             {
@@ -3610,7 +3601,6 @@ const useLogs = () => {
 
         searchObj.data.queryResults.total = num_records;
       }
-      console.log("call 1")
       const chartParams = {
         title: getHistogramTitle(),
         unparsed_x_data: unparsed_x_data,
@@ -3888,16 +3878,14 @@ const useLogs = () => {
         await getQueryData();
       }
       else{
-        console.log('here it running refreshed 2')
 
         await getJobData();
 
-        console.log(searchObj.data.queryResults.pagination,'pagination refreshed')
       }
       refreshData();
     } catch (e: any) {
       searchObj.loading = false;
-      console.log("Error while loading logs data");
+
     }
   };
   const loadJobData = async () => {
@@ -4079,7 +4067,6 @@ const useLogs = () => {
       delete queryParams.type;
     }
     // TODO OK : Replace push with replace and test all scenarios
-    console.log("queryParams", queryParams);
     router.push({
       query: {
         ...queryParams,
@@ -5116,7 +5103,6 @@ const useLogs = () => {
     // if total records in partition is greater than recordsPerPage then we need to update pagination
     // setting up forceFlag to true to update pagination as we have check for pagination already created more than currentPage + 3 pages.
     refreshPagination(regeratePaginationFlag);
-    console.log('call 2')
 
     searchObj.data.histogram.chartParams.title = getHistogramTitle();
   };
@@ -5219,7 +5205,6 @@ const useLogs = () => {
     // if (hasAggregationFlag) {
     //   searchObj.data.queryResults.total = res.data.total;
     // }
-    console.log("call 3")
     searchObj.data.histogram.chartParams.title = getHistogramTitle();
 
     searchObjDebug["histogramProcessingEndTime"] = performance.now();

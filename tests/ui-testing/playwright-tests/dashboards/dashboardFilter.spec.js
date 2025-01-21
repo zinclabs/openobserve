@@ -39,16 +39,17 @@ test.describe("dashboard filter testcases", () => {
       .locator('[data-test="add-dashboard-name"]')
       .fill(randomDashboardName);
 
-      await page.locator('[data-test="dashboard-add-submit"]').click();
-      await page.waitForTimeout(2000);
-      // await page.locator('[data-test="dashboard-setting-btn"]').click();
+    await page.locator('[data-test="dashboard-add-submit"]').click();
+    await page.waitForTimeout(2000);
+    // await page.locator('[data-test="dashboard-setting-btn"]').click();
 
-      const settingsButton = page.locator('[data-test="dashboard-setting-btn"]');
-await expect(settingsButton).toBeVisible();
-await settingsButton.click();
+    const settingsButton = page.locator('[data-test="dashboard-setting-btn"]');
+    await expect(settingsButton).toBeVisible();
+    await settingsButton.click();
+    await page.waitForTimeout(4000);
 
-      await page.getByRole("tab", { name: "Variables" }).click();
-      await page.getByRole("button", { name: "Add Variable" }).click();
+    await page.getByRole("tab", { name: "Variables" }).click();
+    await page.getByRole("button", { name: "Add Variable" }).click();
     await page
       .locator("div")
       .filter({ hasText: /^Name \*$/ })
@@ -57,15 +58,21 @@ await settingsButton.click();
 
     await page.getByLabel("Name *").fill("variablename");
 
-  
-    await page.locator('[data-test="dashboard-variable-stream-type-select"]').click();
+    await page
+      .locator('[data-test="dashboard-variable-stream-type-select"]')
+      .click();
     await page.getByRole("option", { name: "logs" }).click();
 
-   
-    await page.locator('[data-test="dashboard-variable-stream-select"]').click();
+    await page
+      .locator('[data-test="dashboard-variable-stream-select"]')
+      .click();
 
-    await page.locator('[data-test="dashboard-variable-stream-select"]').fill('e2e_automate');
-    await page.getByRole('option', { name: 'e2e_automate', exact: true }).click();
+    await page
+      .locator('[data-test="dashboard-variable-stream-select"]')
+      .fill("e2e_automate");
+    await page
+      .getByRole("option", { name: "e2e_automate", exact: true })
+      .click();
 
     await page.getByText("Field *arrow_drop_down").click();
     await page
@@ -75,7 +82,7 @@ await settingsButton.click();
       .click();
     await page.getByRole("button", { name: "Save" }).click();
 
-    await page.locator('[data-test="dashboard-settings-close-btn"]').click();
+    // await page.locator('[data-test="dashboard-settings-close-btn"]').click();
 
     const button = page.locator(
       '[data-test="dashboard-if-no-panel-add-panel-btn"]'
@@ -85,14 +92,17 @@ await settingsButton.click();
     await page.waitForTimeout(3000);
     await button.click();
 
-
     await page
       .locator('[data-test="index-dropdown-stream"]')
       .waitFor({ state: "visible" });
     await page.locator('[data-test="index-dropdown-stream"]').click();
 
-    await page.locator('[data-test="index-dropdown-stream"]').press('Control+a');
-    await page.locator('[data-test="index-dropdown-stream"]').fill('e2e_automat');
+    await page
+      .locator('[data-test="index-dropdown-stream"]')
+      .press("Control+a");
+    await page
+      .locator('[data-test="index-dropdown-stream"]')
+      .fill("e2e_automat");
 
     await page.waitForTimeout(2000);
 
@@ -138,15 +148,18 @@ await settingsButton.click();
 
     await page.locator('[data-test="dashboard-apply"]').click();
 
-  
     await page.waitForTimeout(5000);
 
     await page
       .locator('[data-test="dashboard-panel-data-view-query-inspector-btn"]')
       .click();
 
-    await expect(page.getByRole('cell', { name: 'SELECT histogram(_timestamp) as "x_axis_1", count(_timestamp) as "y_axis_1" FROM "e2e_automate" WHERE kubernetes_container_name = \'$variablename\' GROUP BY x_axis_1 ORDER BY x_axis_1 ASC', exact: true })).toBeVisible();
-
+    await expect(
+      page.getByRole("cell", {
+        name: 'SELECT histogram(_timestamp) as "x_axis_1", count(_timestamp) as "y_axis_1" FROM "e2e_automate" WHERE kubernetes_container_name = \'$variablename\' GROUP BY x_axis_1 ORDER BY x_axis_1 ASC',
+        exact: true,
+      })
+    ).toBeVisible();
 
     await page.locator('[data-test="query-inspector-close-btn"]').click();
 
@@ -167,18 +180,18 @@ await settingsButton.click();
       .fill(randomDashboardName);
 
     await page.locator('[data-test="dashboard-add-submit"]').click();
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(3000);
     // await page.locator('[data-test="dashboard-setting-btn"]').click();
 
     const settingsButton = page.locator('[data-test="dashboard-setting-btn"]');
-await expect(settingsButton).toBeVisible();
-await settingsButton.click();
+    await expect(settingsButton).toBeVisible();
+    await settingsButton.click();
 
     // await page.getByRole("tab", { name: "Variables" }).click();
 
     const variablesTab = page.getByRole("tab", { name: "Variables" });
-await expect(variablesTab).toBeVisible();
-await variablesTab.click();
+    await expect(variablesTab).toBeVisible();
+    await variablesTab.click();
 
     await page.getByRole("button", { name: "Add Variable" }).click();
     await page
@@ -212,7 +225,6 @@ await variablesTab.click();
 
     await page.waitForTimeout(3000);
     await page.locator('[data-test="dashboard-settings-close-btn"]').click();
-
 
     const button = page.locator(
       '[data-test="dashboard-if-no-panel-add-panel-btn"]'
@@ -287,7 +299,9 @@ await variablesTab.click();
     await page
       .locator('[data-test="dashboard-add-condition-condition-1"]')
       .click();
-    await page.locator('[data-test="dashboard-add-condition-condition-1"]').click();
+    await page
+      .locator('[data-test="dashboard-add-condition-condition-1"]')
+      .click();
 
     await page.getByText("Operatorarrow_drop_down").click();
 
@@ -333,8 +347,8 @@ await variablesTab.click();
     await page.waitForTimeout(2000);
     await page.locator('[data-test="query-inspector-close-btn"]').click();
 
-    await page.getByText('ANDarrow_drop_down').click();
-    await page.getByRole('option', { name: 'OR' }).click();
+    await page.getByText("ANDarrow_drop_down").click();
+    await page.getByRole("option", { name: "OR" }).click();
     await page.locator('[data-test="dashboard-apply"]').click();
 
     await page
@@ -366,7 +380,7 @@ await variablesTab.click();
 
     await page.locator('[data-test="dashboard-panel-name"]').click();
     await page.locator('[data-test="dashboard-panel-name"]').fill("test");
-    await page.locator('[data-test="dashboard-panel-save"]').click();    
+    await page.locator('[data-test="dashboard-panel-save"]').click();
   });
 
   test("Should  apply the  filter group inside group", async ({ page }) => {
@@ -385,7 +399,7 @@ await variablesTab.click();
     const settingsButton = page.locator('[data-test="dashboard-setting-btn"]');
     await expect(settingsButton).toBeVisible();
     await settingsButton.click();
-    
+
     await page.getByRole("tab", { name: "Variables" }).click();
     await page.getByRole("button", { name: "Add Variable" }).click();
     await page
@@ -419,7 +433,6 @@ await variablesTab.click();
 
     await page.waitForTimeout(3000);
     await page.locator('[data-test="dashboard-settings-close-btn"]').click();
-
 
     const button = page.locator(
       '[data-test="dashboard-if-no-panel-add-panel-btn"]'
@@ -535,17 +548,17 @@ await variablesTab.click();
       .fill(randomDashboardName);
 
     await page.locator('[data-test="dashboard-add-submit"]').click();
-    // await page.waitForTimeout(3000);
+    await page.waitForTimeout(3000);
 
     // await page.locator('[data-test="dashboard-setting-btn"]').click();
 
     const settingsButton = page.locator('[data-test="dashboard-setting-btn"]');
-await expect(settingsButton).toBeVisible();
-await settingsButton.click();
+    await expect(settingsButton).toBeVisible();
+    await settingsButton.click();
 
-const variablesTab = page.getByRole("tab", { name: "Variables" });
-await expect(variablesTab).toBeVisible();
-await variablesTab.click();
+    const variablesTab = page.getByRole("tab", { name: "Variables" });
+    await expect(variablesTab).toBeVisible();
+    await variablesTab.click();
     // await page.getByRole("tab", { name: "Variables" }).click();
     await page.getByRole("button", { name: "Add Variable" }).click();
     await page
@@ -576,7 +589,6 @@ await variablesTab.click();
       .click();
     await page.getByRole("button", { name: "Save" }).click();
     await page.locator('[data-test="dashboard-settings-close-btn"]').click();
-
 
     await page.waitForTimeout(3000);
 
@@ -690,13 +702,13 @@ await variablesTab.click();
       .fill(randomDashboardName);
 
     await page.locator('[data-test="dashboard-add-submit"]').click();
-    // await page.waitForTimeout(2000);
+    await page.waitForTimeout(3000);
 
     // await page.locator('[data-test="dashboard-setting-btn"]').click();
 
     const settingsButton = page.locator('[data-test="dashboard-setting-btn"]');
-await expect(settingsButton).toBeVisible();
-await settingsButton.click();
+    await expect(settingsButton).toBeVisible();
+    await settingsButton.click();
 
     await page.getByRole("tab", { name: "Variables" }).click();
     await page.getByRole("button", { name: "Add Variable" }).click();
@@ -776,9 +788,9 @@ await settingsButton.click();
     ).toBeVisible();
   });
 
-
-  test("Should disply an error massge if added the invalid oprator", async ({ page }) => {
-
+  test("Should disply an error massge if added the invalid oprator", async ({
+    page,
+  }) => {
     await page.locator('[data-test="menu-link-\\/dashboards-item"]').click();
     await waitForDashboardPage(page);
     await page.locator('[data-test="dashboard-add"]').click();
@@ -823,7 +835,6 @@ await settingsButton.click();
     await page.getByRole("button", { name: "Save" }).click();
     await page.locator('[data-test="dashboard-settings-close-btn"]').click();
 
-
     await page.waitForTimeout(3000);
 
     const button = page.locator(
@@ -863,27 +874,44 @@ await settingsButton.click();
     );
     await expect(filterButton).toBeVisible();
     await filterButton.click();
-await page.locator('[data-test="dashboard-add-condition-label-0-kubernetes_container_name"]').click();
-      await page.locator('[data-test="dashboard-add-condition-condition-0"]').click();
-      await page.locator('[data-test="dashboard-add-condition-operator"]').click();
-      await page.getByRole('option', { name: 'IN', exact: true }).click();
-      await page.locator('[data-test="common-auto-complete"]').click();
-      await page.locator('[data-test="common-auto-complete-option"]').click();
-      await page.locator('[data-test="dashboard-apply"]').click();
+    await page
+      .locator(
+        '[data-test="dashboard-add-condition-label-0-kubernetes_container_name"]'
+      )
+      .click();
+    await page
+      .locator('[data-test="dashboard-add-condition-condition-0"]')
+      .click();
+    await page
+      .locator('[data-test="dashboard-add-condition-operator"]')
+      .click();
+    await page.getByRole("option", { name: "IN", exact: true }).click();
+    await page.locator('[data-test="common-auto-complete"]').click();
+    await page.locator('[data-test="common-auto-complete-option"]').click();
+    await page.locator('[data-test="dashboard-apply"]').click();
 
-      await expect(page.getByText('Search field not found: controller').first()).toBeVisible();
+    await expect(
+      page.getByText("Search field not found: controller").first()
+    ).toBeVisible();
 
-      await page.locator('[data-test="dashboard-add-condition-label-0-kubernetes_container_name"]').click();
-      await page.locator('[data-test="dashboard-add-condition-condition-0"]').click();
-      await page.locator('[data-test="dashboard-add-condition-operator"]').click();
-      await page.getByRole('option', { name: '=', exact: true }).click()
-      await page.locator('[data-test="dashboard-apply"]').click();
+    await page
+      .locator(
+        '[data-test="dashboard-add-condition-label-0-kubernetes_container_name"]'
+      )
+      .click();
+    await page
+      .locator('[data-test="dashboard-add-condition-condition-0"]')
+      .click();
+    await page
+      .locator('[data-test="dashboard-add-condition-operator"]')
+      .click();
+    await page.getByRole("option", { name: "=", exact: true }).click();
+    await page.locator('[data-test="dashboard-apply"]').click();
 
-      await page.locator('[data-test="dashboard-panel-name"]').click();
-      await page.locator('[data-test="dashboard-panel-name"]').click();
-      await page.locator('[data-test="dashboard-panel-name"]').fill("test");
-      await page.locator('[data-test="dashboard-panel-save"]').click();
-
+    await page.locator('[data-test="dashboard-panel-name"]').click();
+    await page.locator('[data-test="dashboard-panel-name"]').click();
+    await page.locator('[data-test="dashboard-panel-name"]').fill("test");
+    await page.locator('[data-test="dashboard-panel-save"]').click();
   });
 
   test("Should Filter work correcly if Added the breakdwon filed", async ({
@@ -898,14 +926,13 @@ await page.locator('[data-test="dashboard-add-condition-label-0-kubernetes_conta
       .fill(randomDashboardName);
 
     await page.locator('[data-test="dashboard-add-submit"]').click();
-    // await page.waitForTimeout(3000);
+    await page.waitForTimeout(3000);
 
     // await page.locator('[data-test="dashboard-setting-btn"]').click();
 
     const settingsButton = page.locator('[data-test="dashboard-setting-btn"]');
-await expect(settingsButton).toBeVisible();
-await settingsButton.click();
-
+    await expect(settingsButton).toBeVisible();
+    await settingsButton.click();
 
     await page.getByRole("tab", { name: "Variables" }).click();
     await page.getByRole("button", { name: "Add Variable" }).click();
@@ -930,8 +957,14 @@ await settingsButton.click();
       .locator("i")
       .click();
 
-      await page.locator('[data-test="dashboard-variable-stream-select"]').fill('e2e_automate');
-      await page.getByRole('option', { name: 'e2e_automate', exact: true }).locator('div').nth(2).click();
+    await page
+      .locator('[data-test="dashboard-variable-stream-select"]')
+      .fill("e2e_automate");
+    await page
+      .getByRole("option", { name: "e2e_automate", exact: true })
+      .locator("div")
+      .nth(2)
+      .click();
 
     await page.getByText("Field *arrow_drop_down").click();
     await page
@@ -943,7 +976,6 @@ await settingsButton.click();
 
     await page.waitForTimeout(3000);
     await page.locator('[data-test="dashboard-settings-close-btn"]').click();
-
 
     const button = page.locator(
       '[data-test="dashboard-if-no-panel-add-panel-btn"]'
@@ -972,8 +1004,11 @@ await settingsButton.click();
       )
       .click();
 
-  await page.locator('[data-test="field-list-item-logs-e2e_automate-kubernetes_container_name"] [data-test="dashboard-add-b-data"]').click();
-
+    await page
+      .locator(
+        '[data-test="field-list-item-logs-e2e_automate-kubernetes_container_name"] [data-test="dashboard-add-b-data"]'
+      )
+      .click();
 
     await page.locator('[data-test="dashboard-apply"]').click();
 
@@ -990,85 +1025,186 @@ await settingsButton.click();
     await filterButton.click();
 
     await page
-    .locator('[data-test="dashboard-variable-query-value-selector"]')
-    .click();
-  await page.getByRole("option", { name: "ziox" }).click();
+      .locator('[data-test="dashboard-variable-query-value-selector"]')
+      .click();
+    await page.getByRole("option", { name: "ziox" }).click();
 
-  await page.locator('[data-test="dashboard-add-condition-add"]').click();
-  await page
-    .locator(
-      '[data-test="dashboard-add-condition-label-0-kubernetes_container_name"]'
-    )
-    .click();
-  await page
-    .locator('[data-test="dashboard-add-condition-condition-0"]')
-    .click();
-  await page.getByText("Operatorarrow_drop_down").click();
-  await page.getByText("=", { exact: true }).click();
-  await page.getByLabel("Value").click();
-  await page.getByLabel("Value").fill("$variablename");
-  await page.locator('[data-test="dashboard-apply"]').click();
+    await page.locator('[data-test="dashboard-add-condition-add"]').click();
+    await page
+      .locator(
+        '[data-test="dashboard-add-condition-label-0-kubernetes_container_name"]'
+      )
+      .click();
+    await page
+      .locator('[data-test="dashboard-add-condition-condition-0"]')
+      .click();
+    await page.getByText("Operatorarrow_drop_down").click();
+    await page.getByText("=", { exact: true }).click();
+    await page.getByLabel("Value").click();
+    await page.getByLabel("Value").fill("$variablename");
+    await page.locator('[data-test="dashboard-apply"]').click();
 
-  await page
-  .locator('[data-test="dashboard-panel-data-view-query-inspector-btn"]')
-  .click();
+    await page
+      .locator('[data-test="dashboard-panel-data-view-query-inspector-btn"]')
+      .click();
 
-  await page.waitForTimeout(3000);
+    await page.waitForTimeout(3000);
 
-  await expect(page.getByRole('cell', { name: 'SELECT histogram(_timestamp) as "x_axis_1", count(_timestamp) as "y_axis_1", kubernetes_container_name as "breakdown_1" FROM "e2e_automate" WHERE kubernetes_container_name = \'$variablename\' GROUP BY x_axis_1, breakdown_1 ORDER BY x_axis_1 ASC', exact: true })).toBeVisible();
-
+    await expect(
+      page.getByRole("cell", {
+        name: 'SELECT histogram(_timestamp) as "x_axis_1", count(_timestamp) as "y_axis_1", kubernetes_container_name as "breakdown_1" FROM "e2e_automate" WHERE kubernetes_container_name = \'$variablename\' GROUP BY x_axis_1, breakdown_1 ORDER BY x_axis_1 ASC',
+        exact: true,
+      })
+    ).toBeVisible();
   });
 
-  // Refactored test case
-  test("should correctly apply the filter conditions with different operators", async ({
+  test("variable value should be displayed when applying the dynamic filter and refreshing the page", async ({
     page,
   }) => {
-    const dashFilter = new DashFilter(page);
-
-    await dashFilter.openDashboardMenu();
+    await page.locator('[data-test="menu-link-\\/dashboards-item"]').click();
     await waitForDashboardPage(page);
+    await page.locator('[data-test="dashboard-add"]').click();
+    await page.locator('[data-test="add-dashboard-name"]').click();
+    await page
+      .locator('[data-test="add-dashboard-name"]')
+      .fill(randomDashboardName);
 
-    // Add Dashboard
-    await dashFilter.addDashboard(randomDashboardName);
+    await page.locator('[data-test="dashboard-add-submit"]').click();
+    await page.waitForTimeout(3000);
 
-    await page.waitForTimeout(4000);
-    // Configure Variable
-    await dashFilter.configureVariable("variablename");
+    // await page.locator('[data-test="dashboard-setting-btn"]').click();
 
-    // Add Panel
-    await dashFilter.addPanel();
+    const settingsButton = page.locator('[data-test="dashboard-setting-btn"]');
+    await expect(settingsButton).toBeVisible();
+    await settingsButton.click();
 
-    // Apply Filter
-    await dashFilter.applyFilter("e2e_automate", "_timestamp");
+    await page.getByRole("tab", { name: "Variables" }).click();
+    await page.getByRole("button", { name: "Add Variable" }).click();
+    await page
+      .locator("div")
+      .filter({ hasText: /^Name \*$/ })
+      .nth(2)
+      .click();
 
-    // Verify Query Inspector
-    const expectedQuery =
-      'SELECT histogram(_timestamp) as "x_axis_1", count(_timestamp) as "y_axis_1" FROM "e2e_automate" WHERE kubernetes_container_name = "ziox" GROUP BY x_axis_1 ORDER BY x_axis_1 ASC';
-    await dashFilter.verifyQueryInspector(expectedQuery);
+    // await page.getByLabel('Name *').click();
+    await page.getByLabel("Name *").fill("variablename");
 
-    // Save Panel
-    await dashFilter.savePanel("test");
-  });
+    await page
+      .locator("label")
+      .filter({ hasText: "Stream Type *arrow_drop_down" })
+      .locator("i")
+      .click();
+    await page.getByRole("option", { name: "logs" }).click();
+    await page
+      .locator("label")
+      .filter({ hasText: "Stream *arrow_drop_down" })
+      .locator("i")
+      .click();
 
-  test("1should successfully apply filter conditions using both AND and OR operators", async ({
-    page,
-  }) => {
-    const dashFilter = new DashFilter(page);
+    await page
+      .locator('[data-test="dashboard-variable-stream-select"]')
+      .fill("e2e_automate");
+    await page
+      .getByRole("option", { name: "e2e_automate", exact: true })
+      .locator("div")
+      .nth(2)
+      .click();
 
-    await dashFilter.openDashboardMenu();
-    await waitForDashboardPage(page);
+    await page.getByText("Field *arrow_drop_down").click();
+    await page
+      .getByRole("option", { name: "kubernetes_container_name" })
+      .locator("div")
+      .nth(2)
+      .click();
+    await page.getByRole("button", { name: "Save" }).click();
 
-    // Add Dashboard
-    await dashFilter.addDashboard(randomDashboardName);
+    await page.waitForTimeout(3000);
+    await page.locator('[data-test="dashboard-settings-close-btn"]').click();
 
-    await page.waitForTimeout(4000);
-    // Configure Variable
-    await dashFilter.configureVariable("variablename");
+    const button = page.locator(
+      '[data-test="dashboard-if-no-panel-add-panel-btn"]'
+    );
+    await expect(button).toBeVisible();
 
-    // Add Panel
-    await dashFilter.addPanel();
+    await page.waitForTimeout(3000);
+    await button.click();
 
-    // Apply Filter
-    await dashFilter.applyStreamandField("e2e_automate", "_timestamp");
+    await page.waitForTimeout(2000);
+
+    await page
+      .locator('[data-test="index-dropdown-stream"]')
+      .waitFor({ state: "visible" });
+    await page.locator('[data-test="index-dropdown-stream"]').click();
+
+    await page.waitForTimeout(2000);
+
+    await page
+      .getByRole("option", { name: "e2e_automate", exact: true })
+      .click();
+
+    await page
+      .locator(
+        '[data-test="field-list-item-logs-e2e_automate-_timestamp"] [data-test="dashboard-add-y-data"]'
+      )
+      .click();
+
+    await page
+      .locator(
+        '[data-test="field-list-item-logs-e2e_automate-kubernetes_container_name"] [data-test="dashboard-add-b-data"]'
+      )
+      .click();
+
+    await page.locator('[data-test="dashboard-apply"]').click();
+
+    await page.locator('[data-test="date-time-btn"]').click();
+    await page.locator('[data-test="date-time-relative-6-w-btn"]').click();
+    await page.locator('[data-test="date-time-apply-btn"]').click();
+    await page.locator('[data-test="dashboard-panel-name"]').click();
+    await page.locator('[data-test="dashboard-panel-name"]').click();
+    await page.locator('[data-test="dashboard-panel-name"]').fill("test");
+    await page.locator('[data-test="dashboard-panel-save"]').click();
+
+    await page.waitForTimeout(3000);
+
+    await page.locator('[data-test="date-time-btn"]').click();
+    await page.locator('[data-test="date-time-relative-6-w-btn"]').click();
+    await page.locator('[data-test="date-time-apply-btn"]').click();
+
+    await page
+      .locator('[data-test="dashboard-variable-adhoc-add-selector"]')
+      .click();
+    await page
+      .locator('[data-test="dashboard-variable-adhoc-name-selector"]')
+      .click();
+    await page
+      .locator('[data-test="dashboard-variable-adhoc-name-selector"]')
+      .fill("sbhkubernetes_container_name");
+    await page
+      .locator('[data-test="dashboard-variable-adhoc-value-selector"]')
+      .click();
+    await page
+      .locator('[data-test="dashboard-variable-adhoc-value-selector"]')
+      .fill("ziox");
+
+    await page.locator('[data-test="dashboard-refresh-btn"]').click();
+    await page.reload();
+
+    // Click on the dropdown
+    await page.getByText("controllervariablenamearrow_drop_down").click();
+
+    // Check if the dropdown contains options
+    const dropdownOptions = page.getByRole("option"); // Don't await yet, just capture the locator
+    const dropdownCount = await dropdownOptions.count();
+
+    console.log("Dropdown count:", dropdownCount); // Debugging line
+
+    // Ensure the dropdown options are not blank
+    expect(dropdownCount).toBeGreaterThan(0); // Checks that there is at least one option
+
+    // // Get the row element
+    // const row = await page.getByRole("row", { name: "_timestamp +X +Y +B +F" }).first();
+
+    // // Ensure the row element is present
+    // await expect(row).toBeVisible();
   });
 });

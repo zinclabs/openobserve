@@ -38,13 +38,12 @@
       <div>
         <q-page>
           <q-table
-          v-if="!isLoading"
             data-test="search-scheduler-table"
             ref="qTableSchedule"
             dense
             :rows="dataToBeLoaded"
             :columns="columnsToBeRendered"
-            :pagination.sync="pagination"
+            :pagination="pagination"
             row-key="trace_id"
             :rows-per-page-options="[]"
             class="custom-table search-job-list-table"
@@ -298,14 +297,15 @@
               <div v-if="!isLoading" class="tw-flex tw-mx-auto">
                 <NoData />
               </div>
+              <div
+                v-if="isLoading"
+                class="text-center full-width full-height q-mt-lg tw-flex tw-justify-center"
+              >
+                <q-spinner-hourglass color="primary" size="lg" />
+              </div>
             </template>
           </q-table>
-          <div
-            v-if="isLoading"
-            class="text-center full-width full-height q-mt-lg tw-flex tw-justify-center"
-          >
-            <q-spinner-hourglass color="primary" size="lg" />
-          </div>
+
         </q-page>
         <ConfirmDialog
           title="Delete Scheduled Search"
@@ -850,6 +850,12 @@ export default defineComponent({
         const functionContent = b64EncodeUnicode(row.function);
         queryObject["functionContent"] = functionContent;
       }
+
+      $q.notify({
+        type: "positive",
+        message: "Search Job have been applied successfully",
+        timeout: 2000,
+      });
 
       router.push({
         path: "/logs",

@@ -456,7 +456,7 @@ export default defineComponent({
         // so added this condition to avoid that
         this.searchObj.meta.refreshHistogram = true;
         this.searchObj.data.queryResults.aggs = null;
-        if(this.searchObj.meta.jobId == ""){
+        if (this.searchObj.meta.jobId == "") {
           await this.getQueryData(false);
           this.refreshHistogramChart();
         }

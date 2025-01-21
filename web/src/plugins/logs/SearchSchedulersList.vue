@@ -552,6 +552,7 @@ export default defineComponent({
         const { org_identifier } = router.currentRoute.value.query;
         // columnsToBeRendered.value = [];
         // dataToBeLoaded.value = [];
+        expandedRow.value = [];
         isLoading.value = true;
           let responseToBeFetched = [];
           searchService
@@ -1075,6 +1076,28 @@ td:first-child {
   }
 }
 .search-job-exapnded-table {
+}
+.dark-theme {
+  background-color: $dark-page;
+
+  .report-list-tabs {
+    height: fit-content;
+
+    :deep(.rum-tabs) {
+      border: 1px solid #464646;
+    }
+
+    :deep(.rum-tab) {
+      &:hover {
+        background: #464646;
+      }
+
+      &.active {
+        background: #5960b2;
+        color: #ffffff !important;
+      }
+    }
+  }
 }
 
 .report-list-tabs {

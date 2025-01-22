@@ -15,34 +15,22 @@
 
 <!-- eslint-disable vue/no-unused-components -->
 <template>
-  <div
-    style="padding: 0px 10px; min-width: 60%"
-    class="scroll o2-input"
-    data-test="dashboard-drilldown-popup"
-  >
-    <div
-      class="flex justify-between items-center q-pa-md"
-      style="border-bottom: 2px solid gray; margin-bottom: 5px"
-    >
-      <div class="flex items-center q-table__title q-mr-md">
-        <span data-test="dashboard-drilldown-title" v-if="isEditMode"
-          >Edit Join
-        </span>
-        <span data-test="dashboard-drilldown-title" v-else>Add Join</span>
-      </div>
-    </div>
+  <div class="o2-input" data-test="dashboard-join-pop-up">
     <div>
       <div
         class="tw-flex tw-flex-row tw-w-full tw-gap-10 items-center q-table__title q-mr-md"
       >
         <q-select
+          behavior="menu"
+          borderless
+          dense
           outlined
           filled
           v-model="mainStream"
           :options="[]"
           :disable="true"
           label="Joining Stream"
-          class="q-py-md showLabelOnTop tw-w-1/3"
+          class="tw-w-52"
           stack-label
           data-test="dashboard-config-panel-join-from"
         />
@@ -53,7 +41,7 @@
           v-model="modelValue.joinType"
           :options="joinOptions"
           label="With Join Type"
-          class="q-py-md showLabelOnTop tw-w-1/3"
+          class="q-py-md tw-w-1/3"
           stack-label
           data-test="dashboard-config-panel-join-type"
         />
@@ -66,7 +54,7 @@
           emit-value
           map-options
           label="On Stream"
-          class="q-py-md showLabelOnTop tw-w-1/3"
+          class="q-py-md tw-w-1/3"
           stack-label
           data-test="dashboard-config-panel-join-to"
         />
@@ -162,29 +150,6 @@
         />
       </div>
     </div>
-
-    <q-card-actions class="confirmActions">
-      <q-btn
-        unelevated
-        no-caps
-        class="q-mr-sm"
-        @click="$emit('close')"
-        data-test="cancel-button"
-      >
-        {{ t("confirmDialog.cancel") }}
-      </q-btn>
-      <q-btn
-        unelevated
-        no-caps
-        class="no-border"
-        color="primary"
-        style="min-width: 60px"
-        data-test="confirm-button"
-        :label="isEditMode ? 'Update' : 'Add'"
-      />
-      <!-- :disable="isFormValid" -->
-      <!-- @click="saveDrilldown" -->
-    </q-card-actions>
   </div>
 </template>
 
@@ -200,10 +165,6 @@ export default defineComponent({
   name: "AddJoinPopUp",
   components: {},
   props: {
-    isEditMode: {
-      type: Boolean,
-      default: false,
-    },
     mainStream: {
       type: String,
       required: true,
@@ -248,8 +209,6 @@ export default defineComponent({
     // get the stream list by making an API call
     const getStreamList = async (stream_type: any) => {
       await getStreams(stream_type, false).then((res: any) => {
-        console.log("getStreamList", res);
-
         streamOptions.value = res.list.map((stream: any) => {
           return {
             label: stream.name,

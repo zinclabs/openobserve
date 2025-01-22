@@ -19,20 +19,11 @@
       >
         <div
           class="row q-mr-sm q-my-xs"
-          v-for="(itemY, index) in dashboardPanelData.data.queries[
+          v-for="(joinObj, index) in dashboardPanelData.data.queries[
             dashboardPanelData.layout.currentQueryIndex
-          ].fields?.y"
+          ].joins"
           :key="index"
         >
-          <div
-            v-if="
-              dashboardPanelData.meta.dragAndDrop.targetDragIndex == index &&
-              dashboardPanelData.meta.dragAndDrop.currentDragArea == 'y'
-            "
-            class="dragItem"
-          >
-            &nbsp;
-          </div>
           <q-btn-group class="axis-field">
             <div>
               <!-- <q-icon
@@ -50,18 +41,38 @@
                 :no-wrap="true"
                 size="sm"
                 :label="index"
-                :data-test="`dashboard-y-item-${itemY?.column}`"
+                :data-test="`dashboard-join-item-${index}`"
                 class="q-pl-sm"
               >
+                <q-menu
+                  class="q-pa-md"
+                  :data-test="`dashboard-join-menu-${index}`"
+                >
+                  <AddJoinPopUp
+                    :class="
+                      store.state.theme == 'dark' ? 'dark-mode' : 'bg-white'
+                    "
+                    v-model="
+                      dashboardPanelData.data.queries[
+                        dashboardPanelData.layout.currentQueryIndex
+                      ].joins[index]
+                    "
+                    :mainStream="
+                      dashboardPanelData.data.queries[
+                        dashboardPanelData.layout.currentQueryIndex
+                      ].fields.stream
+                    "
+                  />
+                </q-menu>
               </q-btn>
               <q-btn
                 style="height: 100%"
                 size="xs"
                 dense
-                :data-test="`dashboard-y-item-${itemY?.column}-remove`"
+                :data-test="`dashboard-join-item-${index}-remove`"
                 icon="close"
+                @click="removeJoin(index)"
               />
-              <!-- @click="removeYAxisItem(itemY?.column)" -->
             </div>
           </q-btn-group>
         </div>
@@ -72,24 +83,15 @@
           round
           class="add-btn"
           data-test="dashboard-add-join-btn"
-          @click="showAddJoinPopUp = !showAddJoinPopUp"
+          @click="addJoin"
         />
       </div>
     </div>
-    <q-dialog v-model="showAddJoinPopUp">
-      <AddJoinPopUp
-        :class="store.state.theme == 'dark' ? 'dark-mode' : 'bg-white'"
-        v-model="addJoinModel"
-        :isEditMode="false"
-        mainStream="default"
-        @close="showAddJoinPopUp = false"
-      />
-    </q-dialog>
   </div>
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, inject } from "vue";
+import { defineComponent, ref, inject, onMounted } from "vue";
 import useDashboardPanelData from "../../../composables/useDashboardPanel";
 import { useI18n } from "vue-i18n";
 import { useStore } from "vuex";
@@ -114,19 +116,45 @@ export default defineComponent({
     const { t } = useI18n();
     const store = useStore();
 
-    const showAddJoinPopUp = ref(false);
+    const initializeJoinObj = () => {
+      dashboardPanelData?.data?.queries?.forEach((queryObj: any) => {
+        if (!queryObj?.joins) {
+          queryObj.joins = [];
+        }
+      });
+    };
 
-    const addJoinModel = ref({
-      stream: "",
-      joinType: "inner",
-      conditions: [
-        {
-          leftField: "",
-          rightField: "",
-          logicalOperator: "AND",
-          operation: "=",
-        },
-      ],
+    const addJoin = () => {
+      const initialValue = {
+        stream: "",
+        joinType: "inner",
+        conditions: [
+          {
+            leftField: "",
+            rightField: "",
+            logicalOperator: "AND",
+            operation: "=",
+          },
+        ],
+      };
+
+      // initialize join array is available for old version as well
+      initializeJoinObj();
+
+      dashboardPanelData.data.queries[
+        dashboardPanelData.layout.currentQueryIndex
+      ]?.joins?.push(initialValue);
+    };
+
+    const removeJoin = (index: number) => {
+      dashboardPanelData.data.queries[
+        dashboardPanelData.layout.currentQueryIndex
+      ].joins.splice(index, 1);
+    };
+
+    onMounted(() => {
+      // initialize join array is available for old version as well
+      initializeJoinObj();
     });
 
     return {
@@ -135,8 +163,8 @@ export default defineComponent({
       dashboardPanelData,
       removeFilterItem,
       loadFilterItem,
-      showAddJoinPopUp,
-      addJoinModel,
+      addJoin,
+      removeJoin,
     };
   },
 });

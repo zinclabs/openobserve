@@ -108,6 +108,10 @@ test.describe("dashboard filter testcases", () => {
 
     await page.locator('[data-test="dashboard-apply"]').click();
 
+    await page.locator('[data-test="date-time-btn"]').click();
+    await page.locator('[data-test="date-time-relative-6-w-btn"]').click();
+    await page.locator('[data-test="date-time-apply-btn"]').click();
+
     await page.waitForTimeout(2000);
 
     const filterButton = page.locator(
@@ -170,7 +174,7 @@ test.describe("dashboard filter testcases", () => {
       .fill(randomDashboardName);
 
     await page.locator('[data-test="dashboard-add-submit"]').click();
-    await page.waitForTimeout(3000);
+    await page.waitForTimeout(2000);
 
     await page.locator('[data-test="dashboard-setting-btn"]').click();
 
@@ -373,6 +377,9 @@ test.describe("dashboard filter testcases", () => {
       .fill(randomDashboardName);
 
     await page.locator('[data-test="dashboard-add-submit"]').click();
+
+    await page.waitForTimeout(2000);
+
 
     await page.locator('[data-test="dashboard-setting-btn"]').click();
 

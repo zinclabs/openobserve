@@ -167,6 +167,7 @@ export default defineComponent({
         return {
           stream: "",
           joinType: "inner",
+          streamAlias: "",
           conditions: [
             {
               leftField: "",

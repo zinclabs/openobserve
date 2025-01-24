@@ -92,7 +92,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, inject, onMounted } from "vue";
+import { defineComponent, ref, inject, onMounted, watch } from "vue";
 import useDashboardPanelData from "../../../composables/useDashboardPanel";
 import { useI18n } from "vue-i18n";
 import { useStore } from "vuex";
@@ -128,6 +128,7 @@ export default defineComponent({
     const addJoin = () => {
       const initialValue = {
         stream: "",
+        streamAlias: "",
         joinType: "inner",
         conditions: [
           {
@@ -157,6 +158,28 @@ export default defineComponent({
       // initialize join array is available for old version as well
       initializeJoinObj();
     });
+
+    watch(
+      () =>
+        dashboardPanelData.data.queries[
+          dashboardPanelData.layout.currentQueryIndex
+        ].joins,
+      () => {
+        // generate alias for each join stream
+        // make sure that alias is unique
+        // if stream is duplicate then add _1, _2, _3 etc
+        dashboardPanelData.data.queries[
+          dashboardPanelData.layout.currentQueryIndex
+        ]?.joins?.forEach((join: any, index: number) => {
+          if (join?.stream) {
+            join.streamAlias = `${join.stream}_${index}`;
+          }
+        });
+      },
+      {
+        deep: true,
+      },
+    );
 
     return {
       t,

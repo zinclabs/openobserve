@@ -271,13 +271,18 @@ export default defineComponent({
     const getStreamsBasedJoinIndex = () => {
       // return list of all streams upto current join index
 
-      return dashboardPanelData.data.queries[
-        dashboardPanelData.layout.currentQueryIndex
-      ]?.joins
-        ?.slice(0, props.joinIndex)
-        ?.map((join: any) => {
-          return join.stream;
-        });
+      return [
+        dashboardPanelData.data.queries[
+          dashboardPanelData.layout.currentQueryIndex
+        ].fields.stream,
+        ...(dashboardPanelData.data.queries[
+          dashboardPanelData.layout.currentQueryIndex
+        ]?.joins
+          ?.slice(0, props.joinIndex)
+          ?.map((join: any) => {
+            return join.stream;
+          }) ?? []),
+      ];
     };
 
     return {

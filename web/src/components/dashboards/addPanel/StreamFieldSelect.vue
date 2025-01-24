@@ -15,7 +15,7 @@
           <q-expansion-item
             expand-separator
             group="streamGroup"
-            :default-opened="false"
+            :default-opened="scope.index === 0 ? true : false"
             header-class="text-weight-bold"
             :label="scope.opt.label"
           >
@@ -147,5 +147,3 @@ export default defineComponent({
   },
 });
 </script>
-
-<style lang="scss" scoped></style>

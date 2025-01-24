@@ -136,7 +136,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
             sortable: true,
           },
         ]"
-        :rows="currentFieldsList"
+        :rows="flattenGroupedFields"
         v-model:pagination="pagination"
         row-key="column"
         :filter="dashboardPanelData.meta.stream.filterField"
@@ -174,6 +174,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
               "
             >
               <div
+                v-if="props?.row?.isGroup"
+                class="tw-pl-2 tw-py-1 tw-font-semibold tw-bg-gray-200"
+              >
+                {{ props?.row?.groupName }}
+              </div>
+              <div
+                v-else
                 class="field_overlay"
                 :title="props.row.name"
                 :data-test="`field-list-item-${
@@ -923,34 +930,100 @@ export default defineComponent({
       },
     );
 
-    const currentFieldsList = computed(() => {
-      const { user_defined_schemas_enabled } = store.state.zoConfig;
-      const {
-        selectedStreamFields,
-        customQueryFields,
-        userDefinedSchema,
-        useUserDefinedSchemas,
-        vrlFunctionFieldList,
-      } = dashboardPanelData.meta.stream;
+    const groupedFields: any = ref([]);
 
-      if (
-        user_defined_schemas_enabled &&
-        userDefinedSchema.length > 0 &&
-        useUserDefinedSchemas === "user_defined_schema"
-      ) {
-        return [
-          ...customQueryFields,
-          ...vrlFunctionFieldList,
-          ...userDefinedSchema,
+    watch(
+      () => [
+        dashboardPanelData.data.queries[
+          dashboardPanelData.layout.currentQueryIndex
+        ].fields.stream,
+        dashboardPanelData.data.queries[
+          dashboardPanelData.layout.currentQueryIndex
+        ].fields.stream_type,
+        dashboardPanelData.data.queries[
+          dashboardPanelData.layout.currentQueryIndex
+        ].joins,
+      ],
+      async () => {
+        const joins =
+          dashboardPanelData.data.queries[
+            dashboardPanelData.layout.currentQueryIndex
+          ].joins ?? [];
+
+        const joinsStreams = [
+          dashboardPanelData.data.queries[
+            dashboardPanelData.layout.currentQueryIndex
+          ].fields.stream,
+          ...joins
+            .map((join: any) => join.stream)
+            .filter((stream: any) => stream),
         ];
-      } else {
-        return [
-          ...customQueryFields,
-          ...vrlFunctionFieldList,
-          ...selectedStreamFields,
-        ];
-      }
+
+        // loop on all the streams
+        // get fields for each stream
+        // create grouped object with stream name and fields
+        groupedFields.value = await Promise.all(
+          joinsStreams.map(async (stream: any) => {
+            return await loadStreamFields(stream);
+          }),
+        );
+      },
+      {
+        deep: true,
+      },
+    );
+
+    const flattenGroupedFields = computed(() => {
+      const flattenedFields: any[] = [];
+      groupedFields.value.forEach((group: any) => {
+        // // Add a group header row
+        flattenedFields.push({
+          isGroup: true,
+          groupName: group.name,
+        });
+        // // Add the fields in the group, including the group name
+        group.schema.forEach((field: any) => {
+          flattenedFields.push({
+            ...field,
+            stream: group.name,
+            isGroup: false,
+          });
+        });
+      });
+      console.log("flattenedFields", flattenedFields);
+
+      return flattenedFields;
     });
+
+    // computed(() => {
+
+    //   const { user_defined_schemas_enabled } = store.state.zoConfig;
+    //   const {
+    //     selectedStreamFields,
+    //     customQueryFields,
+    //     userDefinedSchema,
+    //     useUserDefinedSchemas,
+    //     vrlFunctionFieldList,
+    //   } = dashboardPanelData.meta.stream;
+
+    //   if (
+    //     user_defined_schemas_enabled &&
+    //     userDefinedSchema.length > 0 &&
+    //     useUserDefinedSchemas === "user_defined_schema"
+    //   ) {
+    //     return [
+    //       ...customQueryFields,
+    //       ...vrlFunctionFieldList,
+    //       ...userDefinedSchema,
+    //     ];
+    //   } else {
+    //     return [
+    //       ...customQueryFields,
+    //       ...vrlFunctionFieldList,
+    //       ...selectedStreamFields,
+    //     ];
+    //   }
+    // });
 
     watch(
       () => dashboardPanelData.meta.stream.filterField,
@@ -976,47 +1049,25 @@ export default defineComponent({
         dashboardPanelData.meta.stream.streamResultsType = stream_type;
       });
     };
+
     const filterFieldFn = (rows: any, terms: any) => {
-      let filtered = [];
-
-      if (terms != "") {
-        terms = terms.toLowerCase();
-
-        // loop on custom query fields
-        for (
-          let i = 0;
-          i < dashboardPanelData.meta.stream.customQueryFields.length;
-          i++
-        ) {
-          if (
-            dashboardPanelData.meta.stream.customQueryFields[i]["name"]
-              .toLowerCase()
-              .includes(terms)
-          ) {
-            filtered.push(dashboardPanelData.meta.stream.customQueryFields[i]);
-          }
-        }
-
-        // update custom query fields length
-        customQueryFieldsLength.value = filtered.length;
-
-        for (
-          let i = 0;
-          i < selectedStreamFieldsBasedOnUserDefinedSchema.value.length;
-          i++
-        ) {
-          if (
-            selectedStreamFieldsBasedOnUserDefinedSchema.value[i]["name"]
-              .toLowerCase()
-              .includes(terms)
-          ) {
-            filtered.push(
-              selectedStreamFieldsBasedOnUserDefinedSchema.value[i],
-            );
-          }
-        }
+      if (!terms || terms.trim() === "") {
+        return rows;
       }
-      return filtered;
+
+      const searchTerm = terms.toLowerCase();
+
+      const filteredRows = rows.filter((row: any) => {
+        // Always include group headers
+        if (row.isGroup) {
+          return true;
+        }
+
+        // Filter fields based on name
+        return row.name.toLowerCase().includes(searchTerm);
+      });
+
+      return filteredRows;
     };
 
     const mutationHandler: any = (mutationRecords: any) => {};
@@ -1211,7 +1262,8 @@ export default defineComponent({
       toggleSchema,
       userDefinedSchemaBtnGroupOption,
       pagination,
-      currentFieldsList,
+      groupedFields,
+      flattenGroupedFields,
       pagesNumber: computed(() => {
         return Math.ceil(
           dashboardPanelData.meta.stream.selectedStreamFields.length /

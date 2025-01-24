@@ -60,8 +60,7 @@
           />
 
           <!-- Render different input types based on validation -->
-          <q-select
-            v-if="fields.args[argIndex]?.type === 'field'"
+          <!-- <q-select
             v-model="fields.args[argIndex].value"
             :options="filteredSchemaOptions"
             label="Select Field"
@@ -77,7 +76,15 @@
             @filter="filterStreamFn"
             :required="isRequired(fields.functionName, argIndex)"
             class="tw-w-52"
-          />
+          /> -->
+
+          <!-- Left field selector using StreamFieldSelect -->
+          <div class="tw-w-52" v-if="fields.args[argIndex]?.type === 'field'">
+            <StreamFieldSelect
+              :streams="getAllSelectedStreams()"
+              v-model="fields.args[argIndex].value"
+            />
+          </div>
 
           <q-input
             v-if="fields.args[argIndex]?.type === 'string'"
@@ -150,10 +157,11 @@ import useDashboardPanelData from "@/composables/useDashboardPanel";
 import { useSelectAutoComplete } from "@/composables/useSelectAutocomplete";
 import HistogramIntervalDropDown from "../HistogramIntervalDropDown.vue";
 import { addMissingArgs } from "@/utils/dashboard/convertDataIntoUnitValue";
+import StreamFieldSelect from "@/components/dashboards/addPanel/StreamFieldSelect.vue";
 
 export default {
   name: "SelectFunction",
-  components: { HistogramIntervalDropDown },
+  components: { HistogramIntervalDropDown, StreamFieldSelect },
   props: {
     modelValue: {
       type: Object,
@@ -166,17 +174,17 @@ export default {
       "dashboardPanelDataPageKey",
       "dashboard",
     );
-    const { selectedStreamFieldsBasedOnUserDefinedSchema } =
+    const { dashboardPanelData, selectedStreamFieldsBasedOnUserDefinedSchema } =
       useDashboardPanelData(dashboardPanelDataPageKey);
 
-    const schemaOptions = computed(() =>
-      selectedStreamFieldsBasedOnUserDefinedSchema?.value?.map(
-        (field: any) => ({
-          label: field.name,
-          value: field.name,
-        }),
-      ),
-    );
+    // const schemaOptions = computed(() =>
+    //   selectedStreamFieldsBasedOnUserDefinedSchema?.value?.map(
+    //     (field: any) => ({
+    //       label: field.name,
+    //       value: field.name,
+    //     }),
+    //   ),
+    // );
 
     const fields = ref(addMissingArgs(props.modelValue));
 
@@ -190,8 +198,8 @@ export default {
       },
     );
 
-    const { filterFn: filterStreamFn, filteredOptions: filteredSchemaOptions } =
-      useSelectAutoComplete(toRef(schemaOptions), "label");
+    // const { filterFn: filterStreamFn, filteredOptions: filteredSchemaOptions } =
+    //   useSelectAutoComplete(toRef(schemaOptions), "label");
 
     const filteredFunctions: any = ref([]);
 
@@ -388,6 +396,22 @@ export default {
       }
     };
 
+    const getAllSelectedStreams = () => {
+      // get all streams
+      // mainStream + all join streams
+
+      return [
+        dashboardPanelData.data.queries[
+          dashboardPanelData.layout.currentQueryIndex
+        ].fields.stream,
+        ...((
+          dashboardPanelData.data.queries[
+            dashboardPanelData.layout.currentQueryIndex
+          ]?.joins ?? []
+        )?.map((join: any) => join?.stream) ?? []),
+      ];
+    };
+
     return {
       fields,
       functionValidation,
@@ -401,11 +425,12 @@ export default {
       getNonSeparatorArgs,
       getSeparatorArg,
       getSupportedTypeBasedOnFunctionNameAndIndex,
-      filterStreamFn,
-      filteredSchemaOptions,
+      // filterStreamFn,
+      // filteredSchemaOptions,
       filteredFunctions,
       filterFunctionsOptions,
       onArgTypeChange,
+      getAllSelectedStreams,
     };
   },
 };

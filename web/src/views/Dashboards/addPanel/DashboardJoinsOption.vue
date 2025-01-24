@@ -57,6 +57,7 @@
                         dashboardPanelData.layout.currentQueryIndex
                       ].joins[index]
                     "
+                    :joinIndex="index"
                     :mainStream="
                       dashboardPanelData.data.queries[
                         dashboardPanelData.layout.currentQueryIndex

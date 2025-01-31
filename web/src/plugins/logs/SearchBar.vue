@@ -3044,20 +3044,8 @@ export default defineComponent({
         }
 
         searchSchedulerJob.value = false;
-
         await getJobData();
-        $q.notify({
-        type: "positive",
-        message: "Job Added Succesfully",
-        timeout: 10000,
-        actions: [
-          {
-            label: "Go To Job Scheduler",
-            color: "white",
-            handler: () => routeToSearchSchedule(),
-          },
-        ],
-      });
+
       }
       catch (e){
         $q.notify({

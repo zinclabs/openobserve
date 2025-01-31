@@ -1901,6 +1901,13 @@ const useLogs = () => {
                 type: "positive",
                 message: "Job Added Succesfully",
                 timeout: 2000,
+                actions: [
+                  {
+                    label: "Go To Job Scheduler",
+                    color: "white",
+                    handler: () => routeToSearchSchedule(),
+                  },
+                ],
               });
             })
             }
@@ -2530,6 +2537,16 @@ const useLogs = () => {
         searchObj.data.queryResults.hits;
     }
   };
+
+  const routeToSearchSchedule = () => {
+    router.push({
+      query:{
+        action: "search_scheduler",
+        org_identifier: store.state.selectedOrganization.identifier,
+        type: "search_scheduler_list"
+      }
+    });
+  }
 
   const getHistogramQueryData = (queryReq: any) => {
     return new Promise((resolve, reject) => {
@@ -5690,6 +5707,7 @@ const useLogs = () => {
     loadJobData,
     refreshJobPagination,
     enableRefreshInterval,
+    routeToSearchSchedule,
   };
 };
 

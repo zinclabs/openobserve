@@ -630,8 +630,7 @@ export default defineComponent({
             message: e.response?.data?.message ||  "Failed to cancel search job",
             timeout: 2000,
           });
-          }
-          
+          } 
         }).finally(()=> {
           fetchSearchHistory();
         })
@@ -683,7 +682,17 @@ export default defineComponent({
             message: "Search Job has been deleted successfully",
             timeout: 2000,
           });
-        });
+        }).catch((e)=>{
+          if(e.response.status.code != 403){
+            $q.notify({
+            type: "negative",
+            message: e.response?.data?.message ||  "Failed to delete search job",
+            timeout: 2000,
+          });
+          }
+        }).finally(()=> {
+          fetchSearchHistory();
+        })
     };
     const sortMethod = (rows, sortBy, descending) => {
       const data = [...rows];

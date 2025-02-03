@@ -2888,23 +2888,25 @@ const useDashboardPanelData = (pageKey: string = "dashboard") => {
             dashboardPanelData.layout.currentQueryIndex
           ].customQuery
         ) {
-          const customQueryXFieldError = dashboardPanelData.data.queries[
-            dashboardPanelData.layout.currentQueryIndex
-          ].fields.x.filter(
-            (it: any) =>
-              ![
-                ...dashboardPanelData.meta.stream.customQueryFields,
-                ...dashboardPanelData.meta.stream.vrlFunctionFieldList,
-              ].find((i: any) => i.name == it.column),
-          );
-          if (customQueryXFieldError.length) {
-            errors.push(
-              ...customQueryXFieldError.map(
-                (it: any) =>
-                  `Please update X-Axis Selection. Current X-Axis field ${it.column} is invalid`,
-              ),
-            );
-          }
+          // const customQueryXFieldError = dashboardPanelData.data.queries[
+          //   dashboardPanelData.layout.currentQueryIndex
+          // ].fields.x.filter(
+          //   (it: any) =>
+          //     ![
+          //       ...dashboardPanelData.meta.stream.customQueryFields,
+          //       ...dashboardPanelData.meta.stream.vrlFunctionFieldList,
+          //     ].find((i: any) => i.name == it.column),
+          // );
+          //  HERE NEED CHANGES
+          // Now, we can not check field name is there on stream or not
+          // if (customQueryXFieldError.length) {
+          //   errors.push(
+          //     ...customQueryXFieldError.map(
+          //       (it: any) =>
+          //         `Please update X-Axis Selection. Current X-Axis field ${it.column} is invalid`,
+          //     ),
+          //   );
+          // }
 
           const customQueryYFieldError = dashboardPanelData.data.queries[
             dashboardPanelData.layout.currentQueryIndex
@@ -2925,41 +2927,40 @@ const useDashboardPanelData = (pageKey: string = "dashboard") => {
           }
         } else {
           // check if field selection is from the selected stream fields when the custom query mode is OFF
-          const customQueryXFieldError = dashboardPanelData.data.queries[
-            dashboardPanelData.layout.currentQueryIndex
-          ].fields.x.filter(
-            (it: any) =>
-              ![
-                ...selectedStreamFieldsBasedOnUserDefinedSchema.value,
-                ...dashboardPanelData.meta.stream.vrlFunctionFieldList,
-              ].find((i: any) => i.name == it.column),
-          );
-          if (customQueryXFieldError.length) {
-            errors.push(
-              ...customQueryXFieldError.map(
-                (it: any) =>
-                  `Please update X-Axis Selection. Current X-Axis field ${it.column} is invalid for selected stream`,
-              ),
-            );
-          }
-
-          const customQueryYFieldError = dashboardPanelData.data.queries[
-            dashboardPanelData.layout.currentQueryIndex
-          ].fields.y.filter(
-            (it: any) =>
-              ![
-                ...selectedStreamFieldsBasedOnUserDefinedSchema.value,
-                ...dashboardPanelData.meta.stream.vrlFunctionFieldList,
-              ].find((i: any) => i.name == it.column),
-          );
-          if (customQueryYFieldError.length) {
-            errors.push(
-              ...customQueryYFieldError.map(
-                (it: any) =>
-                  `Please update Y-Axis Selection. Current Y-Axis field ${it.column} is invalid for selected stream`,
-              ),
-            );
-          }
+          // const customQueryXFieldError = dashboardPanelData.data.queries[
+          //   dashboardPanelData.layout.currentQueryIndex
+          // ].fields.x.filter(
+          //   (it: any) =>
+          //     ![
+          //       ...selectedStreamFieldsBasedOnUserDefinedSchema.value,
+          //       ...dashboardPanelData.meta.stream.vrlFunctionFieldList,
+          //     ].find((i: any) => i.name == it.column),
+          // );
+          // if (customQueryXFieldError.length) {
+          //   errors.push(
+          //     ...customQueryXFieldError.map(
+          //       (it: any) =>
+          //         `Please update X-Axis Selection. Current X-Axis field ${it.column} is invalid for selected stream`,
+          //     ),
+          //   );
+          // }
+          // const customQueryYFieldError = dashboardPanelData.data.queries[
+          //   dashboardPanelData.layout.currentQueryIndex
+          // ].fields.y.filter(
+          //   (it: any) =>
+          //     ![
+          //       ...selectedStreamFieldsBasedOnUserDefinedSchema.value,
+          //       ...dashboardPanelData.meta.stream.vrlFunctionFieldList,
+          //     ].find((i: any) => i.name == it.column),
+          // );
+          // if (customQueryYFieldError.length) {
+          //   errors.push(
+          //     ...customQueryYFieldError.map(
+          //       (it: any) =>
+          //         `Please update Y-Axis Selection. Current Y-Axis field ${it.column} is invalid for selected stream`,
+          //     ),
+          //   );
+          // }
         }
       }
     }

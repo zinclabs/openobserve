@@ -649,7 +649,8 @@ export const validateSQLPanelFields = (
     ].fields.y.filter(
       (it: any) =>
         !it.isDerived &&
-        (it.aggregationFunction == null || it.aggregationFunction == ""),
+        it.type == "build" &&
+        (it.functionName == null || it.functionName == ""),
     );
     if (
       panelData.queries[queryIndex].fields.y.length &&

@@ -378,7 +378,7 @@ export default {
 
     const onArgTypeChange = (arg: any) => {
       if (arg.type === "field") {
-        arg.value = "";
+        arg.value = {};
       } else if (arg.type === "string") {
         arg.value = "";
       } else if (arg.type === "number") {
@@ -401,14 +401,20 @@ export default {
       // mainStream + all join streams
 
       return [
-        dashboardPanelData.data.queries[
-          dashboardPanelData.layout.currentQueryIndex
-        ].fields.stream,
+        {
+          stream:
+            dashboardPanelData.data.queries[
+              dashboardPanelData.layout.currentQueryIndex
+            ].fields.stream,
+        },
         ...((
           dashboardPanelData.data.queries[
             dashboardPanelData.layout.currentQueryIndex
           ]?.joins ?? []
-        )?.map((join: any) => join?.stream) ?? []),
+        )?.map((join: any) => ({
+          stream: join.stream,
+          streamAlias: join.streamAlias,
+        })) ?? []),
       ];
     };
 

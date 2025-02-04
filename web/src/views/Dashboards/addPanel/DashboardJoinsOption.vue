@@ -172,7 +172,7 @@ export default defineComponent({
           dashboardPanelData.layout.currentQueryIndex
         ]?.joins?.forEach((join: any, index: number) => {
           if (join?.stream) {
-            join.streamAlias = `${join.stream}_${index}`;
+            join.streamAlias = `stream_${index}`;
           }
         });
       },

@@ -58,18 +58,16 @@ export default defineComponent({
 
   props: {
     streams: {
-      type: Array as PropType<string[]>,
+      type: Array,
       required: true,
     },
     modelValue: {
-      type: String as PropType<string | null>,
-      default: null,
+      type: Object,
+      default: {},
     },
   },
 
-  emits: {
-    "update:modelValue": (value: string | null) => true,
-  },
+  emits: ["update:modelValue"],
 
   setup(props, { emit }) {
     const dashboardPanelDataPageKey = inject(
@@ -77,7 +75,8 @@ export default defineComponent({
       "dashboard",
     );
 
-    const internalModel = ref<string | null>(props.modelValue);
+    const internalModel = ref(props.modelValue);
+
     const options = ref<Option[]>([]);
 
     const { getStream } = useStreams();
@@ -113,11 +112,13 @@ export default defineComponent({
 
       // Fetch schema for each stream and build options
       options.value = await Promise.all(
-        props.streams.map(async (stream) => {
-          const streamSchemaObj = await loadStreamFields(stream);
+        props.streams.map(async (stream: any) => {
+          const streamSchemaObj = await loadStreamFields(stream.stream);
 
           return {
-            label: stream,
+            label: stream.streamAlias
+              ? `${stream.stream}(${stream.streamAlias})`
+              : `${stream.stream}`,
             children: streamSchemaObj?.schema?.map((field: any) => ({
               ...field,
               stream: stream,
@@ -127,8 +128,12 @@ export default defineComponent({
       );
     }
 
-    function selectField(field: OptionChild) {
-      internalModel.value = field.label;
+    function selectField(field: any) {
+      console.log(field);
+      internalModel.value = {
+        streamAlias: field?.stream?.streamAlias,
+        field: field.name,
+      };
     }
 
     // Watch for v-model changes

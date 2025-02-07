@@ -52,7 +52,11 @@ const convertPanelSchemaVersion = (data: any) => {
   };
 };
 
-const migrateV5FieldsToV6 = (fieldItem: any, isCustomQuery: boolean) => {
+const migrateV5FieldsToV6 = (
+  fieldItem: any,
+  isCustomQuery: boolean,
+  stream: string,
+) => {
   // if fieldItem is undefined, do nothing
   if (!fieldItem) return;
   // mirgrate old args
@@ -78,7 +82,10 @@ const migrateV5FieldsToV6 = (fieldItem: any, isCustomQuery: boolean) => {
       // prepend column in args
       fieldItem.args.unshift({
         type: "field",
-        value: fieldItem.column,
+        value: {
+          field: fieldItem.column,
+          streamAlias: stream,
+        },
       });
       delete fieldItem.column;
     }
@@ -97,12 +104,15 @@ const migrateV5FieldsToV6 = (fieldItem: any, isCustomQuery: boolean) => {
 function migrateFields(
   fields: any | any[],
   isCustomQuery: boolean,
-  migrateFunction: (field: any, isCustomQuery: boolean) => void,
+  stream: string,
+  migrateFunction: (field: any, isCustomQuery: boolean, stream: string) => void,
 ) {
   if (Array.isArray(fields)) {
-    fields.forEach((field: any) => migrateFunction(field, isCustomQuery));
+    fields.forEach((field: any) =>
+      migrateFunction(field, isCustomQuery, stream),
+    );
   } else {
-    migrateFunction(fields, isCustomQuery);
+    migrateFunction(fields, isCustomQuery, stream);
   }
 }
 
@@ -261,7 +271,12 @@ export function convertDashboardSchemaVersion(data: any) {
               target,
               value,
             ].forEach((field: any) => {
-              migrateFields(field, queryItem.customQuery, migrateV5FieldsToV6);
+              migrateFields(
+                field,
+                queryItem.customQuery,
+                queryItem.stream,
+                migrateV5FieldsToV6,
+              );
             });
           });
         });

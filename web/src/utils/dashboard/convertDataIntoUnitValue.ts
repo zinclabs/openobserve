@@ -732,7 +732,11 @@ export function buildSQLQueryFromInput(fields: any): string {
     // Add the argument to the SQL query
     if (argType === "field") {
       // If the argument type is "field", do not wrap with quotes
-      sqlArgs.push(argValue);
+      sqlArgs.push(
+        argValue.streamAlias
+          ? argValue.streamAlias + "." + argValue.field
+          : argValue.field,
+      );
     } else if (argType === "string" || argType === "histogramInterval") {
       // Wrap strings in quotes if they are not already wrapped
       if (

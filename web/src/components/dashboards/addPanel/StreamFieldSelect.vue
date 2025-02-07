@@ -8,7 +8,7 @@
         label="Select a Field"
         option-label="name"
         option-value="name"
-        emit-value
+        :display-value="internalModel?.field"
         map-options
       >
         <template v-slot:option="scope">
@@ -129,7 +129,6 @@ export default defineComponent({
     }
 
     function selectField(field: any) {
-      console.log(field);
       internalModel.value = {
         streamAlias: field?.stream?.streamAlias,
         field: field.name,

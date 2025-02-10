@@ -832,6 +832,44 @@ const processField = (field: any) => {
   }
 };
 
+function buildJoinConditions(conditions: any[]) {
+  if (!conditions || conditions.length === 0) return null;
+
+  if (conditions.length === 1) {
+    return createBinaryExpr(conditions[0]);
+  }
+
+  let conditionTree = createBinaryExpr(conditions[0]);
+
+  for (let i = 1; i < conditions.length; i++) {
+    conditionTree = {
+      type: "binary_expr",
+      operator: "AND",
+      left: conditionTree,
+      right: createBinaryExpr(conditions[i]),
+    };
+  }
+
+  return conditionTree;
+}
+
+function createBinaryExpr(condition: any) {
+  return {
+    type: "binary_expr",
+    operator: condition.operation,
+    left: {
+      type: "column_ref",
+      table: condition.leftField.streamAlias || null,
+      column: { expr: { type: "default", value: condition.leftField.field } },
+    },
+    right: {
+      type: "column_ref",
+      table: condition.rightField.streamAlias || null,
+      column: { expr: { type: "default", value: condition.rightField.field } },
+    },
+  };
+}
+
 // Main function to build SQL query using AST
 export async function buildSQLQueryWithParser(
   fields: any,
@@ -958,34 +996,17 @@ export async function buildSQLQueryWithParser(
         table: join.stream,
         as: join.streamAlias,
         join: join.joinType.toUpperCase() + " JOIN",
-        on: {
-          type: "binary_expr",
-          operator: join.conditions[0].operation, // Assuming single condition for now
-          left: {
-            type: "column_ref",
-            table: join.conditions[0].leftField.streamAlias || fields.stream,
-            column: {
-              expr: {
-                type: "default",
-                value: join.conditions[0].leftField.field,
-              },
-            },
-          },
-          right: {
-            type: "column_ref",
-            table:
-              join.conditions[0].rightField.streamAlias || join.streamAlias,
-            column: {
-              expr: {
-                type: "default",
-                value: join.conditions[0].rightField.field,
-              },
-            },
-          },
-        },
+        on: buildJoinConditions(join.conditions),
       });
     });
   }
+
+  console.log(
+    "Abhay: ast",
+    parser.astify(
+      `SELECT histogram(default._timestamp) as "x_axis_1", count(stream_0.kubernetes_host) as "y_axis_1"  FROM "default" join e2e_automate as stream_0 on default.k8s_namespace_name = stream_0.k8s_namespace_name AND default.abc != stream_0.bcd  GROUP BY x_axis_1 ORDER BY x_axis_1 ASC`,
+    ),
+  );
 
   // Convert AST to SQL
   const sql = parser.sqlify(ast);

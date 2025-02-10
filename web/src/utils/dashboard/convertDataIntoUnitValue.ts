@@ -766,6 +766,62 @@ export function buildSQLQueryFromInput(fields: any): string {
   return `${functionName}(${sqlArgs.join(", ")})`;
 }
 
+export function buildSQLJoinsFromInput(joins: any[]): string {
+  if (!joins || joins.length === 0) {
+    return ""; // No joins, return empty string
+  }
+
+  let joinClauses: string[] = [];
+
+  for (const join of joins) {
+    const { stream, streamAlias, joinType, conditions } = join;
+
+    if (
+      !stream ||
+      !streamAlias ||
+      !joinType ||
+      !conditions ||
+      conditions.length === 0
+    ) {
+      // Invalid join, return empty string
+      return "";
+    }
+
+    let joinConditionStrings: string[] = [];
+
+    for (const condition of conditions) {
+      const { leftField, rightField, operation, logicalOperator } = condition;
+
+      if (!leftField || !rightField || !operation) {
+        // Invalid condition, return empty string
+        return "";
+      }
+
+      const leftFieldStr = leftField.streamAlias
+        ? `${leftField.streamAlias}.${leftField.field}`
+        : leftField.field;
+
+      const rightFieldStr = rightField.streamAlias
+        ? `${rightField.streamAlias}.${rightField.field}`
+        : rightField.field;
+
+      joinConditionStrings.push(
+        `${leftFieldStr} ${operation} ${rightFieldStr}`,
+      );
+    }
+
+    // Combine conditions with logical operators (e.g., AND, OR)
+    const joinConditionsSQL = joinConditionStrings.join(" AND ");
+
+    // Construct the JOIN SQL statement
+    joinClauses.push(
+      `${joinType.toUpperCase()} JOIN "${stream}" AS ${streamAlias} ON ${joinConditionsSQL}`,
+    );
+  }
+
+  return joinClauses.join(" ");
+}
+
 export function addMissingArgs(fields: any): any {
   const { functionName, args } = fields;
 

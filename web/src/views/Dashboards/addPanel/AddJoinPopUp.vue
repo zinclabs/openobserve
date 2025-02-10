@@ -101,7 +101,12 @@
               <!-- Right field selector using StreamFieldSelect -->
               <div class="tw-w-1/3">
                 <StreamFieldSelect
-                  :streams="[modelValue.stream]"
+                  :streams="[
+                    {
+                      stream: modelValue.stream,
+                      streamAlias: modelValue.streamAlias,
+                    },
+                  ]"
                   v-model="modelValue.conditions[argIndex].rightField"
                   :data-test="`dashboard-join-condition-rightField-${argIndex}`"
                 />
@@ -170,8 +175,12 @@ export default defineComponent({
           streamAlias: "",
           conditions: [
             {
-              leftField: "",
-              rightField: "",
+              leftField: {
+                streamAlias: "",
+              },
+              rightField: {
+                streamAlias: "",
+              },
               logicalOperator: "and",
               operation: "=",
             },
@@ -271,17 +280,19 @@ export default defineComponent({
 
     const getStreamsBasedJoinIndex = () => {
       // return list of all streams upto current join index
-
       return [
-        dashboardPanelData.data.queries[
-          dashboardPanelData.layout.currentQueryIndex
-        ].fields.stream,
+        {
+          stream:
+            dashboardPanelData.data.queries[
+              dashboardPanelData.layout.currentQueryIndex
+            ].fields.stream,
+        },
         ...(dashboardPanelData.data.queries[
           dashboardPanelData.layout.currentQueryIndex
         ]?.joins
           ?.slice(0, props.joinIndex)
           ?.map((join: any) => {
-            return join.stream;
+            return { stream: join.stream, streamAlias: join.streamAlias };
           }) ?? []),
       ];
     };

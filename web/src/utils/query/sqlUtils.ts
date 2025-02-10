@@ -623,3 +623,88 @@ export const changeHistogramInterval = async (
   const sql = parser.sqlify(ast);
   return sql.replace(/`/g, '"');
 };
+
+export async function buildSQLQueryWithParser(
+  fields: any,
+  joins: any[],
+): Promise<string> {
+  // import parser
+  await importSqlParser();
+  console.log(
+    parser.astify(
+      "select histogram(_timestamp) as x_axis_1, count(_timestamp) as y_axis_1 from test",
+    ),
+  );
+
+  const ast: any = {
+    type: "select",
+    columns: [],
+    from: [{ db: null, table: fields?.stream || "unknown_table", as: null }],
+    where: null,
+    groupby: null,
+    orderby: null,
+    joins: [],
+  };
+
+  // **Helper Function to Process Fields for SELECT Clause**
+  const processField = (field: any) => {
+    if (!field || !field.alias) return null; // Ignore invalid fields
+
+    if (field.functionName) {
+      return {
+        type: "expr",
+        expr: {
+          type:
+            field.functionName.toLowerCase() === "count"
+              ? "aggr_func"
+              : "function",
+          name:
+            field.functionName.toLowerCase() === "count"
+              ? "COUNT"
+              : field.functionName,
+          args: {
+            type: "expr_list",
+            value: [
+              {
+                type: "column_ref",
+                table: null,
+                column: field.args?.[0]?.value?.field || "unknown_column",
+              },
+            ],
+          },
+          over: null,
+        },
+        as: field.alias,
+      };
+    } else {
+      return {
+        type: "expr",
+        expr: {
+          type: "column_ref",
+          table: null,
+          column: field.column || "unknown_column",
+        },
+        as: field.alias,
+      };
+    }
+  };
+
+  // **Process X-Axis Fields**
+  if (Array.isArray(fields?.x)) {
+    fields.x.forEach((xField: any) => {
+      const processedField = processField(xField);
+      if (processedField) ast.columns.push(processedField);
+    });
+  }
+
+  // **Process Y-Axis Fields**
+  if (Array.isArray(fields?.y)) {
+    fields.y.forEach((yField: any) => {
+      const processedField = processField(yField);
+      if (processedField) ast.columns.push(processedField);
+    });
+  }
+
+  // **Convert AST to SQL**
+  return parser.sqlify(ast);
+}

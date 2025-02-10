@@ -177,9 +177,11 @@ export default defineComponent({
             {
               leftField: {
                 streamAlias: "",
+                field: "",
               },
               rightField: {
                 streamAlias: "",
+                field: "",
               },
               logicalOperator: "and",
               operation: "=",
@@ -271,8 +273,14 @@ export default defineComponent({
 
     const addCondition = () => {
       props.modelValue.conditions.push({
-        leftField: "",
-        rightField: "",
+        leftField: {
+          streamAlias: "",
+          field: "",
+        },
+        rightField: {
+          streamAlias: "",
+          field: "",
+        },
         logicalOperator: "and",
         operation: "=",
       });

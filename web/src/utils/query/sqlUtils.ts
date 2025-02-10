@@ -624,6 +624,140 @@ export const changeHistogramInterval = async (
   return sql.replace(/`/g, '"');
 };
 
+// // List of known aggregation functions
+// const aggregationFunctions = new Set([
+//   "count",
+//   "count-distinct",
+//   "sum",
+//   "avg",
+//   "min",
+//   "max",
+//   "p50",
+//   "p90",
+//   "p95",
+//   "p99",
+// ]);
+
+// // Helper function to process function arguments
+// const processFunctionArgs = (args: any[]) => {
+//   return {
+//     type: "expr_list",
+//     value: args.map((arg) => {
+//       if (!arg || !arg.type)
+//         return { type: "default", value: "unknown_column" };
+
+//       switch (arg.type) {
+//         case "field":
+//           return {
+//             type: "column_ref",
+//             table: null,
+//             column: arg.value?.field || "unknown_column",
+//           };
+
+//         case "number":
+//           return {
+//             type: "number",
+//             value: arg.value ?? 0,
+//           };
+
+//         case "string":
+//           return {
+//             type: "string",
+//             value: arg.value || "",
+//           };
+
+//         case "function":
+//           return processField(arg.value); // Recursively process nested functions
+
+//         default:
+//           return { type: "default", value: "unknown_column" };
+//       }
+//     }),
+//   };
+// };
+
+// // Helper function to process fields for SELECT clause
+// const processField: any = (field: any) => {
+//   if (!field || !field.alias) return null; // Ignore invalid fields
+
+//   if (field.functionName) {
+//     const functionNameLower = field.functionName.toLowerCase();
+//     const isAggregation = aggregationFunctions.has(functionNameLower);
+
+//     console.log(isAggregation, "isAggregation", field);
+
+//     return {
+//       type: "expr",
+//       expr: {
+//         type: isAggregation ? "aggr_func" : "function",
+//         name: isAggregation
+//           ? field.functionName.toUpperCase()
+//           : { name: [{ type: "default", value: field.functionName }] },
+//         args: processFunctionArgs(field.args || []),
+//         over: null,
+//       },
+//       as: field.alias,
+//     };
+//   } else {
+//     return {
+//       type: "expr",
+//       expr: {
+//         type: "column_ref",
+//         table: null,
+//         column: field.column || "unknown_column",
+//       },
+//       as: field.alias,
+//     };
+//   }
+// };
+
+// // Main function to build SQL query using AST
+// export async function buildSQLQueryWithParser(
+//   fields: any,
+//   joins: any[],
+// ): Promise<string> {
+//   // import parser
+//   await importSqlParser();
+
+//   console.log(
+//     parser.astify(
+//       "select histogram(_timestamp) as x_axis_1, count(_timestamp) as y_axis_1 from default group by x_axis_1 order by x_axis_1",
+//     ),
+//     "parser.astify",
+//   );
+
+//   const ast: any = {
+//     type: "select",
+//     columns: [],
+//     from: [{ db: null, table: fields?.stream || "unknown_table", as: null }],
+//     where: null,
+//     groupby: null,
+//     orderby: null,
+//     joins: [],
+//   };
+
+//   // Process X-Axis Fields
+//   if (Array.isArray(fields?.x)) {
+//     fields.x.forEach((xField: any) => {
+//       const processedField = processField(xField);
+//       if (processedField) ast.columns.push(processedField);
+//     });
+//   }
+
+//   // Process Y-Axis Fields
+//   if (Array.isArray(fields?.y)) {
+//     fields.y.forEach((yField: any) => {
+//       const processedField = processField(yField);
+//       if (processedField) ast.columns.push(processedField);
+//     });
+//   }
+
+//   console.log(ast, "AST");
+
+//   const sql = parser.sqlify(ast);
+//   return sql.replace(/`/g, '"');
+// }
+
 // List of known aggregation functions
 const aggregationFunctions = new Set([
   "count",
@@ -639,52 +773,39 @@ const aggregationFunctions = new Set([
 ]);
 
 // Helper function to process function arguments
-const processFunctionArgs = (args: any[]) => {
-  return {
-    type: "expr_list",
-    value: args.map((arg) => {
-      if (!arg || !arg.type)
-        return { type: "default", value: "unknown_column" };
-
-      switch (arg.type) {
-        case "field":
-          return {
-            type: "column_ref",
-            table: null,
-            column: arg.value?.field || "unknown_column",
-          };
-
-        case "number":
-          return {
-            type: "number",
-            value: arg.value ?? 0,
-          };
-
-        case "string":
-          return {
-            type: "string",
-            value: arg.value || "",
-          };
-
-        case "function":
-          return processField(arg.value); // Recursively process nested functions
-
-        default:
-          return { type: "default", value: "unknown_column" };
-      }
-    }),
-  };
+const processFunctionArgs = (args: any[], isAggregation: boolean) => {
+  if (isAggregation) {
+    // Aggregation functions need a single `expr` argument
+    return {
+      distinct: null,
+      expr: {
+        type: "column_ref",
+        table: null,
+        column: args[0]?.value?.field || args[0]?.value || "unknown_column",
+      },
+      orderby: null,
+      separator: null,
+    };
+  } else {
+    // Regular functions need an `expr_list`
+    return {
+      type: "expr_list",
+      value: args.map((arg) => ({
+        type: "column_ref",
+        table: null,
+        column: arg.value?.field || arg.value || "unknown_column",
+      })),
+    };
+  }
 };
 
 // Helper function to process fields for SELECT clause
-const processField: any = (field: any) => {
+const processField = (field: any) => {
   if (!field || !field.alias) return null; // Ignore invalid fields
 
   if (field.functionName) {
     const functionNameLower = field.functionName.toLowerCase();
     const isAggregation = aggregationFunctions.has(functionNameLower);
-
-    console.log(isAggregation, "isAggregation", field);
 
     return {
       type: "expr",
@@ -693,7 +814,7 @@ const processField: any = (field: any) => {
         name: isAggregation
           ? field.functionName.toUpperCase()
           : { name: [{ type: "default", value: field.functionName }] },
-        args: processFunctionArgs(field.args || []),
+        args: processFunctionArgs(field.args || [], isAggregation),
         over: null,
       },
       as: field.alias,
@@ -716,37 +837,157 @@ export async function buildSQLQueryWithParser(
   fields: any,
   joins: any[],
 ): Promise<string> {
-  // import parser
+  // Import parser
   await importSqlParser();
 
   const ast: any = {
+    with: null,
     type: "select",
+    options: null,
+    distinct: { type: null },
     columns: [],
-    from: [{ db: null, table: fields?.stream || "unknown_table", as: null }],
+    from: [],
     where: null,
-    groupby: null,
-    orderby: null,
-    joins: [],
+    groupby: { columns: [] },
+    having: null,
+    orderby: [],
+    limit: { separator: "", value: [] },
+    window: null,
   };
 
-  // Process X-Axis Fields
+  const groupByFields: any[] = [];
+
+  // Main table reference
+  if (fields?.stream) {
+    ast.from.push({
+      db: null,
+      table: fields.stream,
+      as: null,
+    });
+  }
+
+  // Process X-Axis Fields (Included in GROUP BY & ORDER BY if applicable)
   if (Array.isArray(fields?.x)) {
     fields.x.forEach((xField: any) => {
       const processedField = processField(xField);
-      if (processedField) ast.columns.push(processedField);
+      if (processedField) {
+        ast.columns.push(processedField);
+        groupByFields.push({
+          type: "column_ref",
+          table: null,
+          column: xField.alias || xField.column || "unknown_column",
+        });
+
+        // Handle ORDER BY for X-axis
+        if (xField.sortBy) {
+          ast.orderby.push({
+            expr: {
+              type: "column_ref",
+              table: null,
+              column: xField.alias || xField.column || "unknown_column",
+            },
+            type: xField.sortBy.toLowerCase() === "desc" ? "DESC" : "ASC",
+          });
+        }
+      }
     });
   }
 
-  // Process Y-Axis Fields
+  // Process Breakdown Fields (Included in GROUP BY & ORDER BY if applicable)
+  if (Array.isArray(fields?.breakdown)) {
+    fields.breakdown.forEach((breakdownField: any) => {
+      const processedField = processField(breakdownField);
+      if (processedField) {
+        ast.columns.push(processedField);
+        groupByFields.push({
+          type: "column_ref",
+          table: null,
+          column:
+            breakdownField.alias || breakdownField.column || "unknown_column",
+        });
+
+        // Handle ORDER BY for Breakdown
+        if (breakdownField.sortBy) {
+          ast.orderby.push({
+            expr: {
+              type: "column_ref",
+              table: null,
+              column:
+                breakdownField.alias ||
+                breakdownField.column ||
+                "unknown_column",
+            },
+            type:
+              breakdownField.sortBy.toLowerCase() === "desc" ? "DESC" : "ASC",
+          });
+        }
+      }
+    });
+  }
+
+  // Process Y-Axis Fields (These may have ORDER BY)
   if (Array.isArray(fields?.y)) {
     fields.y.forEach((yField: any) => {
       const processedField = processField(yField);
-      if (processedField) ast.columns.push(processedField);
+      if (processedField) {
+        ast.columns.push(processedField);
+        if (yField.sortBy) {
+          ast.orderby.push({
+            expr: {
+              type: "column_ref",
+              table: null,
+              column: yField.alias || yField.column || "unknown_column",
+            },
+            type: yField.sortBy.toLowerCase() === "desc" ? "DESC" : "ASC",
+          });
+        }
+      }
     });
   }
 
-  console.log(ast, "AST");
+  // Assign GROUP BY fields if there are any
+  if (groupByFields.length > 0) {
+    ast.groupby = groupByFields;
+  }
 
+  // Process Joins
+  if (Array.isArray(joins)) {
+    joins.forEach((join: any) => {
+      ast.from.push({
+        db: null,
+        table: join.stream,
+        as: join.streamAlias,
+        join: join.joinType.toUpperCase() + " JOIN",
+        on: {
+          type: "binary_expr",
+          operator: join.conditions[0].operation, // Assuming single condition for now
+          left: {
+            type: "column_ref",
+            table: join.conditions[0].leftField.streamAlias || fields.stream,
+            column: {
+              expr: {
+                type: "default",
+                value: join.conditions[0].leftField.field,
+              },
+            },
+          },
+          right: {
+            type: "column_ref",
+            table:
+              join.conditions[0].rightField.streamAlias || join.streamAlias,
+            column: {
+              expr: {
+                type: "default",
+                value: join.conditions[0].rightField.field,
+              },
+            },
+          },
+        },
+      });
+    });
+  }
+
+  // Convert AST to SQL
   const sql = parser.sqlify(ast);
-  return sql.replace(/`/g, '"');
+  return sql.replace(/`/g, '"'); // Replace backticks with double quotes for consistency
 }

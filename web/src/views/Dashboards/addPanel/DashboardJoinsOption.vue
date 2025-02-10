@@ -132,8 +132,14 @@ export default defineComponent({
         joinType: "inner",
         conditions: [
           {
-            leftField: "",
-            rightField: "",
+            leftField: {
+              streamAlias: "",
+              field: "",
+            },
+            rightField: {
+              streamAlias: "",
+              field: "",
+            },
             logicalOperator: "AND",
             operation: "=",
           },

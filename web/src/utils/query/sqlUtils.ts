@@ -624,17 +624,100 @@ export const changeHistogramInterval = async (
   return sql.replace(/`/g, '"');
 };
 
+// List of known aggregation functions
+const aggregationFunctions = new Set([
+  "count",
+  "count-distinct",
+  "sum",
+  "avg",
+  "min",
+  "max",
+  "p50",
+  "p90",
+  "p95",
+  "p99",
+]);
+
+// Helper function to process function arguments
+const processFunctionArgs = (args: any[]) => {
+  return {
+    type: "expr_list",
+    value: args.map((arg) => {
+      if (!arg || !arg.type)
+        return { type: "default", value: "unknown_column" };
+
+      switch (arg.type) {
+        case "field":
+          return {
+            type: "column_ref",
+            table: null,
+            column: arg.value?.field || "unknown_column",
+          };
+
+        case "number":
+          return {
+            type: "number",
+            value: arg.value ?? 0,
+          };
+
+        case "string":
+          return {
+            type: "string",
+            value: arg.value || "",
+          };
+
+        case "function":
+          return processField(arg.value); // Recursively process nested functions
+
+        default:
+          return { type: "default", value: "unknown_column" };
+      }
+    }),
+  };
+};
+
+// Helper function to process fields for SELECT clause
+const processField: any = (field: any) => {
+  if (!field || !field.alias) return null; // Ignore invalid fields
+
+  if (field.functionName) {
+    const functionNameLower = field.functionName.toLowerCase();
+    const isAggregation = aggregationFunctions.has(functionNameLower);
+
+    console.log(isAggregation, "isAggregation", field);
+
+    return {
+      type: "expr",
+      expr: {
+        type: isAggregation ? "aggr_func" : "function",
+        name: isAggregation
+          ? field.functionName.toUpperCase()
+          : { name: [{ type: "default", value: field.functionName }] },
+        args: processFunctionArgs(field.args || []),
+        over: null,
+      },
+      as: field.alias,
+    };
+  } else {
+    return {
+      type: "expr",
+      expr: {
+        type: "column_ref",
+        table: null,
+        column: field.column || "unknown_column",
+      },
+      as: field.alias,
+    };
+  }
+};
+
+// Main function to build SQL query using AST
 export async function buildSQLQueryWithParser(
   fields: any,
   joins: any[],
 ): Promise<string> {
   // import parser
   await importSqlParser();
-  console.log(
-    parser.astify(
-      "select histogram(_timestamp) as x_axis_1, count(_timestamp) as y_axis_1 from test",
-    ),
-  );
 
   const ast: any = {
     type: "select",
@@ -646,50 +729,7 @@ export async function buildSQLQueryWithParser(
     joins: [],
   };
 
-  // **Helper Function to Process Fields for SELECT Clause**
-  const processField = (field: any) => {
-    if (!field || !field.alias) return null; // Ignore invalid fields
-
-    if (field.functionName) {
-      return {
-        type: "expr",
-        expr: {
-          type:
-            field.functionName.toLowerCase() === "count"
-              ? "aggr_func"
-              : "function",
-          name:
-            field.functionName.toLowerCase() === "count"
-              ? "COUNT"
-              : field.functionName,
-          args: {
-            type: "expr_list",
-            value: [
-              {
-                type: "column_ref",
-                table: null,
-                column: field.args?.[0]?.value?.field || "unknown_column",
-              },
-            ],
-          },
-          over: null,
-        },
-        as: field.alias,
-      };
-    } else {
-      return {
-        type: "expr",
-        expr: {
-          type: "column_ref",
-          table: null,
-          column: field.column || "unknown_column",
-        },
-        as: field.alias,
-      };
-    }
-  };
-
-  // **Process X-Axis Fields**
+  // Process X-Axis Fields
   if (Array.isArray(fields?.x)) {
     fields.x.forEach((xField: any) => {
       const processedField = processField(xField);
@@ -697,7 +737,7 @@ export async function buildSQLQueryWithParser(
     });
   }
 
-  // **Process Y-Axis Fields**
+  // Process Y-Axis Fields
   if (Array.isArray(fields?.y)) {
     fields.y.forEach((yField: any) => {
       const processedField = processField(yField);
@@ -705,6 +745,8 @@ export async function buildSQLQueryWithParser(
     });
   }
 
-  // **Convert AST to SQL**
-  return parser.sqlify(ast);
+  console.log(ast, "AST");
+
+  const sql = parser.sqlify(ast);
+  return sql.replace(/`/g, '"');
 }

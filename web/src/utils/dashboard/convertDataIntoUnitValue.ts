@@ -689,7 +689,10 @@ export const validateSQLPanelFields = (
   }
 };
 
-export function buildSQLQueryFromInput(fields: any): string {
+export function buildSQLQueryFromInput(
+  fields: any,
+  defaultStream: any,
+): string {
   // if fields type is raw, return rawQuery
   if (fields.type === "raw") {
     return `${fields?.rawQuery ?? ""}`;
@@ -735,7 +738,7 @@ export function buildSQLQueryFromInput(fields: any): string {
       sqlArgs.push(
         argValue.streamAlias
           ? argValue.streamAlias + "." + argValue.field
-          : argValue.field,
+          : defaultStream + "." + argValue.field,
       );
     } else if (argType === "string" || argType === "histogramInterval") {
       // Wrap strings in quotes if they are not already wrapped
@@ -753,13 +756,32 @@ export function buildSQLQueryFromInput(fields: any): string {
       sqlArgs.push(argValue);
     } else if (argType === "function") {
       // Recursively build the SQL query for the nested function
-      const nestedFunctionQuery = buildSQLQueryFromInput(argValue);
+      const nestedFunctionQuery = buildSQLQueryFromInput(
+        argValue,
+        defaultStream,
+      );
       sqlArgs.push(nestedFunctionQuery);
     } else {
       throw new Error(
         `Unsupported argument type "${argType}" for argument at position ${i + 1}.`,
       );
     }
+  }
+
+  // TODO: add aggregator
+  switch (functionName) {
+    case "count-distinct":
+      return `count(distinct(${sqlArgs.join(", ")}))`;
+    case "p50":
+      return `approx_percentile_cont(${sqlArgs.join(", ")}, 0.5)`;
+    case "p90":
+      return `approx_percentile_cont(${sqlArgs.join(", ")}, 0.9)`;
+    case "p95":
+      return `approx_percentile_cont(${sqlArgs.join(", ")}, 0.95)`;
+    case "p99":
+      return `approx_percentile_cont(${sqlArgs.join(", ")}, 0.99)`;
+    case "p50":
+      return `approx_percentile_cont(${sqlArgs.join(", ")}, 0.5)`;
   }
 
   // Construct the SQL query string

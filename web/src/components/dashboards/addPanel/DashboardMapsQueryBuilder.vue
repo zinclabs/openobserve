@@ -532,7 +532,12 @@ export default defineComponent({
         //  HERE NEED CHANGES
         return field.column;
       }
-      return buildSQLQueryFromInput(field);
+      return buildSQLQueryFromInput(
+        field,
+        dashboardPanelData.data.queries[
+          dashboardPanelData.layout.currentQueryIndex
+        ].fields?.stream,
+      );
     };
 
     const nameLabel = computed(() => {

@@ -952,13 +952,10 @@ export default defineComponent({
 
         // joins streams
         // main stream + all join streams
+        // wiil be object with stream and streamAlias
         const joinsStreams = [
           {
             stream:
-              dashboardPanelData.data.queries[
-                dashboardPanelData.layout.currentQueryIndex
-              ].fields.stream,
-            streamAlias:
               dashboardPanelData.data.queries[
                 dashboardPanelData.layout.currentQueryIndex
               ].fields.stream,

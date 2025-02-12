@@ -711,11 +711,6 @@ export function buildSQLQueryFromInput(
     throw new Error(`Function "${functionName}" is not supported.`);
   }
 
-  // if selectedFunction is null, simply return the first argument
-  if (selectedFunction.functionName === null) {
-    return `${args?.[0]?.value ?? fields.column ?? ""}`;
-  }
-
   // Validate the provided args against the function's argument definitions
   const argsDefinition = selectedFunction.args;
 
@@ -785,7 +780,11 @@ export function buildSQLQueryFromInput(
   }
 
   // Construct the SQL query string
-  return `${functionName}(${sqlArgs.join(", ")})`;
+  // if the function is not null, return the function call statement
+  // else return the first argument(if function is null, always only one argument will be there)
+  return functionName
+    ? `${functionName}(${sqlArgs.join(", ")})`
+    : `${sqlArgs[0]}`;
 }
 
 export function buildSQLJoinsFromInput(joins: any[]): string {

@@ -422,7 +422,7 @@ const useDashboardPanelData = (pageKey: string = "dashboard") => {
     );
   };
 
-  const addXAxisItem = (row: { name: string }) => {
+  const addXAxisItem = (row: { name: string; streamAlias?: string }) => {
     if (
       !dashboardPanelData.data.queries[
         dashboardPanelData.layout.currentQueryIndex
@@ -463,7 +463,7 @@ const useDashboardPanelData = (pageKey: string = "dashboard") => {
             ].fields.x.length +
               1)
           : row.name,
-      column: row.name,
+      // column: row.name,
       color: null,
       type: "build",
       functionName:
@@ -475,7 +475,10 @@ const useDashboardPanelData = (pageKey: string = "dashboard") => {
           ? [
               {
                 type: "field",
-                value: row.name,
+                value: {
+                  field: row.name,
+                  streamAlias: row.streamAlias,
+                },
               },
               {
                 type: "histogramInterval",
@@ -485,7 +488,10 @@ const useDashboardPanelData = (pageKey: string = "dashboard") => {
           : [
               {
                 type: "field",
-                value: row.name,
+                value: {
+                  field: row.name,
+                  streamAlias: row.streamAlias,
+                },
               },
             ],
       sortBy:
@@ -543,7 +549,7 @@ const useDashboardPanelData = (pageKey: string = "dashboard") => {
             ].fields.breakdown.length +
               1)
           : row.name,
-      column: row.name,
+      // column: row.name,
       color: null,
       type: "build",
       functionName:
@@ -555,7 +561,10 @@ const useDashboardPanelData = (pageKey: string = "dashboard") => {
           ? [
               {
                 type: "field",
-                value: row.name,
+                value: {
+                  field: row.name,
+                  streamAlias: row.streamAlias,
+                },
               },
               {
                 type: "histogramInterval",
@@ -565,7 +574,10 @@ const useDashboardPanelData = (pageKey: string = "dashboard") => {
           : [
               {
                 type: "field",
-                value: row.name,
+                value: {
+                  field: row.name,
+                  streamAlias: row.streamAlias,
+                },
               },
             ],
       sortBy:
@@ -622,20 +634,20 @@ const useDashboardPanelData = (pageKey: string = "dashboard") => {
             ].fields.y.length +
               1)
           : row.name,
-      column: row.name,
+      // column: row.name,
       color: getNewColorValue(),
       type: "build",
       functionName:
         dashboardPanelData.data.type == "heatmap" || isDerived ? null : "count",
-      args:
-        dashboardPanelData.data.type == "heatmap" || isDerived
-          ? []
-          : [
-              {
-                type: "field",
-                value: row.name,
-              },
-            ],
+      args: [
+        {
+          type: "field",
+          value: {
+            field: row.name,
+            streamAlias: row.streamAlias,
+          },
+        },
+      ],
       isDerived,
     });
     // }
@@ -683,18 +695,19 @@ const useDashboardPanelData = (pageKey: string = "dashboard") => {
             ].fields.z.length +
               1)
           : row.name,
-      column: row.name,
+      // column: row.name,
       color: getNewColorValue(),
       type: "build",
       functionName: isDerived ? null : "count",
-      args: isDerived
-        ? []
-        : [
-            {
-              type: "field",
-              value: row.name,
-            },
-          ],
+      args: [
+        {
+          type: "field",
+          value: {
+            field: row.name,
+            streamAlias: row.streamAlias,
+          },
+        },
+      ],
       isDerived,
     });
     // }
@@ -714,11 +727,19 @@ const useDashboardPanelData = (pageKey: string = "dashboard") => {
     ].fields.latitude = {
       label: generateLabelFromName(row.name),
       alias: isDerived ? row.name : "latitude",
-      column: row.name,
+      // column: row.name,
       color: getNewColorValue(),
       type: "build",
       functionName: null, // You can set the appropriate aggregation function here
-      args: [],
+      args: [
+        {
+          type: "field",
+          value: {
+            field: row.name,
+            streamAlias: row.streamAlias,
+          },
+        },
+      ],
       isDerived,
     };
     // }
@@ -737,11 +758,19 @@ const useDashboardPanelData = (pageKey: string = "dashboard") => {
     ].fields.longitude = {
       label: generateLabelFromName(row.name),
       alias: isDerived ? row.name : "longitude",
-      column: row.name,
+      // column: row.name,
       color: getNewColorValue(),
       type: "build",
       functionName: null, // You can set the appropriate aggregation function here
-      args: [],
+      args: [
+        {
+          type: "field",
+          value: {
+            field: row.name,
+            streamAlias: row.streamAlias,
+          },
+        },
+      ],
       isDerived,
     };
     // }
@@ -760,18 +789,19 @@ const useDashboardPanelData = (pageKey: string = "dashboard") => {
     ].fields.weight = {
       label: generateLabelFromName(row.name),
       alias: isDerived ? row.name : "weight",
-      column: row.name,
+      // column: row.name,
       color: getNewColorValue(),
       type: "build",
       functionName: isDerived ? null : "count", // You can set the appropriate aggregation function here
-      args: isDerived
-        ? []
-        : [
-            {
-              type: "field",
-              value: row.name,
-            },
-          ],
+      args: [
+        {
+          type: "field",
+          value: {
+            field: row.name,
+            streamAlias: row.streamAlias,
+          },
+        },
+      ],
       isDerived,
     };
     // }
@@ -788,11 +818,19 @@ const useDashboardPanelData = (pageKey: string = "dashboard") => {
     ].fields.name = {
       label: generateLabelFromName(row.name),
       alias: "name",
-      column: row.name,
+      // column: row.name,
       color: getNewColorValue(),
       type: "build",
       functionName: null, // You can set the appropriate aggregation function here
-      args: [],
+      args: [
+        {
+          type: "field",
+          value: {
+            field: row.name,
+            streamAlias: row.streamAlias,
+          },
+        },
+      ],
     };
     // }
   };
@@ -808,14 +846,17 @@ const useDashboardPanelData = (pageKey: string = "dashboard") => {
     ].fields.value_for_maps = {
       label: generateLabelFromName(row.name),
       alias: "value_for_maps",
-      column: row.name,
+      // column: row.name,
       color: getNewColorValue(),
       type: "build",
       functionName: "count", // You can set the appropriate aggregation function here
       args: [
         {
           type: "field",
-          value: row.name,
+          value: {
+            field: row.name,
+            streamAlias: row.streamAlias,
+          },
         },
       ],
     };
@@ -835,11 +876,19 @@ const useDashboardPanelData = (pageKey: string = "dashboard") => {
     ].fields.source = {
       label: generateLabelFromName(row.name),
       alias: isDerived ? row.name : "source",
-      column: row.name,
+      // column: row.name,
       color: getNewColorValue(),
       type: "build",
       functionName: null, // You can set the appropriate aggregation function here
-      args: [],
+      args: [
+        {
+          type: "field",
+          value: {
+            field: row.name,
+            streamAlias: row.streamAlias,
+          },
+        },
+      ],
       isDerived,
     };
     // }
@@ -858,11 +907,19 @@ const useDashboardPanelData = (pageKey: string = "dashboard") => {
     ].fields.target = {
       label: generateLabelFromName(row.name),
       alias: isDerived ? row.name : "target",
-      column: row.name,
+      // column: row.name,
       color: getNewColorValue(),
       type: "build",
       functionName: null, // You can set the appropriate aggregation function here
-      args: [],
+      args: [
+        {
+          type: "field",
+          value: {
+            field: row.name,
+            streamAlias: row.streamAlias,
+          },
+        },
+      ],
       isDerived,
     };
     // }
@@ -881,18 +938,19 @@ const useDashboardPanelData = (pageKey: string = "dashboard") => {
     ].fields.value = {
       label: generateLabelFromName(row.name),
       alias: isDerived ? row.name : "value",
-      column: row.name,
+      // column: row.name,
       color: getNewColorValue(),
       type: "build",
       functionName: isDerived ? null : "sum", // You can set the appropriate aggregation function here
-      args: isDerived
-        ? []
-        : [
-            {
-              type: "field",
-              value: row.name,
-            },
-          ],
+      args: [
+        {
+          type: "field",
+          value: {
+            field: row.name,
+            streamAlias: row.streamAlias,
+          },
+        },
+      ],
       isDerived,
     };
     // }
@@ -917,7 +975,8 @@ const useDashboardPanelData = (pageKey: string = "dashboard") => {
           dashboardPanelData.layout.currentQueryIndex
         ].fields.y.forEach((itemY: any) => {
           itemY.functionName = null;
-          itemY.args = [];
+          // take first arg
+          itemY.args = itemY.args.length ? [itemY?.args?.[0]] : [];
         });
         dashboardPanelData.data.queries[
           dashboardPanelData.layout.currentQueryIndex
@@ -959,12 +1018,8 @@ const useDashboardPanelData = (pageKey: string = "dashboard") => {
         ].fields.y.forEach((itemY: any) => {
           if (itemY.functionName === null && !itemY.isDerived) {
             itemY.functionName = "count";
-            itemY.args = [
-              {
-                type: "field",
-                value: itemY.column,
-              },
-            ];
+            // take first arg
+            itemY.args = itemY.args.length ? [itemY?.args?.[0]] : [];
           }
         });
         dashboardPanelData.data.queries[
@@ -1002,12 +1057,8 @@ const useDashboardPanelData = (pageKey: string = "dashboard") => {
         ].fields.y.forEach((itemY: any) => {
           if (itemY.functionName === null && !itemY.isDerived) {
             itemY.functionName = "count";
-            // itemY.args = [
-            //   {
-            //     type: "field",
-            //     value: itemY.column,
-            //   },
-            // ];
+            // take first arg
+            itemY.args = itemY.args.length ? [itemY?.args?.[0]] : [];
           }
         });
         dashboardPanelData.data.queries[
@@ -1800,12 +1851,8 @@ const useDashboardPanelData = (pageKey: string = "dashboard") => {
               !field.isDerived
             ) {
               field.functionName = "count";
-              // field.args = [
-              //   {
-              //     type: "field",
-              //     value: field.column,
-              //   },
-              // ];
+              // take first arg
+              field.args = field.args.length ? [field?.args?.[0]] : [];
             }
           }
 

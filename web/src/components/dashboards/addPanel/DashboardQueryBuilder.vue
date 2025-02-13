@@ -1188,6 +1188,10 @@ export default defineComponent({
           // move the item from field list to axis
           const dragElement = dashboardPanelData.meta.dragAndDrop.dragElement;
 
+          console.log(dragElement, "dragElement");
+
+
+          // Here, we need all fields for all joins streams
           const dragName =
             selectedStreamFieldsBasedOnUserDefinedSchema.value.find(
               (item: any) => item?.name === dragElement?.column,

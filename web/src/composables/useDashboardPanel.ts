@@ -25,6 +25,7 @@ import {
   buildSQLJoinsFromInput,
 } from "@/utils/dashboard/convertDataIntoUnitValue";
 import { buildSQLQueryWithParser } from "@/utils/query/sqlUtils";
+import useStreams from "./useStreams";
 
 const colors = [
   "#5960b2",
@@ -194,6 +195,9 @@ const getDefaultDashboardPanelData: any = () => ({
       streamResultsType: "",
       filterField: "",
     },
+    streamFields: {
+      groupedFields: [],
+    },
   },
 });
 
@@ -209,6 +213,7 @@ const getDefaultCustomChartText = () => {
 const useDashboardPanelData = (pageKey: string = "dashboard") => {
   const store = useStore();
   const { showErrorNotification } = useNotifications();
+  const { getStreams, getStream } = useStreams();
 
   // Initialize the state for this page key if it doesn't already exist
   if (!dashboardPanelDataObj[pageKey]) {
@@ -316,6 +321,172 @@ const useDashboardPanelData = (pageKey: string = "dashboard") => {
     }
 
     return dashboardPanelData.meta.stream.selectedStreamFields ?? [];
+  });
+
+  const streamCache: any = {};
+
+  async function loadStreamFields(streamName: string) {
+    try {
+      if (!streamName) return;
+      console.log(streamName, JSON.parse(JSON.stringify(streamCache)));
+
+      // If the stream data is already cached, return it immediately
+      if (streamCache[streamName]) {
+        console.log("Stream data already cached", streamCache[streamName]);
+        return streamCache[streamName]; // Return cached result
+      }
+
+      // Create a new request and store it in the cache
+      const requestPromise = getStream(
+        streamName,
+        dashboardPanelData.data.queries[
+          dashboardPanelData.layout.currentQueryIndex
+        ].fields.stream_type ?? "logs",
+        true,
+      )
+        .then((res: any) => {
+          console.log("then", res);
+          return res;
+        })
+        .catch((error) => {
+          throw error;
+        })
+        .finally(() => {
+          streamCache[streamName] = null; // Remove from cache on error
+        });
+
+      console.log("Stream data loaded", streamName, JSON.parse(JSON.stringify(requestPromise)));
+      streamCache[streamName] = requestPromise; // Store the promise in cache
+      return requestPromise;
+    } catch (e: any) {
+      console.log("Error while loading stream fields", e);
+    }
+  }
+
+  let latestRequestId: any = null;
+
+  watch(
+    () => [
+      dashboardPanelData.data.queries[
+        dashboardPanelData.layout.currentQueryIndex
+      ].fields.stream,
+      dashboardPanelData.data.queries[
+        dashboardPanelData.layout.currentQueryIndex
+      ].fields.stream_type,
+      dashboardPanelData.data.queries[
+        dashboardPanelData.layout.currentQueryIndex
+      ].joins,
+    ],
+    async () => {
+      // Generate a unique request ID
+      const requestId = Symbol();
+      latestRequestId = requestId;
+
+      const joins =
+        dashboardPanelData.data.queries[
+          dashboardPanelData.layout.currentQueryIndex
+        ].joins ?? [];
+
+      // Collect streams (main + joins)
+      const joinsStreams = [
+        {
+          stream:
+            dashboardPanelData.data.queries[
+              dashboardPanelData.layout.currentQueryIndex
+            ].fields.stream,
+        },
+        ...joins.filter((stream: any) => stream?.stream),
+      ];
+
+      console.log(joinsStreams, "joinsStreams");
+
+      // Fetch stream fields
+      const groupedFields = await Promise.all(
+        joinsStreams.map(async (stream: any) => {
+          return {
+            ...(await loadStreamFields(stream?.stream)),
+            stream_alias: stream?.streamAlias,
+          };
+        }),
+      );
+
+      // Only update if this is the latest request
+      if (latestRequestId === requestId) {
+        dashboardPanelData.meta.streamFields.groupedFields = groupedFields;
+      }
+    },
+    {
+      deep: true,
+    },
+  );
+
+  const flattenGroupedFields = computed(() => {
+    const flattenedFields: any[] = [];
+    dashboardPanelData.meta.streamFields.groupedFields.forEach((group: any) => {
+      // Add a group header row
+      flattenedFields.push({
+        isGroup: true,
+        groupName: group.name,
+      });
+
+      if (
+        group.settings.hasOwnProperty("defined_schema_fields") &&
+        group.settings.defined_schema_fields.length > 0
+      ) {
+        // add the user defined fields
+        // _timestamp field + user defined fields + all_fields_name
+
+        // add _timestamp field
+        flattenedFields.push({
+          name: store.state.zoConfig?.timestamp_column,
+          type: "Int64",
+          stream: group.name,
+          streamAlias: group.stream_alias,
+          isGroup: false,
+        });
+
+        // add user defined fields
+        for (const field of group.schema) {
+          if (
+            store.state.zoConfig.user_defined_schemas_enabled &&
+            group.settings.hasOwnProperty("defined_schema_fields") &&
+            group.settings.defined_schema_fields.length > 0
+          ) {
+            if (group.settings.defined_schema_fields.includes(field.name)) {
+              // push as a user defined schema
+              flattenedFields.push({
+                ...field,
+                stream: group.name,
+                streamAlias: group.stream_alias,
+                isGroup: false,
+              });
+            }
+          }
+        }
+
+        // add all_fields_name
+        flattenedFields.push({
+          name: store.state.zoConfig?.all_fields_name,
+          type: "Utf8",
+          stream: group.name,
+          streamAlias: group.stream_alias,
+          isGroup: false,
+        });
+      } else {
+        // use schema of the group
+        // Add the fields in the group, including the group name
+        group.schema.forEach((field: any) => {
+          flattenedFields.push({
+            ...field,
+            stream: group.name,
+            streamAlias: group.stream_alias,
+            isGroup: false,
+          });
+        });
+      }
+    });
+
+    return flattenedFields;
   });
 
   const isAddXAxisNotAllowed = computed((e: any) => {
@@ -3373,6 +3544,7 @@ const useDashboardPanelData = (pageKey: string = "dashboard") => {
     currentYLabel,
     generateLabelFromName,
     selectedStreamFieldsBasedOnUserDefinedSchema,
+    flattenGroupedFields,
   };
 };
 export default useDashboardPanelData;

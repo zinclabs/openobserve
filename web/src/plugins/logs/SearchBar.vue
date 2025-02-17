@@ -1042,7 +1042,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
           
           </div>
           <div class="text-left">
-            Maximum 10000 events can be returned in schedule job
+            Maximum 100000 events can be returned in schedule job
           </div>
           <div style="opacity: 0.8;" class="text-left mapping-warning-msg q-mt-md">
                     <q-icon name="warning" color="red" class="q-mr-sm" />
@@ -3027,19 +3027,19 @@ export default defineComponent({
           $q.notify({
             type: "negative",
             message: "Job Already Scheduled , please change some parameters to schedule new job",
-            timeout: 10000,
+            timeout: 3000,
           });
           return;
         }
         if (
-          searchObj.meta.jobRecords > 10000 ||
+          searchObj.meta.jobRecords > 100000 ||
           searchObj.meta.jobRecords == 0 ||
           searchObj.meta.jobRecords < 0
         ) {
           $q.notify({
             type: "negative",
-            message: "Job Scheduler should be between 1 and 10000",
-            timeout: 10000,
+            message: "Job Scheduler should be between 1 and 100000",
+            timeout: 3000,
           });
           return;
         }
@@ -3052,7 +3052,7 @@ export default defineComponent({
         $q.notify({
           type: "negative",
           message: "Error while adding job",
-          timeout: 10000,
+          timeout: 3000,
         });
         return;
       }

@@ -1060,7 +1060,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
             :label="t('confirmDialog.cancel')"
             color="secondary"
             v-close-popup
-            @click="searchSchedulerJob = false"
+            @click="{
+              searchSchedulerJob = false;
+              searchObj.meta.showSearchScheduler = false;
+            }"
           />
           <q-btn
             data-test="search-scheduler-max-records-submit-btn"
@@ -1081,13 +1084,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
       @update:ok="confirmDeleteSavedViews"
       @update:cancel="confirmDelete = false"
       v-model="confirmDelete"
-    />
-    <ConfirmDialog
-      title="Search Scheduler Job"
-      message="This search is taking long time. Do you want to save this as a search scheduler job?"
-      @update:cancel="autoSearchSchedulerJob = false"
-      @update:ok="addJobScheduler"
-      v-model="autoSearchSchedulerJob"
     />
     <ConfirmDialog
       title="Update Saved View"
@@ -1401,6 +1397,15 @@ export default defineComponent({
       () => searchObj.data.stream.selectedStreamFields,
       (fields) => {
         if (fields != undefined && fields.length) updateFieldKeywords(fields);
+      },
+      { immediate: true, deep: true },
+    );
+    watch(
+      () => searchObj.meta.showSearchScheduler,
+      (showSearchScheduler) => {
+        if(showSearchScheduler){
+          searchSchedulerJob.value = true;
+        }
       },
       { immediate: true, deep: true },
     );
@@ -3045,6 +3050,7 @@ export default defineComponent({
         }
 
         searchSchedulerJob.value = false;
+        searchObj.meta.showSearchScheduler = false;
         await getJobData();
 
       }

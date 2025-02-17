@@ -154,6 +154,7 @@ const defaultObject = {
     useUserDefinedSchemas: "user_defined_schema",
     hasUserDefinedSchemas: false,
     selectedTraceStream: "",
+    showSearchScheduler: false,
   },
   data: {
     query: <any>"",
@@ -3945,7 +3946,13 @@ const useLogs = () => {
       ) {
         delete router.currentRoute.value.query.type;
       }
+      const queryTimeout = setTimeout(() => {
+        if (searchObj.loading) {
+          searchObj.meta.showSearchScheduler = true;
+        }
+      }, 120000);
       await getQueryData();
+      clearTimeout(queryTimeout); 
     } catch (e: any) {
       console.log("Error while loading logs data");
     }

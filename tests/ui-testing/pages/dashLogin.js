@@ -1,7 +1,10 @@
 // dashboardlogin.js   
 export const login = async (page) => {  
     await page.goto(process.env["ZO_BASE_URL"], { waitUntil: "networkidle" });
-    await page.getByText('Login as internal user').click();
+    
+    if (await page.getByText('Login as internal user').isVisible()) {
+      await page.getByText('Login as internal user').click();
+  }
     await page.waitForTimeout(1000);
     await page
       .locator('[data-cy="login-user-id"]')

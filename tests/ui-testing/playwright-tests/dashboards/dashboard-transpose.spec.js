@@ -9,7 +9,11 @@ test.describe.configure({ mode: "parallel" });
 
 async function login(page) {
   await page.goto(process.env["ZO_BASE_URL"], { waitUntil: "networkidle" });
-  // await page.getByText('Login as internal user').click();
+
+  if (await page.getByText("Login as internal user").isVisible()) {
+    await page.getByText("Login as internal user").click();
+  }
+
   await page.waitForTimeout(1000);
   await page
     .locator('[data-cy="login-user-id"]')
@@ -169,79 +173,119 @@ test.describe("dashboard UI testcases", () => {
   }) => {
     await page.locator('[data-test="menu-link-\\/dashboards-item"]').click();
     await waitForDashboardPage(page);
-  
+
     // Create a new dashboard
     await page.locator('[data-test="dashboard-add"]').click();
-    await page.locator('[data-test="add-dashboard-name"]').fill(randomDashboardName);
+    await page
+      .locator('[data-test="add-dashboard-name"]')
+      .fill(randomDashboardName);
     await page.locator('[data-test="dashboard-add-submit"]').click();
-  
+
     // Add panel to the dashboard
-    await page.locator('[data-test="dashboard-if-no-panel-add-panel-btn"]').click();
-    await page.locator("label").filter({ hasText: "Streamarrow_drop_down" }).locator("i").click();
+    await page
+      .locator('[data-test="dashboard-if-no-panel-add-panel-btn"]')
+      .click();
+    await page
+      .locator("label")
+      .filter({ hasText: "Streamarrow_drop_down" })
+      .locator("i")
+      .click();
     await page.getByRole("option", { name: "e2e_automate" }).click();
     await page
       .locator('[data-test="dashboard-x-item-_timestamp-remove"]')
       .click();
-    
+
     await page
-      .locator('[data-test="field-list-item-logs-e2e_automate-kubernetes_namespace_name"] [data-test="dashboard-add-x-data"]')
+      .locator(
+        '[data-test="field-list-item-logs-e2e_automate-kubernetes_namespace_name"] [data-test="dashboard-add-x-data"]'
+      )
       .click();
     await page
-      .locator('[data-test="field-list-item-logs-e2e_automate-kubernetes_container_name"] [data-test="dashboard-add-y-data"]')
+      .locator(
+        '[data-test="field-list-item-logs-e2e_automate-kubernetes_container_name"] [data-test="dashboard-add-y-data"]'
+      )
       .click();
     await page.locator('[data-test="dashboard-apply"]').click();
     await page.locator('[data-test="dashboard-panel-name"]').click();
     await page.locator('[data-test="dashboard-panel-name"]').fill("test");
     await page.locator('[data-test="date-time-btn"]').click();
-  
+
     await page.locator('[data-test="date-time-relative-6-w-btn"]').click();
     await page.locator('[data-test="dashboard-apply"]').click();
-  
+
     await page.waitForTimeout(2000);
-  
+
     // Select table chart and perform transpose
     await page.locator('[data-test="selected-chart-table-item"] img').click();
     await page.getByRole("cell", { name: "Kubernetes Container Name" }).click();
     await page.locator('[data-test="dashboard-sidebar"]').click();
-    await page.locator('[data-test="dashboard-config-table_transpose"] div').nth(2).click();
+    await page
+      .locator('[data-test="dashboard-config-table_transpose"] div')
+      .nth(2)
+      .click();
     await page.locator('[data-test="dashboard-apply"]').click();
     await page.waitForTimeout(2000);
-  
+
     // Validate data consistency before and after transpose
     await validateTableDataBeforeAndAfterTranspose(page);
-  
+
     // Helper function to validate table data before and after transposing
     // Helper function to dynamically transpose data and validate it
     async function validateTableDataBeforeAndAfterTranspose(page) {
       // Step 1: Capture headers and initial data from the table
-      const headers = await page.$$eval('[data-test="dashboard-panel-table"] thead tr th', (headerCells) =>
-        headerCells.map(cell => cell.textContent.trim().replace(/^arrow_upward/, "")) // Remove "arrow_upward" prefix
+      const headers = await page.$$eval(
+        '[data-test="dashboard-panel-table"] thead tr th',
+        (headerCells) =>
+          headerCells.map((cell) =>
+            cell.textContent.trim().replace(/^arrow_upward/, "")
+          ) // Remove "arrow_upward" prefix
       );
 
-      const initialData = await page.$$eval('[data-test="dashboard-panel-table"] tbody tr', (rows) =>
-        rows
-          .map(row => Array.from(row.querySelectorAll("td"), cell => cell.textContent.trim()))
-          .filter(row => row.length > 0 && row.some(cell => cell !== ""))
+      const initialData = await page.$$eval(
+        '[data-test="dashboard-panel-table"] tbody tr',
+        (rows) =>
+          rows
+            .map((row) =>
+              Array.from(row.querySelectorAll("td"), (cell) =>
+                cell.textContent.trim()
+              )
+            )
+            .filter((row) => row.length > 0 && row.some((cell) => cell !== ""))
       );
 
       // Step 2: Perform transpose by simulating the transpose button click
-      await page.locator('[data-test="dashboard-config-table_transpose"] div').nth(2).click();
+      await page
+        .locator('[data-test="dashboard-config-table_transpose"] div')
+        .nth(2)
+        .click();
       await page.locator('[data-test="dashboard-apply"]').click();
       await page.waitForTimeout(2000);
 
       // Step 3: Capture transposed data from the table
-      const transposedData = await page.$$eval('[data-test="dashboard-panel-table"] tr', (rows) =>
-        rows
-          .map(row => Array.from(row.querySelectorAll("td"), cell => cell.textContent.trim()))
-          .filter(row => row.length > 0 && row.some(cell => cell !== ""))
+      const transposedData = await page.$$eval(
+        '[data-test="dashboard-panel-table"] tr',
+        (rows) =>
+          rows
+            .map((row) =>
+              Array.from(row.querySelectorAll("td"), (cell) =>
+                cell.textContent.trim()
+              )
+            )
+            .filter((row) => row.length > 0 && row.some((cell) => cell !== ""))
       );
 
       // Step 4: Flatten `initialData` by pairing each namespace header with its value, excluding the empty namespace
-      const flattenedInitialData = headers.slice(1).map((namespace, index) => [namespace, initialData[0][index + 1]]);
+      const flattenedInitialData = headers
+        .slice(1)
+        .map((namespace, index) => [namespace, initialData[0][index + 1]]);
 
       // Step 5: Sort both `flattenedInitialData` and `transposedData` for comparison
-      const sortedFlattenedInitialData = flattenedInitialData.sort((a, b) => a[0].localeCompare(b[0]));
-      const sortedTransposedData = transposedData.sort((a, b) => a[0].localeCompare(b[0]));
+      const sortedFlattenedInitialData = flattenedInitialData.sort((a, b) =>
+        a[0].localeCompare(b[0])
+      );
+      const sortedTransposedData = transposedData.sort((a, b) =>
+        a[0].localeCompare(b[0])
+      );
 
       // Step 6: Directly compare sorted arrays
       expect(sortedTransposedData).toEqual(sortedFlattenedInitialData);
@@ -363,9 +407,9 @@ test.describe("dashboard UI testcases", () => {
       .locator('[data-test="dashboard-vrl-function-editor"]')
       .getByLabel("Editor content;Press Alt+F1")
       .fill(".vrl=100");
-    
+
     await page.waitForTimeout(2000);
-    
+
     await page
       .locator('[data-test="dashboard-config-table_dynamic_columns"] div')
       .nth(2)
@@ -388,13 +432,13 @@ test.describe("dashboard UI testcases", () => {
 
   test("should not show an error when both the Transpose and Dynamic Column toggle buttons are enabled", async ({
     page,
-}) => {
+  }) => {
     // Set up listener to catch console errors
-    let errorMessage = '';
-    page.on('console', (msg) => {
-        if (msg.type() === 'error') {
-            errorMessage += msg.text() + '\n';
-        }
+    let errorMessage = "";
+    page.on("console", (msg) => {
+      if (msg.type() === "error") {
+        errorMessage += msg.text() + "\n";
+      }
     });
 
     // Navigate to dashboard creation and configuration steps
@@ -404,26 +448,54 @@ test.describe("dashboard UI testcases", () => {
     // Create a new dashboard
     await page.locator('[data-test="dashboard-add"]').click();
     await page.locator('[data-test="add-dashboard-name"]').click();
-    await page.locator('[data-test="add-dashboard-name"]').fill(randomDashboardName);
+    await page
+      .locator('[data-test="add-dashboard-name"]')
+      .fill(randomDashboardName);
     await page.locator('[data-test="dashboard-add-submit"]').click();
 
     // Add panel to the dashboard
-    await page.locator('[data-test="dashboard-if-no-panel-add-panel-btn"]').click();
-    await page.locator("label").filter({ hasText: "Streamarrow_drop_down" }).locator("i").click();
+    await page
+      .locator('[data-test="dashboard-if-no-panel-add-panel-btn"]')
+      .click();
+    await page
+      .locator("label")
+      .filter({ hasText: "Streamarrow_drop_down" })
+      .locator("i")
+      .click();
     await page.getByRole("option", { name: "e2e_automate" }).click();
-    await page.locator('[data-test="field-list-item-logs-e2e_automate-kubernetes_container_name"] [data-test="dashboard-add-y-data"]').click();
+    await page
+      .locator(
+        '[data-test="field-list-item-logs-e2e_automate-kubernetes_container_name"] [data-test="dashboard-add-y-data"]'
+      )
+      .click();
     await page.locator('[data-test="date-time-btn"]').click();
     await page.locator('[data-test="date-time-relative-6-w-btn"]').click();
     await page.locator('[data-test="dashboard-apply"]').click();
 
     await page.locator('[data-test="dashboard-sidebar"]').click();
-    await page.locator('[data-test="logs-search-bar-show-query-toggle-btn"] div').nth(2).click();
-    await page.locator("#fnEditor > .monaco-editor > .overflow-guard > div:nth-child(2) > .lines-content > .view-lines > .view-line").click();
-    await page.locator('[data-test="dashboard-vrl-function-editor"]').getByLabel("Editor content;Press Alt+F1").fill(".vrl=100");
+    await page
+      .locator('[data-test="logs-search-bar-show-query-toggle-btn"] div')
+      .nth(2)
+      .click();
+    await page
+      .locator(
+        "#fnEditor > .monaco-editor > .overflow-guard > div:nth-child(2) > .lines-content > .view-lines > .view-line"
+      )
+      .click();
+    await page
+      .locator('[data-test="dashboard-vrl-function-editor"]')
+      .getByLabel("Editor content;Press Alt+F1")
+      .fill(".vrl=100");
 
     await page.locator('[data-test="selected-chart-table-item"] img').click();
-    await page.locator('[data-test="dashboard-config-table_dynamic_columns"] div').nth(2).click();
-    await page.locator('[data-test="dashboard-config-table_transpose"] div').nth(2).click();
+    await page
+      .locator('[data-test="dashboard-config-table_dynamic_columns"] div')
+      .nth(2)
+      .click();
+    await page
+      .locator('[data-test="dashboard-config-table_transpose"] div')
+      .nth(2)
+      .click();
     await page.locator('[data-test="dashboard-apply"]').click();
 
     await page.locator('[data-test="dashboard-panel-name"]').click();
@@ -431,7 +503,6 @@ test.describe("dashboard UI testcases", () => {
     await page.locator('[data-test="dashboard-panel-save"]').click();
 
     // Assert no error occurred
-    expect(errorMessage).toBe('');
-});
-
+    expect(errorMessage).toBe("");
+  });
 });

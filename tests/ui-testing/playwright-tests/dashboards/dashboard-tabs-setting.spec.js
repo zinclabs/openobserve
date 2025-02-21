@@ -9,7 +9,11 @@ test.describe.configure({ mode: "parallel" });
 
 async function login(page) {
   await page.goto(process.env["ZO_BASE_URL"], { waitUntil: "networkidle" });
-  // await page.getByText('Login as internal user').click();
+
+  if (await page.getByText("Login as internal user").isVisible()) {
+    await page.getByText("Login as internal user").click();
+  }
+
   await page.waitForTimeout(1000);
   await page
     .locator('[data-cy="login-user-id"]')
@@ -117,138 +121,166 @@ test.describe("dashboard tabs setting", () => {
     await orgNavigation;
   });
 
-  test("should try to open tabs, click add tabs, and without saving close it ", async ({ page, }) => {
+  test("should try to open tabs, click add tabs, and without saving close it ", async ({
+    page,
+  }) => {
     await page.locator('[data-test="menu-link-\\/dashboards-item"]').click();
     await waitForDashboardPage(page);
     await page.locator('[data-test="dashboard-add"]').click();
     await page.locator('[data-test="add-dashboard-name"]').click();
     await page
-    .locator('[data-test="add-dashboard-name"]')
-    .fill(randomDashboardName);
+      .locator('[data-test="add-dashboard-name"]')
+      .fill(randomDashboardName);
     await page.locator('[data-test="dashboard-add-submit"]').click();
     await page.locator('[data-test="dashboard-setting-btn"]').click();
     await page.locator('[data-test="dashboard-settings-tab-tab"]').click();
-    await  page.locator('[data-test="dashboard-tab-settings-add-tab"]').click();
+    await page.locator('[data-test="dashboard-tab-settings-add-tab"]').click();
     await page.locator('[data-test="dashboard-add-cancel"]').click();
     await page.locator('[data-test="dashboard-settings-close-btn"]').click();
-  })
+  });
 
-  test("should go to tabs, click on add tab, add its name and save it", async ({ page, }) => {
+  test("should go to tabs, click on add tab, add its name and save it", async ({
+    page,
+  }) => {
     await page.locator('[data-test="menu-link-\\/dashboards-item"]').click();
     await waitForDashboardPage(page);
     await page.locator('[data-test="dashboard-add"]').click();
     await page.locator('[data-test="add-dashboard-name"]').click();
     await page
-    .locator('[data-test="add-dashboard-name"]')
-    .fill(randomDashboardName);
+      .locator('[data-test="add-dashboard-name"]')
+      .fill(randomDashboardName);
     await page.locator('[data-test="dashboard-add-submit"]').click();
     await page.locator('[data-test="dashboard-setting-btn"]').click();
     await page.locator('[data-test="dashboard-settings-tab-tab"]').click();
     await page.locator('[data-test="dashboard-tab-settings-add-tab"]').click();
     await page.locator('[data-test="dashboard-add-tab-name"]').click();
-    await page.locator('[data-test="dashboard-add-tab-name"]').fill('test');
+    await page.locator('[data-test="dashboard-add-tab-name"]').fill("test");
     await page.locator('[data-test="dashboard-add-tab-submit"]').click();
     await page.locator('[data-test="dashboard-settings-close-btn"]').click();
     await expect(page.getByText("Dashboard added successfully.")).toBeVisible({
-        timeout: 3000,
+      timeout: 3000,
     });
     await expect(page.getByText("Tab added successfully")).toBeVisible({
-        timeout: 2000,
+      timeout: 2000,
     });
-  })
+  });
 
-  test("should edit tab name and save it", async ({ page, }) => {
+  test("should edit tab name and save it", async ({ page }) => {
     await page.locator('[data-test="menu-link-\\/dashboards-item"]').click();
     await waitForDashboardPage(page);
     await page.locator('[data-test="dashboard-add"]').click();
     await page.locator('[data-test="add-dashboard-name"]').click();
     await page
-    .locator('[data-test="add-dashboard-name"]')
-    .fill(randomDashboardName);
+      .locator('[data-test="add-dashboard-name"]')
+      .fill(randomDashboardName);
     await page.locator('[data-test="dashboard-add-submit"]').click();
     await page.locator('[data-test="dashboard-setting-btn"]').click();
     await page.locator('[data-test="dashboard-settings-tab-tab"]').click();
     await page.locator('[data-test="dashboard-tab-settings-add-tab"]').click();
     await page.locator('[data-test="dashboard-add-tab-name"]').click();
-    await page.locator('[data-test="dashboard-add-tab-name"]').fill('test');
+    await page.locator('[data-test="dashboard-add-tab-name"]').fill("test");
     await page.locator('[data-test="dashboard-add-tab-submit"]').click();
     await page.locator('[data-test="dashboard-settings-close-btn"]').click();
     await expect(page.getByText("Dashboard added successfully.")).toBeVisible({
-        timeout: 3000,
+      timeout: 3000,
     });
     await expect(page.getByText("Tab added successfully")).toBeVisible({
-        timeout: 2000,
+      timeout: 2000,
     });
     await page.locator('[data-test="dashboard-setting-btn"]').click();
     await page.locator('[data-test="dashboard-settings-tab-tab"]').click();
-    await page.locator('[data-test="dashboard-tab-settings-drag"] div').filter({ hasText: 'drag_indicatortestedit' }).locator('[data-test="dashboard-tab-settings-tab-edit-btn"]').click();
-    await page.locator('[data-test="dashboard-tab-settings-tab-name-edit"]').click();
-    await page.locator('[data-test="dashboard-tab-settings-tab-name-edit"]').fill('test 2');
-    await page.locator('[data-test="dashboard-tab-settings-tab-name-edit-save"]').click();
+    await page
+      .locator('[data-test="dashboard-tab-settings-drag"] div')
+      .filter({ hasText: "drag_indicatortestedit" })
+      .locator('[data-test="dashboard-tab-settings-tab-edit-btn"]')
+      .click();
+    await page
+      .locator('[data-test="dashboard-tab-settings-tab-name-edit"]')
+      .click();
+    await page
+      .locator('[data-test="dashboard-tab-settings-tab-name-edit"]')
+      .fill("test 2");
+    await page
+      .locator('[data-test="dashboard-tab-settings-tab-name-edit-save"]')
+      .click();
     await expect(page.getByText("Tab updated successfully")).toBeVisible({
-        timeout: 2000,
+      timeout: 2000,
     });
-  })
+  });
 
-  test("should edit tab name and cancel it", async ({ page, }) => {
+  test("should edit tab name and cancel it", async ({ page }) => {
     await page.locator('[data-test="menu-link-\\/dashboards-item"]').click();
     await waitForDashboardPage(page);
     await page.locator('[data-test="dashboard-add"]').click();
     await page.locator('[data-test="add-dashboard-name"]').click();
     await page
-    .locator('[data-test="add-dashboard-name"]')
-    .fill(randomDashboardName);
+      .locator('[data-test="add-dashboard-name"]')
+      .fill(randomDashboardName);
     await page.locator('[data-test="dashboard-add-submit"]').click();
     await page.locator('[data-test="dashboard-setting-btn"]').click();
     await page.locator('[data-test="dashboard-settings-tab-tab"]').click();
     await page.locator('[data-test="dashboard-tab-settings-add-tab"]').click();
     await page.locator('[data-test="dashboard-add-tab-name"]').click();
-    await page.locator('[data-test="dashboard-add-tab-name"]').fill('test');
+    await page.locator('[data-test="dashboard-add-tab-name"]').fill("test");
     await page.locator('[data-test="dashboard-add-tab-submit"]').click();
     await page.locator('[data-test="dashboard-settings-close-btn"]').click();
     await expect(page.getByText("Dashboard added successfully.")).toBeVisible({
-        timeout: 3000,
+      timeout: 3000,
     });
     await expect(page.getByText("Tab added successfully")).toBeVisible({
-        timeout: 2000,
+      timeout: 2000,
     });
     await page.locator('[data-test="dashboard-setting-btn"]').click();
     await page.locator('[data-test="dashboard-settings-tab-tab"]').click();
-    await page.locator('[data-test="dashboard-tab-settings-drag"] div').filter({ hasText: 'drag_indicatortestedit' }).locator('[data-test="dashboard-tab-settings-tab-edit-btn"]').click();
-    await page.locator('[data-test="dashboard-tab-settings-tab-name-edit"]').click();
-    await page.locator('[data-test="dashboard-tab-settings-tab-name-edit"]').fill('test 2');
-    await page.locator('[data-test="dashboard-tab-settings-tab-name-edit-cancel"]').click();
-  })
+    await page
+      .locator('[data-test="dashboard-tab-settings-drag"] div')
+      .filter({ hasText: "drag_indicatortestedit" })
+      .locator('[data-test="dashboard-tab-settings-tab-edit-btn"]')
+      .click();
+    await page
+      .locator('[data-test="dashboard-tab-settings-tab-name-edit"]')
+      .click();
+    await page
+      .locator('[data-test="dashboard-tab-settings-tab-name-edit"]')
+      .fill("test 2");
+    await page
+      .locator('[data-test="dashboard-tab-settings-tab-name-edit-cancel"]')
+      .click();
+  });
 
-  test("should delete tab, click delete and confirm it", async ({ page, }) => {
+  test("should delete tab, click delete and confirm it", async ({ page }) => {
     await page.locator('[data-test="menu-link-\\/dashboards-item"]').click();
     await waitForDashboardPage(page);
     await page.locator('[data-test="dashboard-add"]').click();
     await page.locator('[data-test="add-dashboard-name"]').click();
     await page
-    .locator('[data-test="add-dashboard-name"]')
-    .fill(randomDashboardName);
+      .locator('[data-test="add-dashboard-name"]')
+      .fill(randomDashboardName);
     await page.locator('[data-test="dashboard-add-submit"]').click();
     await page.locator('[data-test="dashboard-setting-btn"]').click();
     await page.locator('[data-test="dashboard-settings-tab-tab"]').click();
     await page.locator('[data-test="dashboard-tab-settings-add-tab"]').click();
     await page.locator('[data-test="dashboard-add-tab-name"]').click();
-    await page.locator('[data-test="dashboard-add-tab-name"]').fill('test');
+    await page.locator('[data-test="dashboard-add-tab-name"]').fill("test");
     await page.locator('[data-test="dashboard-add-tab-submit"]').click();
     await page.locator('[data-test="dashboard-settings-close-btn"]').click();
     await expect(page.getByText("Dashboard added successfully.")).toBeVisible({
-        timeout: 3000,
+      timeout: 3000,
     });
     await expect(page.getByText("Tab added successfully")).toBeVisible({
-        timeout: 2000,
+      timeout: 2000,
     });
     await page.locator('[data-test="dashboard-setting-btn"]').click();
     await page.locator('[data-test="dashboard-settings-tab-tab"]').click();
-    await page.locator('[data-test="dashboard-tab-settings-drag"] div').filter({ hasText: 'drag_indicatortestedit' }).locator('[data-test="dashboard-tab-settings-tab-delete-btn"]').click();
+    await page
+      .locator('[data-test="dashboard-tab-settings-drag"] div')
+      .filter({ hasText: "drag_indicatortestedit" })
+      .locator('[data-test="dashboard-tab-settings-tab-delete-btn"]')
+      .click();
     await page.locator('[data-test="dashboard-tab-delete-tab-para"]').click();
     await page.locator('[data-test="confirm-button"]').click();
     await expect(page.getByText("Tab deleted successfully")).toBeVisible({
-        timeout: 2000,
+      timeout: 2000,
     });
-  })
+  });
 });

@@ -9,7 +9,11 @@ test.describe.configure({ mode: "parallel" });
 
 async function login(page) {
   await page.goto(process.env["ZO_BASE_URL"], { waitUntil: "networkidle" });
-  // await page.getByText('Login as internal user').click();
+
+  if (await page.getByText("Login as internal user").isVisible()) {
+    await page.getByText("Login as internal user").click();
+  }
+
   await page.waitForTimeout(1000);
   await page
     .locator('[data-cy="login-user-id"]')
@@ -117,7 +121,9 @@ test.describe("dashboard general setting", () => {
     await orgNavigation;
   });
 
-  test("should verify that adding a default duration time automatically applies it as the default time on the chart", async ({ page, }) => {
+  test("should verify that adding a default duration time automatically applies it as the default time on the chart", async ({
+    page,
+  }) => {
     await page.locator('[data-test="menu-link-\\/dashboards-item"]').click();
     await waitForDashboardPage(page);
     await page.locator('[data-test="dashboard-add"]').click();
@@ -128,32 +134,50 @@ test.describe("dashboard general setting", () => {
     await page.locator('[data-test="dashboard-add-submit"]').click();
     await page.locator('[data-test="dashboard-setting-btn"]').click();
     await page.locator('[data-test="dashboard-general-setting-name"]').click();
-    await page.locator('[data-test="dashboard-general-setting-description"]').click();
-    await page.locator('[data-test="dashboard-general-setting-description"]').fill('test');
-    await page.locator('[data-test="dashboard-general-setting-datetime-picker"] [data-test="date-time-btn"]').click();
+    await page
+      .locator('[data-test="dashboard-general-setting-description"]')
+      .click();
+    await page
+      .locator('[data-test="dashboard-general-setting-description"]')
+      .fill("test");
+    await page
+      .locator(
+        '[data-test="dashboard-general-setting-datetime-picker"] [data-test="date-time-btn"]'
+      )
+      .click();
     await page.locator('[data-test="date-time-relative-2-h-btn"]').click();
 
-    await page.waitForSelector('[data-test="dashboard-general-setting-datetime-picker"] [data-test="date-time-btn"]');
-    const expectedTime = await page.locator('[data-test="dashboard-general-setting-datetime-picker"] [data-test="date-time-btn"]').textContent();
+    await page.waitForSelector(
+      '[data-test="dashboard-general-setting-datetime-picker"] [data-test="date-time-btn"]'
+    );
+    const expectedTime = await page
+      .locator(
+        '[data-test="dashboard-general-setting-datetime-picker"] [data-test="date-time-btn"]'
+      )
+      .textContent();
 
-    await page.locator('[data-test="dashboard-general-setting-save-btn"]').click();
+    await page
+      .locator('[data-test="dashboard-general-setting-save-btn"]')
+      .click();
     await expect(page.getByText("Dashboard updated successfully")).toBeVisible({
       timeout: 30000,
     });
     await page.locator('[data-test="dashboard-settings-close-btn"]').click();
     await page.locator('[data-test="dashboard-panel-add"]').click();
     await page.locator('[data-test="dashboard-panel-discard"]').click();
-    page.once('dialog', dialog => {
+    page.once("dialog", (dialog) => {
       dialog.dismiss().catch(() => {});
     });
     await page.waitForTimeout(2000);
     await page.locator('[data-test="date-time-btn"]').click();
     await page.waitForSelector('[data-test="date-time-btn"]'); // Wait for panel time display
-    const panelTime = await page.locator('[data-test="date-time-btn"]').textContent();    
+    const panelTime = await page
+      .locator('[data-test="date-time-btn"]')
+      .textContent();
     expect(panelTime).toBe(expectedTime);
-  })
+  });
 
-  test("should verify that dynamic toggle is diabled", async ({ page, }) => {
+  test("should verify that dynamic toggle is diabled", async ({ page }) => {
     await page.locator('[data-test="menu-link-\\/dashboards-item"]').click();
     await waitForDashboardPage(page);
     await page.locator('[data-test="dashboard-add"]').click();
@@ -164,12 +188,21 @@ test.describe("dashboard general setting", () => {
     await page.locator('[data-test="dashboard-add-submit"]').click();
     await page.locator('[data-test="dashboard-setting-btn"]').click();
     await page.locator('[data-test="dashboard-general-setting-name"]').click();
-    await page.locator('[data-test="dashboard-general-setting-description"]').click();
-    await page.locator('[data-test="dashboard-general-setting-description"]').fill('test');
-    await page.locator('[data-test="dashboard-general-setting-dynamic-filter"] div').nth(2).click();
-    await page.locator('[data-test="dashboard-general-setting-save-btn"]').click();
+    await page
+      .locator('[data-test="dashboard-general-setting-description"]')
+      .click();
+    await page
+      .locator('[data-test="dashboard-general-setting-description"]')
+      .fill("test");
+    await page
+      .locator('[data-test="dashboard-general-setting-dynamic-filter"] div')
+      .nth(2)
+      .click();
+    await page
+      .locator('[data-test="dashboard-general-setting-save-btn"]')
+      .click();
     await expect(page.getByText("Dashboard updated successfully")).toBeVisible({
       timeout: 30000,
     });
-  })
+  });
 });

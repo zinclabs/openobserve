@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use std::{str::FromStr, sync::Arc};
+use std::sync::Arc;
 
 use arrow::array::RecordBatch;
 use async_recursion::async_recursion;
@@ -131,7 +131,11 @@ pub async fn search(
     let node_group = req
         .search_event_type
         .as_ref()
-        .map(|v| SearchEventType::from_str(v).ok().map(RoleGroup::from))
+        .map(|v| {
+            SearchEventType::try_from(v.as_str())
+                .ok()
+                .map(RoleGroup::from)
+        })
         .unwrap_or(None);
     let nodes = get_online_querier_nodes(trace_id, node_group).await?;
     let querier_num = nodes.iter().filter(|node| node.is_querier()).count();

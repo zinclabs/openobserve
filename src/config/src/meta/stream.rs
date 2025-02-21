@@ -87,7 +87,7 @@ impl From<&str> for StreamType {
             "file_list" => StreamType::Filelist,
             "metadata" => StreamType::Metadata,
             "index" => StreamType::Index,
-            _ => StreamType::Logs,
+            _ => StreamType::default(),
         }
     }
 }

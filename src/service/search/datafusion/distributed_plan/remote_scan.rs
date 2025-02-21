@@ -1,4 +1,4 @@
-// Copyright 2024 OpenObserve Inc.
+// Copyright 2025 OpenObserve Inc.
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published by
@@ -26,7 +26,10 @@ use arrow_flight::{
     Ticket,
 };
 use arrow_schema::{Schema, SchemaRef};
-use config::{meta::search::ScanStats, utils::rand::generate_random_string};
+use config::{
+    meta::search::{ScanStats, SearchEventType},
+    utils::rand::generate_random_string,
+};
 use datafusion::{
     common::{DataFusionError, Result, Statistics},
     execution::{RecordBatchStream, SendableRecordBatchStream, TaskContext},
@@ -161,6 +164,7 @@ impl ExecutionPlan for RemoteScanExec {
         let fut = get_remote_batch(
             self.remote_scan_node.clone(),
             partition,
+            self.input.schema().clone(),
             self.scan_stats.clone(),
             self.partial_err.clone(),
         );
@@ -179,24 +183,40 @@ impl ExecutionPlan for RemoteScanExec {
 async fn get_remote_batch(
     remote_scan_node: RemoteScanNode,
     partition: usize,
+    schema: SchemaRef,
     scan_stats: Arc<Mutex<ScanStats>>,
     partial_err: Arc<Mutex<String>>,
 ) -> Result<SendableRecordBatchStream> {
+    let cfg = config::get_config();
     let trace_id = remote_scan_node.query_identifier.trace_id.clone();
     let org_id = remote_scan_node.query_identifier.org_id.clone();
     let context = remote_scan_node.opentelemetry_context.clone();
     let node = remote_scan_node.nodes[partition].clone();
     let is_querier = remote_scan_node.is_querier(partition);
+    let search_type = remote_scan_node
+        .super_cluster_info
+        .search_event_type
+        .as_ref()
+        .and_then(|s| s.as_str().try_into().ok());
+    let mut timeout = remote_scan_node.search_infos.timeout;
+    if matches!(search_type, Some(SearchEventType::UI)) && !is_querier {
+        timeout = std::cmp::min(timeout, cfg.limit.query_ingester_timeout);
+    }
+    if timeout == 0 {
+        timeout = cfg.limit.query_timeout;
+    }
 
     let mut request = remote_scan_node.get_flight_search_request(partition);
     request.set_job_id(generate_random_string(7));
     request.set_partition(partition);
 
     log::info!(
-        "[trace_id {}] flight->search: request node: {}, is_querier: {}, files: {}, idx_files: {}",
+        "[trace_id {}] flight->search: request node: {}, query_type: {}, is_querier: {}, timeout: {}, files: {}, idx_files: {}",
         trace_id,
         &node.get_grpc_addr(),
+        search_type.unwrap_or(SearchEventType::UI),
         is_querier,
+        timeout,
         request.search_info.file_id_list.len(),
         request.search_info.idx_file_list.len(),
     );
@@ -211,7 +231,6 @@ async fn get_remote_batch(
         ticket: buf.clone().into(),
     });
 
-    let cfg = config::get_config();
     let org_id: MetadataValue<_> = org_id
         .parse()
         .map_err(|_| DataFusionError::Internal("invalid org_id".to_string()))?;
@@ -240,11 +259,13 @@ async fn get_remote_batch(
             );
             DataFusionError::Internal("connect search node error".to_string())
         })?;
+
     let mut client =
         FlightServiceClient::with_interceptor(channel, move |mut req: tonic::Request<()>| {
             req.metadata_mut().insert("authorization", token.clone());
             req.metadata_mut()
                 .insert(org_header_key.clone(), org_id.clone());
+            req.set_timeout(std::time::Duration::from_secs(timeout));
             Ok(req)
         });
     client = client
@@ -260,13 +281,16 @@ async fn get_remote_batch(
         is_querier,
     );
 
-    let mut stream = client
-        .do_get(request)
-        .await
-        .map_err(|e| DataFusionError::Execution(e.to_string()))?
-        .into_inner();
-
-    let start = std::time::Instant::now();
+    let mut stream = match client.do_get(request).await {
+        Ok(stream) => stream,
+        Err(e) => {
+            if e.code() == tonic::Code::Cancelled {
+                return Ok(get_empty_record_batch_stream(schema, partial_err, e));
+            }
+            return Err(DataFusionError::Execution(e.to_string()));
+        }
+    }
+    .into_inner();
 
     log::info!(
         "[trace_id {}] flight->search: prepare to receive response from node: {}, is_querier: {}",
@@ -275,11 +299,18 @@ async fn get_remote_batch(
         is_querier,
     );
 
+    let start = std::time::Instant::now();
+
     // the schema should be the first message returned, else client should error
     let flight_data = match stream.message().await {
         Ok(Some(flight_data)) => flight_data,
         Ok(None) => return Err(DataFusionError::Execution("No schema returned".to_string())),
-        Err(e) => return Err(DataFusionError::Execution(e.to_string())),
+        Err(e) => {
+            if e.code() == tonic::Code::Cancelled {
+                return Ok(get_empty_record_batch_stream(schema, partial_err, e));
+            }
+            return Err(DataFusionError::Execution(e.to_string()));
+        }
     };
     // convert FlightData to a stream
     let schema = Arc::new(Schema::try_from(&flight_data)?);
@@ -304,6 +335,26 @@ async fn get_remote_batch(
         partial_err,
         start,
     )))
+}
+
+fn get_empty_record_batch_stream(
+    schema: SchemaRef,
+    partial_err: Arc<Mutex<String>>,
+    e: tonic::Status,
+) -> SendableRecordBatchStream {
+    process_partial_err(partial_err, e);
+    let stream = futures::stream::empty::<Result<RecordBatch>>();
+    Box::pin(RecordBatchStreamAdapter::new(schema, stream))
+}
+
+fn process_partial_err(partial_err: Arc<Mutex<String>>, e: tonic::Status) {
+    let mut guard = partial_err.lock();
+    let partial_err = guard.clone();
+    if partial_err.is_empty() {
+        guard.push_str(e.to_string().as_str());
+    } else {
+        guard.push_str(format!(" \n {}", e).as_str());
+    }
 }
 
 struct FlightStream {
@@ -366,15 +417,7 @@ impl Stream for FlightStream {
             Poll::Ready(None) => Poll::Ready(None),
             Poll::Pending => Poll::Pending,
             Poll::Ready(Some(Err(e))) => {
-                {
-                    let mut guard = self.partial_err.lock();
-                    let partial_err = guard.clone();
-                    if partial_err.is_empty() {
-                        guard.push_str(e.to_string().as_str());
-                    } else {
-                        guard.push_str(format!(" \n {}", e).as_str());
-                    }
-                }
+                process_partial_err(self.partial_err.clone(), e);
                 Poll::Ready(None)
             }
         }

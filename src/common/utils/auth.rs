@@ -1,4 +1,4 @@
-// Copyright 2024 OpenObserve Inc.
+// Copyright 2025 OpenObserve Inc.
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published by
@@ -210,10 +210,7 @@ impl FromRequest for AuthExtractor {
         use crate::common::utils::http::{get_folder, get_stream_type_from_request};
 
         let query = web::Query::<HashMap<String, String>>::from_query(req.query_string()).unwrap();
-        let stream_type = match get_stream_type_from_request(&query) {
-            Ok(v) => v,
-            Err(_) => Some(StreamType::Logs),
-        };
+        let stream_type = get_stream_type_from_request(&query);
 
         let folder = get_folder(&query);
 

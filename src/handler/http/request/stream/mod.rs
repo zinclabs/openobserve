@@ -61,18 +61,7 @@ async fn schema(
 ) -> Result<HttpResponse, Error> {
     let (org_id, stream_name) = path.into_inner();
     let query = web::Query::<HashMap<String, String>>::from_query(req.query_string()).unwrap();
-    let stream_type = match get_stream_type_from_request(&query) {
-        Ok(v) => v,
-        Err(e) => {
-            return Ok(
-                HttpResponse::BadRequest().json(meta::http::HttpResponse::error(
-                    http::StatusCode::BAD_REQUEST.into(),
-                    e.to_string(),
-                )),
-            );
-        }
-    };
-    let stream_type = stream_type.unwrap_or(StreamType::Logs);
+    let stream_type = get_stream_type_from_request(&query).unwrap_or_default();
     stream::get_stream(&org_id, &stream_name, stream_type).await
 }
 
@@ -106,33 +95,15 @@ async fn settings(
         stream_name = format_stream_name(&stream_name);
     }
     let query = web::Query::<HashMap<String, String>>::from_query(req.query_string()).unwrap();
-    let stream_type = match get_stream_type_from_request(&query) {
-        Ok(v) => {
-            if let Some(s_type) = v {
-                if s_type == StreamType::EnrichmentTables || s_type == StreamType::Index {
-                    return Ok(
-                        HttpResponse::BadRequest().json(meta::http::HttpResponse::error(
-                            http::StatusCode::BAD_REQUEST.into(),
-                            format!("Stream type '{}' not allowed", s_type),
-                        )),
-                    );
-                }
-                Some(s_type)
-            } else {
-                v
-            }
-        }
-        Err(e) => {
-            return Ok(
-                HttpResponse::BadRequest().json(meta::http::HttpResponse::error(
-                    http::StatusCode::BAD_REQUEST.into(),
-                    e.to_string(),
-                )),
-            );
-        }
-    };
-
-    let stream_type = stream_type.unwrap_or(StreamType::Logs);
+    let stream_type = get_stream_type_from_request(&query).unwrap_or_default();
+    if stream_type == StreamType::EnrichmentTables || stream_type == StreamType::Index {
+        return Ok(
+            HttpResponse::BadRequest().json(meta::http::HttpResponse::error(
+                http::StatusCode::BAD_REQUEST.into(),
+                format!("Stream type '{}' not allowed", stream_type),
+            )),
+        );
+    }
     stream::save_stream_settings(&org_id, &stream_name, stream_type, settings.into_inner()).await
 }
 
@@ -167,33 +138,15 @@ async fn update_settings(
         stream_name = format_stream_name(&stream_name);
     }
     let query = web::Query::<HashMap<String, String>>::from_query(req.query_string()).unwrap();
-    let stream_type = match get_stream_type_from_request(&query) {
-        Ok(v) => {
-            if let Some(s_type) = v {
-                if s_type == StreamType::EnrichmentTables || s_type == StreamType::Index {
-                    return Ok(
-                        HttpResponse::BadRequest().json(meta::http::HttpResponse::error(
-                            http::StatusCode::BAD_REQUEST.into(),
-                            format!("Stream type '{}' not allowed", s_type),
-                        )),
-                    );
-                }
-                Some(s_type)
-            } else {
-                v
-            }
-        }
-        Err(e) => {
-            return Ok(
-                HttpResponse::BadRequest().json(meta::http::HttpResponse::error(
-                    http::StatusCode::BAD_REQUEST.into(),
-                    e.to_string(),
-                )),
-            );
-        }
-    };
-
-    let stream_type = stream_type.unwrap_or(StreamType::Logs);
+    let stream_type = get_stream_type_from_request(&query).unwrap_or_default();
+    if stream_type == StreamType::EnrichmentTables || stream_type == StreamType::Index {
+        return Ok(
+            HttpResponse::BadRequest().json(meta::http::HttpResponse::error(
+                http::StatusCode::BAD_REQUEST.into(),
+                format!("Stream type '{}' not allowed", stream_type),
+            )),
+        );
+    }
     let stream_settings: UpdateStreamSettings = stream_settings.into_inner();
     let main_stream_res =
         stream::update_stream_settings(&org_id, &stream_name, stream_type, stream_settings.clone())
@@ -272,17 +225,7 @@ async fn delete_fields(
 ) -> Result<HttpResponse, Error> {
     let (org_id, stream_name) = path.into_inner();
     let query = web::Query::<HashMap<String, String>>::from_query(req.query_string()).unwrap();
-    let stream_type = match get_stream_type_from_request(&query) {
-        Ok(v) => v,
-        Err(e) => {
-            return Ok(
-                HttpResponse::BadRequest().json(meta::http::HttpResponse::error(
-                    http::StatusCode::BAD_REQUEST.into(),
-                    e.to_string(),
-                )),
-            );
-        }
-    };
+    let stream_type = get_stream_type_from_request(&query);
     match stream::delete_fields(
         &org_id,
         &stream_name,
@@ -327,18 +270,7 @@ async fn delete(
 ) -> Result<HttpResponse, Error> {
     let (org_id, stream_name) = path.into_inner();
     let query = web::Query::<HashMap<String, String>>::from_query(req.query_string()).unwrap();
-    let stream_type = match get_stream_type_from_request(&query) {
-        Ok(v) => v,
-        Err(e) => {
-            return Ok(
-                HttpResponse::BadRequest().json(meta::http::HttpResponse::error(
-                    http::StatusCode::BAD_REQUEST.into(),
-                    e.to_string(),
-                )),
-            );
-        }
-    };
-    let stream_type = stream_type.unwrap_or(StreamType::Logs);
+    let stream_type = get_stream_type_from_request(&query).unwrap_or_default();
     stream::delete_stream(&org_id, &stream_name, stream_type).await
 }
 
@@ -362,17 +294,7 @@ async fn delete(
 #[get("/{org_id}/streams")]
 async fn list(org_id: web::Path<String>, req: HttpRequest) -> impl Responder {
     let query = web::Query::<HashMap<String, String>>::from_query(req.query_string()).unwrap();
-    let stream_type = match get_stream_type_from_request(&query) {
-        Ok(v) => v,
-        Err(e) => {
-            return Ok(
-                HttpResponse::BadRequest().json(meta::http::HttpResponse::error(
-                    http::StatusCode::BAD_REQUEST.into(),
-                    e.to_string(),
-                )),
-            );
-        }
-    };
+    let stream_type = get_stream_type_from_request(&query);
 
     let fetch_schema = match query.get("fetchSchema") {
         Some(s) => match s.to_lowercase().as_str() {
@@ -460,18 +382,7 @@ async fn delete_stream_cache(
     }
     let (org_id, stream_name) = path.into_inner();
     let query = web::Query::<HashMap<String, String>>::from_query(req.query_string()).unwrap();
-    let stream_type = match get_stream_type_from_request(&query) {
-        Ok(v) => v,
-        Err(e) => {
-            return Ok(
-                HttpResponse::BadRequest().json(meta::http::HttpResponse::error(
-                    http::StatusCode::BAD_REQUEST.into(),
-                    e.to_string(),
-                )),
-            );
-        }
-    };
-    let stream_type = stream_type.unwrap_or(StreamType::Logs);
+    let stream_type = get_stream_type_from_request(&query).unwrap_or_default();
     let path = if stream_name.eq("_all") {
         org_id
     } else {

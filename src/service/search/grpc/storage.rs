@@ -327,9 +327,8 @@ async fn cache_files(
             scan_stats.querier_disk_cached_files += 1;
         }
     }
-    if files.len() as i64
-        == scan_stats.querier_memory_cached_files + scan_stats.querier_disk_cached_files
-    {
+    let files_num = files.len() as i64;
+    if files_num == scan_stats.querier_memory_cached_files + scan_stats.querier_disk_cached_files {
         // all files are cached
         return Ok(file_data::CacheType::None);
     }
@@ -379,7 +378,14 @@ async fn cache_files(
             }
         }
     });
-    Ok(cache_type)
+
+    // if cached file less than 50% of the total files, return None
+    if scan_stats.querier_memory_cached_files + scan_stats.querier_disk_cached_files < files_num / 2
+    {
+        Ok(file_data::CacheType::None)
+    } else {
+        Ok(cache_type)
+    }
 }
 
 #[tracing::instrument(name = "service:search:grpc:storage:cache_files_inner", skip_all)]

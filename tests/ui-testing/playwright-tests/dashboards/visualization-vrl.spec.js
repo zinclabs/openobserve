@@ -218,7 +218,7 @@ test.describe(" visualize UI testcases", () => {
     page,
   }) => {
     await page.locator('[data-test="date-time-btn"]').click();
-    await page.locator('[data-test="date-time-relative-6-w-btn"]').click();
+    await page.locator('[data-test="date-time-relative-3-h-btn"]').click();
 
     await page.locator('[data-test="logs-search-bar-refresh-btn"]').click();
 

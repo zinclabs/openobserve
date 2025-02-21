@@ -22,6 +22,7 @@ mod distinct_values;
 mod folders;
 mod meta;
 mod pipelines;
+mod ratelimit;
 mod scheduler;
 mod schemas;
 mod search_job;
@@ -29,9 +30,13 @@ mod short_urls;
 mod templates;
 
 use config::cluster::{is_offline, LOCAL_NODE};
-use o2_enterprise::enterprise::super_cluster::queue::{
-    ActionScriptsQueue, AlertsQueue, DashboardsQueue, DestinationsQueue, FoldersQueue, MetaQueue,
-    PipelinesQueue, SchemasQueue, SearchJobsQueue, SuperClusterQueueTrait, TemplatesQueue,
+use o2_enterprise::enterprise::super_cluster::{
+    queue::{
+        ActionScriptsQueue, AlertsQueue, DashboardsQueue, DestinationsQueue, FoldersQueue,
+        MetaQueue, PipelinesQueue, SchemasQueue, SearchJobsQueue, SuperClusterQueueTrait,
+        TemplatesQueue,
+    },
+    queue_item::ratelimit::RatelimitSuperClusterQueue,
 };
 
 /// Creates a super cluster queue for each super cluster topic and begins
@@ -78,6 +83,10 @@ pub async fn init() -> Result<(), anyhow::Error> {
         on_action_script_msg: action_scripts::process,
     };
 
+    let ratelimit_queue = RatelimitSuperClusterQueue {
+        on_rate_limit_msg: ratelimit::process,
+    };
+
     let queues: Vec<Box<dyn SuperClusterQueueTrait + Sync + Send>> = vec![
         Box::new(meta_queue),
         Box::new(schema_queue),
@@ -89,6 +98,7 @@ pub async fn init() -> Result<(), anyhow::Error> {
         Box::new(templates_queue),
         Box::new(destinations_queue),
         Box::new(action_scripts_queue),
+        Box::new(ratelimit_queue),
     ];
 
     for queue in queues {

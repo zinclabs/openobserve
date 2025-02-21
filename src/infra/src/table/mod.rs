@@ -32,6 +32,7 @@ pub mod distinct_values;
 pub mod entity;
 pub mod folders;
 mod migration;
+pub mod ratelimit;
 pub mod search_job;
 pub mod search_queue;
 pub mod short_urls;

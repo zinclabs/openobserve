@@ -15,3 +15,5 @@
 
 pub mod grpc;
 pub mod http;
+#[cfg(feature = "enterprise")]
+pub mod ratelimit;

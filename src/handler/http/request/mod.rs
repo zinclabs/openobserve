@@ -31,6 +31,8 @@ pub mod metrics;
 pub mod organization;
 pub mod pipeline;
 pub mod promql;
+#[cfg(feature = "enterprise")]
+pub mod ratelimit;
 pub mod rum;
 #[cfg(feature = "enterprise")]
 pub mod script_server;

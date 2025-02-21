@@ -844,6 +844,21 @@ export const convertSQLData = async (
     });
   };
 
+  const [min, max] = getSQLMinMaxValue(yAxisKeys, missingValueData);
+
+  const getFinalAxisValue = (
+    configValue: number | null | undefined,
+    dataValue: number,
+    isMin: boolean,
+  ) => {
+    if (configValue === null || configValue === undefined) {
+      return undefined;
+    }
+    return isMin
+      ? Math.min(configValue, dataValue)
+      : Math.max(configValue, dataValue);
+  };
+
   const options: any = {
     backgroundColor: "transparent",
     legend: legendConfig,
@@ -1072,6 +1087,8 @@ export const convertSQLData = async (
           ? panelSchema.queries[0]?.fields?.y[0]?.label
           : "",
       nameLocation: "middle",
+      min: getFinalAxisValue(panelSchema.config.y_axis_min, min, true),
+      max: getFinalAxisValue(panelSchema.config.y_axis_max, max, false),
       nameGap:
         calculateWidthText(
           panelSchema.type == "h-bar" || panelSchema.type == "h-stacked"

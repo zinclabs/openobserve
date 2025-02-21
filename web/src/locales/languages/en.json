@@ -43,6 +43,8 @@
     "tags": "Tags",
     "process": "Process",
     "axisWidth": "Axis Width",
+    "yAxisMin": "Y-Axis Min",
+    "yAxisMax": "Y-Axis Max",
     "legendWidth": "Legend Width",
     "exceptions": "Exceptions",
     "nameRequired": "Name is required",

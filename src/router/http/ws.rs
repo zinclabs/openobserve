@@ -78,7 +78,7 @@ pub async fn ws_proxy(
                                 let ws_msg = from_actix_message(msg);
                                 match ws_msg {
                                     tungstenite::protocol::Message::Close(reason) => {
-                                        log::info!("[WS_PROXY] Client initiated close");
+                                        log::info!("[WS_PROXY] Client initiated close ");
                                         let close_msg = tungstenite::protocol::Message::Close(reason.clone());
                                         if let Err(e) = backend_ws_sink.send(close_msg).await {
                                             log::error!("[WS_PROXY] Failed to forward close to backend: {}", e);

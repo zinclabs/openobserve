@@ -33,10 +33,29 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
             :htmlContent="searchObj.data.countErrorMsg"
           />
         </div>
-        <div v-else class="col-6 text-left q-pl-lg q-mt-xs warning">
+        <div v-else class="col-6 text-left q-pl-lg q-mt-xs warning flex">
           {{ noOfRecordsTitle }}
+          <span v-if="searchObj.loadingCounter" class="q-ml-md">
+            <q-spinner-hourglass
+            color="primary"
+            size="25px"
+            style="margin: 0 auto; display: block"
+          />
+          <q-tooltip
+              anchor="center right"
+              self="center left"
+              max-width="300px"
+            >
+              <span style="font-size: 14px"
+                >Fetching the search events</span
+              >
+            </q-tooltip>
+
+          </span>
         </div>
+
         <div class="col-6 text-right q-pr-md q-gutter-xs pagination-block">
+          
           <q-pagination
             v-if="searchObj.meta.resultGrid.showPagination"
             :disable="searchObj.loading == true"
@@ -49,7 +68,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
             :max="
               Math.max(
                 1,
-                (searchObj.communicationMethod === 'ws'
+                (searchObj.communicationMethod === 'ws' ||
+                searchObj.meta.jobId != ''
                   ? searchObj.data.queryResults?.pagination?.length
                   : searchObj.data.queryResults?.partitionDetail?.paginations
                       ?.length) || 0,
@@ -310,19 +330,33 @@ export default defineComponent({
       } else if (actionType == "recordsPerPage") {
         this.searchObj.data.resultGrid.currentPage = 1;
         this.pageNumberInput = this.searchObj.data.resultGrid.currentPage;
-        this.searchObj.communicationMethod === "ws"
-          ? this.refreshPagination()
-          : this.refreshPartitionPagination(true);
+        if (this.searchObj.communicationMethod === "ws") {
+            if (this.searchObj.meta.jobId == "") {
+              this.refreshPagination();
+            } else {
+              this.refreshJobPagination();
+            }
+          } else {
+            if (this.searchObj.meta.jobId !== "") {
+              this.refreshJobPagination();
+            } else {
+              this.refreshPartitionPagination(true);
+            }
+          }
         this.$emit("update:recordsPerPage");
         this.scrollTableToTop(0);
       } else if (actionType == "pageChange") {
+      //here at first the queryResults is undefined so we are checking if it is undefined then we are setting it to empty array
+        if(this.searchObj.meta.jobId != "" && this.searchObj.data.queryResults.paginations == undefined){
+          this.searchObj.data.queryResults.pagination = [];
+        }
         const maxPages =
-          this.searchObj.communicationMethod === "ws"
+          this.searchObj.communicationMethod === "ws" ||
+          this.searchObj.meta.jobId != ""
             ? this.searchObj.data.queryResults.pagination.length
-            : this.searchObj.data.queryResults.partitionDetail.paginations
+            : this.searchObj.data.queryResults?.partitionDetail?.paginations
                 .length;
-
-        if (this.pageNumberInput > Math.ceil(maxPages)) {
+        if (this.pageNumberInput > Math.ceil(maxPages) && this.searchObj.meta.jobId == "") {
           this.$q.notify({
             type: "negative",
             message:
@@ -391,6 +425,7 @@ export default defineComponent({
       reorderSelectedFields,
       getFilterExpressionByFieldType,
       refreshPagination,
+      refreshJobPagination,
     } = useLogs();
     const pageNumberInput = ref(1);
     const totalHeight = ref(0);
@@ -609,6 +644,7 @@ export default defineComponent({
       reorderSelectedFields,
       getPaginations,
       refreshPagination,
+      refreshJobPagination,
     };
   },
   computed: {

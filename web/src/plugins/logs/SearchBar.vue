@@ -399,6 +399,51 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
             </q-list>
           </q-btn-dropdown>
         </q-btn-group>
+        <q-btn-group v-if="config.isEnterprise == 'true'" class=" no-outline q-pa-none no-border">
+          <q-btn-dropdown
+            data-test="search-scheduler-dropdown-btn-group"
+            class="q-mr-xs download-logs-btn q-px-xs "
+            size="sm"
+            icon="schedule_send"
+            :title="t('search.exportLogs')"
+          >
+            <q-list>
+              <q-item
+                data-test="search-scheduler-create-new-btn"
+                class="q-pa-sm saved-view-item"
+                clickable
+                v-close-popup
+                @click="createScheduleJob"
+              >
+                <q-item-section v-close-popup>
+                  <q-item-label data-test="search-scheduler-create-new-label"
+                  >
+                    <q-icon name="save" />
+                    Create Scheduled Search</q-item-label
+                  >
+                </q-item-section>
+              </q-item>
+              <q-separator />
+              <q-item
+                data-test="search-scheduler-list-btn"
+
+                class="q-pa-sm saved-view-item"
+                clickable
+                v-close-popup
+                @click="routeToSearchSchedule"
+              >
+                <q-item-section v-close-popup>
+                  <q-item-label data-test="search-scheduler-list-label"
+                  >
+                    <q-icon name="list" />
+
+                    List Scheduled Search</q-item-label
+                  >
+                </q-item-section>
+              </q-item>
+            </q-list>
+          </q-btn-dropdown>
+        </q-btn-group>
         <q-btn-group class="no-outline q-pa-none no-border">
           <q-btn-dropdown
             data-test="logs-search-bar-reset-function-btn"
@@ -952,6 +997,87 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
         </q-card-actions>
       </q-card>
     </q-dialog>
+    <q-dialog v-model="searchSchedulerJob">
+      <q-card style="width: 700px; max-width: 80vw">
+        <q-card-section>
+          <div class="text-h6">Schedule Search Job</div>
+        </q-card-section>
+
+        <q-card-section class="q-pt-none">
+          <div>
+            <div class="text-left q-mb-xs">
+                No of Records:
+                <q-icon
+            name="info"
+            size="17px"
+            class="q-ml-xs cursor-pointer"
+
+          >
+            <q-tooltip
+              anchor="center right"
+              self="center left"
+              max-width="300px"
+            >
+              <span style="font-size: 14px"
+                >Number of records can be specified eg: if the no. of records is 1000 then user can get maximum of 1000 records</span
+              >
+            </q-tooltip>
+          </q-icon>
+            </div>
+            <q-input
+              type="number"
+              data-test="search-scheuduler-max-number-of-records-input"
+              v-model="searchObj.meta.jobRecords"
+              default-value="100"
+              color="input-border"
+              bg-color="input-bg"
+              class="showLabelOnTop"
+              stack-label
+              outlined
+              filled
+              dense
+              tabindex="0"
+              min="100"
+          />
+          
+          </div>
+          <div class="text-left">
+            Maximum 100000 events can be returned in schedule job
+          </div>
+          <div style="opacity: 0.8;" class="text-left mapping-warning-msg q-mt-md">
+                    <q-icon name="warning" color="red" class="q-mr-sm" />
+                    <span>Histogram will be disabled for the schedule job</span>
+                    </div>
+        </q-card-section>
+           
+
+        <q-card-actions align="right" class=" text-teal">
+          <q-btn
+            data-test="search-scheduler-max-records-cancel-btn"
+            unelevated
+            no-caps
+            class="q-mr-sm text-bold"
+            :label="t('confirmDialog.cancel')"
+            color="secondary"
+            v-close-popup
+            @click="{
+              searchSchedulerJob = false;
+              searchObj.meta.showSearchScheduler = false;
+            }"
+          />
+          <q-btn
+            data-test="search-scheduler-max-records-submit-btn"
+            unelevated
+            no-caps
+            :label="t('confirmDialog.ok')"
+            color="primary"
+            class="text-bold"
+            @click="addJobScheduler"
+            v-close-popup
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
     <ConfirmDialog
       title="Delete Saved View"
       message="Are you sure you want to delete saved view?"
@@ -1016,7 +1142,9 @@ import {
   useLocalSavedView,
   queryIndexSplit,
   timestampToTimezoneDate,
+  b64EncodeUnicode,
 } from "@/utils/zincutils";
+
 import savedviewsService from "@/services/saved_views";
 import ConfirmDialog from "@/components/ConfirmDialog.vue";
 import { cloneDeep } from "lodash-es";
@@ -1026,7 +1154,6 @@ import QueryEditor from "@/components/QueryEditor.vue";
 import useCancelQuery from "@/composables/dashboard/useCancelQuery";
 import { computed } from "vue";
 import { useLoading } from "@/composables/useLoading";
-
 const defaultValue: any = () => {
   return {
     name: "",
@@ -1043,8 +1170,7 @@ export default defineComponent({
     QueryEditor,
     SyntaxGuide,
     AutoRefreshInterval,
-    ConfirmDialog,
-  },
+    ConfirmDialog,  },
   emits: [
     "searchdata",
     "onChangeInterval",
@@ -1191,6 +1317,8 @@ export default defineComponent({
       extractFields,
       cancelQuery,
       setSelectedStreams,
+      getJobData,
+      routeToSearchSchedule,
     } = useLogs();
     const queryEditorRef = ref(null);
 
@@ -1212,6 +1340,8 @@ export default defineComponent({
 
     const confirmDialogVisible: boolean = ref(false);
     const confirmSavedViewDialogVisible: boolean = ref(false);
+    const searchSchedulerJob = ref(false);
+    const autoSearchSchedulerJob = ref(false);
     let confirmCallback;
     let streamName = "";
 
@@ -1271,12 +1401,63 @@ export default defineComponent({
       { immediate: true, deep: true },
     );
     watch(
+      () => searchObj.meta.showSearchScheduler,
+      (showSearchScheduler) => {
+        if(showSearchScheduler){
+          searchSchedulerJob.value = true;
+        }
+      },
+      { immediate: true, deep: true },
+    );
+    watch(
+      () => searchObj.meta.functionEditorPlaceholderFlag,
+      (val) => {
+        if (
+          searchObj.meta.jobId != "" &&
+          val == true &&
+          (router.currentRoute.value.query.functionContent || searchObj.data.tempFunctionContent != "")
+        ) {
+          if (!checkFnQuery(searchObj.data.tempFunctionContent)) {
+            $q.notify({
+              message: "Job Context have been removed",
+              color: "warning",
+              position: "bottom",
+              timeout: 2000,
+            });
+            searchObj.meta.jobId = "";
+            searchObj.data.queryResults.hits = [];
+            // getQueryData(false);
+          }
+        }
+      },
+      { immediate: true, deep: true },
+    );
+    watch(
+      () => searchObj.meta.showHistogram,
+      (val) => {
+        
+        if(val == true && searchObj.meta.jobId != ""  ){
+          $q.notify({
+              message: "Histogram is not available for scheduled search",
+              color: "negative",
+              position: "bottom",
+              timeout: 2000,
+            });
+            searchObj.meta.showHistogram = false;
+            searchObj.loadingHistogram = false;
+        }
+        
+      },
+      { immediate: true, deep: true },
+    );
+    watch(
       () => searchObj.data.stream.functions,
       (funs) => {
         if (funs.length) updateFunctionKeywords(funs);
       },
       { immediate: true, deep: true },
     );
+
 
     onBeforeMount(async () => {
       await importSqlParser();
@@ -1326,6 +1507,12 @@ export default defineComponent({
     };
 
     const updateQueryValue = (value: string) => {
+      // if (searchObj.meta.jobId != "") {
+      //   searchObj.meta.jobId = "";
+      //   getQueryData(false);
+      // }
+
+
       searchObj.data.editorValue = value;
       if (searchObj.meta.quickMode === true) {
         const parsedSQL = fnParsedSQL();
@@ -1434,9 +1621,27 @@ export default defineComponent({
             }
           }
         }
+        //here we reset the job id if user change the query and move outside of the editor
+        if (
+          searchObj.meta.jobId != "" &&
+          searchObj.meta.queryEditorPlaceholderFlag == true
+        ) {
+          if (!checkQuery(value)) {
+            $q.notify({
+              message: "Job Context have been removed",
+              color: "warning",
+              position: "bottom",
+              timeout: 2000,
+            });
+            searchObj.meta.jobId = "";
+            searchObj.data.queryResults.hits = [];
+            // getQueryData(false);
+          }
+       }
       } catch (e) {
         console.log(e, "Logs: Error while updating query value");
       }
+
     };
     const handleEscKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
@@ -2817,6 +3022,70 @@ export default defineComponent({
         )
       );
     });
+    const addJobScheduler = async () => {
+
+      try{
+        // if(searchObj.meta.jobId != ""){
+        //   searchObj.meta.jobId = "";
+        // }
+        if (searchObj.meta.jobId != "") {
+          $q.notify({
+            type: "negative",
+            message: "Job Already Scheduled , please change some parameters to schedule new job",
+            timeout: 3000,
+          });
+          return;
+        }
+        if (
+          searchObj.meta.jobRecords > 100000 ||
+          searchObj.meta.jobRecords == 0 ||
+          searchObj.meta.jobRecords < 0
+        ) {
+          $q.notify({
+            type: "negative",
+            message: "Job Scheduler should be between 1 and 100000",
+            timeout: 3000,
+          });
+          return;
+        }
+
+        searchSchedulerJob.value = false;
+        searchObj.meta.showSearchScheduler = false;
+        await getJobData();
+
+      }
+      catch (e){
+        if(e.response.status != 403){
+        $q.notify({
+          type: "negative",
+          message: "Error while adding job",
+          timeout: 3000,
+        });
+        return;
+      }
+    }
+
+    };
+
+    const createScheduleJob = () => {
+      searchSchedulerJob.value = true;
+      searchObj.meta.jobRecords = 100;
+    }
+
+    const checkQuery = (query) => {
+      const jobQuery = router.currentRoute.value.query.query;
+      if (jobQuery == b64EncodeUnicode(query)) {
+        return true;
+      }
+      return false;
+    }
+    const checkFnQuery = (fnQuery) => {
+      const jobFnQuery = router.currentRoute.value.query.functionContent;
+      if (jobFnQuery == b64EncodeUnicode(fnQuery)) {
+        return true;
+      }
+      return false;
+    }
 
     // [END] cancel running queries
 
@@ -2909,11 +3178,18 @@ export default defineComponent({
       fnParsedSQL,
       iconRight,
       functionToggleIcon,
+      searchSchedulerJob,
+      autoSearchSchedulerJob,
+      addJobScheduler,
+      routeToSearchSchedule,
+      createScheduleJob,
       searchTerm,
       filteredFunctionOptions,
       confirmUpdate,
       updateViewObj,
       updateSavedViews,
+      checkQuery,
+      checkFnQuery,
     };
   },
   computed: {

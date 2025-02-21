@@ -3055,6 +3055,7 @@ export default defineComponent({
 
       }
       catch (e){
+        if(e.response.status != 403){
         $q.notify({
           type: "negative",
           message: "Error while adding job",
@@ -3062,6 +3063,7 @@ export default defineComponent({
         });
         return;
       }
+    }
 
     };
 

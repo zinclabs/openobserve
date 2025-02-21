@@ -600,13 +600,25 @@ export default defineComponent({
 
               dataToBeLoaded.value = responseToBeFetched;
               isLoading.value = false;
-            });
+            }).catch((e)=>{
+              if(e.response.status != 403){
+                $q.notify({
+                  type: "negative",
+                  message: "Failed to fetch search history. Please try again later.",
+                  timeout: 5000,
+                });
+              }
+            }).finally(()=>{
+              isLoading.value = false;
+            })
       } catch (error) {
-        $q.notify({
-          type: "negative",
-          message: "Failed to fetch search history. Please try again later.",
-          timeout: 5000,
-        });
+        if(error.response.status != 403){
+          $q.notify({
+            type: "negative",
+            message: "Failed to fetch search history",
+            timeout: 5000,
+          });
+        }
         isLoading.value = false;
       }
     };
@@ -624,7 +636,7 @@ export default defineComponent({
             timeout: 2000,
           });
         }).catch((e)=> {
-          if(e.response.status.code != 403){
+          if(e.response.status != 403){
             $q.notify({
             type: "negative",
             message: e.response?.data?.message ||  "Failed to cancel search job",
@@ -648,7 +660,7 @@ export default defineComponent({
             timeout: 2000,
           });
         }).catch((e)=> {
-          if(e.response.status.code != 403){
+          if(e.response.status != 403){
             $q.notify({
             type: "negative",
             message: e.response?.data?.message ||  "Failed to restart search job",
@@ -683,7 +695,7 @@ export default defineComponent({
             timeout: 2000,
           });
         }).catch((e)=>{
-          if(e.response.status.code != 403){
+          if(e.response.status != 403){
             $q.notify({
             type: "negative",
             message: e.response?.data?.message ||  "Failed to delete search job",

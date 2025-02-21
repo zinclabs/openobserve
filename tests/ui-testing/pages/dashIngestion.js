@@ -8,31 +8,43 @@ export const removeUTFCharacters = (text) => {
   return text.replace(/[^\x00-\x7F]/g, " ");
 };
 
+// Function to retrieve authentication token (to be implemented securely)
+const getAuthToken = async () => {
+  const basicAuthCredentials = Buffer.from(
+    `${process.env["ZO_ROOT_USER_EMAIL"]}:${process.env["ZO_ROOT_USER_PASSWORD"]}`
+  ).toString("base64");
+  return `Basic ${basicAuthCredentials}`;
+};
 
-// Exported ingestion function
- export const ingestion = async (page)=> {
-    const orgId = process.env["ORGNAME"];
-    const streamName = "e2e_automate";
-    const basicAuthCredentials = Buffer.from(
-      `${process.env["ZO_ROOT_USER_EMAIL"]}:${process.env["ZO_ROOT_USER_PASSWORD"]}`
-    ).toString("base64");
-  
+export const ingestion = async (page, streamName = "e2e_automate") => {
+  if (!process.env["ORGNAME"] || !process.env["INGESTION_URL"]) {
+    throw new Error("Required environment variables are not set");
+  }
+
+  const orgId = process.env["ORGNAME"];
+
+  try {
     const headers = {
-      Authorization: `Basic ${basicAuthCredentials}`,
       "Content-Type": "application/json",
+      Authorization: await getAuthToken(),
     };
-  
+
     const fetchResponse = await fetch(
       `${process.env.INGESTION_URL}/api/${orgId}/${streamName}/_json`,
       {
         method: "POST",
-        headers: headers,
+        headers,
         body: JSON.stringify(logsdata),
       }
     );
-    const response = await fetchResponse.json();
-    console.log(response);
+
+    if (!fetchResponse.ok) {
+      throw new Error(`HTTP error! status: ${fetchResponse.status}`);
+    }
+
+    return await fetchResponse.json();
+  } catch (error) {
+    console.error("Ingestion failed:", error);
+    throw error;
   }
-  
-  // module.exports = { ingestion };
-  
+};

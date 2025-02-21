@@ -40,9 +40,10 @@ test.describe("dashboard filter testcases", () => {
       .fill(randomDashboardName);
 
     await page.locator('[data-test="dashboard-add-submit"]').click();
-    await page.waitForTimeout(2000);
 
-    await page.locator('[data-test="dashboard-setting-btn"]').click();
+    const settingsButton = page.locator('[data-test="dashboard-setting-btn"]');
+await expect(settingsButton).toBeVisible();
+await settingsButton.click();
 
     await page.locator('[data-test="dashboard-settings-variable-tab"]').click();
     await page.locator('[data-test="dashboard-variable-add-btn"]').click();
@@ -174,9 +175,10 @@ test.describe("dashboard filter testcases", () => {
       .fill(randomDashboardName);
 
     await page.locator('[data-test="dashboard-add-submit"]').click();
-    await page.waitForTimeout(2000);
 
-    await page.locator('[data-test="dashboard-setting-btn"]').click();
+    const settingsButton = page.locator('[data-test="dashboard-setting-btn"]');
+await expect(settingsButton).toBeVisible();
+await settingsButton.click();
 
     await page.locator('[data-test="dashboard-settings-variable-tab"]').click();
     await page.locator('[data-test="dashboard-variable-add-btn"]').click();
@@ -378,11 +380,12 @@ test.describe("dashboard filter testcases", () => {
 
     await page.locator('[data-test="dashboard-add-submit"]').click();
 
-    await page.waitForTimeout(2000);
+    // await page.waitForTimeout(2000);
 
-
-    await page.locator('[data-test="dashboard-setting-btn"]').click();
-
+    const settingsButton = page.locator('[data-test="dashboard-setting-btn"]');
+    await expect(settingsButton).toBeVisible();
+    await settingsButton.click();
+  
     await page.locator('[data-test="dashboard-settings-variable-tab"]').click();
     await page.locator('[data-test="dashboard-variable-add-btn"]').click();
 
@@ -527,10 +530,11 @@ test.describe("dashboard filter testcases", () => {
       .fill(randomDashboardName);
 
     await page.locator('[data-test="dashboard-add-submit"]').click();
-    await page.waitForTimeout(3000);
 
-    await page.locator('[data-test="dashboard-setting-btn"]').click();
-
+    const settingsButton = page.locator('[data-test="dashboard-setting-btn"]');
+    await expect(settingsButton).toBeVisible();
+    await settingsButton.click();
+    
     await page.locator('[data-test="dashboard-settings-variable-tab"]').click();
     await page.locator('[data-test="dashboard-variable-add-btn"]').click();
 
@@ -671,9 +675,10 @@ test.describe("dashboard filter testcases", () => {
       .fill(randomDashboardName);
 
     await page.locator('[data-test="dashboard-add-submit"]').click();
-    await page.waitForTimeout(3000);
 
-    await page.locator('[data-test="dashboard-setting-btn"]').click();
+    const settingsButton = page.locator('[data-test="dashboard-setting-btn"]');
+await expect(settingsButton).toBeVisible();
+await settingsButton.click();
 
     await page.locator('[data-test="dashboard-settings-variable-tab"]').click();
     await page.locator('[data-test="dashboard-variable-add-btn"]').click();
@@ -761,10 +766,11 @@ test.describe("dashboard filter testcases", () => {
       .fill(randomDashboardName);
 
     await page.locator('[data-test="dashboard-add-submit"]').click();
-    await page.waitForTimeout(2000);
 
-    await page.locator('[data-test="dashboard-setting-btn"]').click();
-
+    const settingsButton = page.locator('[data-test="dashboard-setting-btn"]');
+    await expect(settingsButton).toBeVisible();
+    await settingsButton.click();
+    
     await page.locator('[data-test="dashboard-settings-variable-tab"]').click();
     await page.locator('[data-test="dashboard-variable-add-btn"]').click();
 
@@ -884,11 +890,10 @@ test.describe("dashboard filter testcases", () => {
       .fill(randomDashboardName);
 
     await page.locator('[data-test="dashboard-add-submit"]').click();
-    await page.waitForTimeout(3000);
 
-
-
-    await page.locator('[data-test="dashboard-setting-btn"]').click();
+const settingsButton = page.locator('[data-test="dashboard-setting-btn"]');
+await expect(settingsButton).toBeVisible();
+await settingsButton.click();
 
     await page.locator('[data-test="dashboard-settings-variable-tab"]').click();
     await page.locator('[data-test="dashboard-variable-add-btn"]').click();

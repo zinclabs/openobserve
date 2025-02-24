@@ -634,13 +634,37 @@ const confirmSaveBasicPipeline = async () => {
   confirmDialogBasicPipeline.value = false;
   await onSubmitPipeline();
 };
+const validatePipeline = () => {
+  // Find input node
+  const inputNode = pipelineObj.currentSelectedPipeline.nodes?.find((node: any) => node.type === 'input');
+
+  const outputNode = pipelineObj.currentSelectedPipeline.nodes?.find((node: any) => node.type === 'output');
+  
+
+  // If trying to use enrichment_tables with stream input, return false
+  if ( inputNode.data?.node_type === 'stream' && outputNode.data?.node_type === 'stream' && outputNode.data?.stream_type === 'enrichment_tables') {
+    q.notify({
+      message: "Enrichment tables as destination stream is only available for scheduled pipelines",
+      color: "negative",
+      position: "bottom",
+      timeout: 2000,
+    });
+    return false;
+  }
+
+  return true;
+};
 
 const onSubmitPipeline = async () => {
+  if(!validatePipeline()){
+    return;
+  }
   const dismiss = q.notify({
     message: "Saving pipeline...",
     position: "bottom",
     spinner: true,
   });
+
   const saveOperation = pipelineObj.isEditPipeline
     ? pipelineService.updatePipeline({
         data: pipelineObj.currentSelectedPipeline,

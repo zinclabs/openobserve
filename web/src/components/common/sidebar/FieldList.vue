@@ -121,7 +121,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                         []"
                         :key="value.key"
                       >
-                        <q-list dense>
+                        <q-list  dense>
                           <q-item tag="label" class="q-pr-none">
                             <div
                               class="flex row wrap justify-between"
@@ -143,6 +143,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                               </div>
                             </div>
                             <div
+                            v-if="!hideIncludeExlcude"
                               class="flex row"
                               :class="
                                 store.state.theme === 'dark'
@@ -179,6 +180,30 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                                 <q-icon>
                                   <NotEqualIcon></NotEqualIcon>
                                 </q-icon>
+                              </q-btn>
+                            </div>
+                            <div
+                            v-if="!hideCopyValue"
+                              class="flex row"
+                              :class="
+                                store.state.theme === 'dark'
+                                  ? 'text-white'
+                                  : 'text-black'
+                              "
+                            >
+                              <q-btn
+                                class="q-ml-sm"
+                                size="8px"
+                                title="Copy Value"
+                                round
+                                dense 
+                                flat
+                                @click="
+                                 copyContentValue(value.key)
+                                "
+                              >
+                                <q-icon  name="content_copy"></q-icon>
+   
                               </q-btn>
                             </div>
                           </q-item>
@@ -253,6 +278,14 @@ export default defineComponent({
       type: String,
       default: "logs",
     },
+    hideIncludeExlcude:{
+      type: Boolean,
+      default: false,
+    },
+    hideCopyValue:{
+      type: Boolean,
+      default: true,
+    }
   },
   emits: ["event-emitted"],
   setup(props, { emit }) {
@@ -332,6 +365,14 @@ export default defineComponent({
       emit("event-emitted", "add-field", term);
     };
 
+    const copyContentValue = (value: string) => {
+      navigator.clipboard.writeText(value);
+      $q.notify({
+        type: "positive",
+        message: "Value copied to clipboard",
+      });
+    };
+
     return {
       t,
       store,
@@ -343,6 +384,7 @@ export default defineComponent({
       fieldValues,
       outlinedAdd,
       filterFieldValue,
+      copyContentValue,
     };
   },
 });

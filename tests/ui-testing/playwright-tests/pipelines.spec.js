@@ -285,20 +285,22 @@ test.describe("Pipeline testcases", () => {
     await page.locator('[data-test="confirm-button"]').click();
     await page.locator("button").filter({ hasText: "edit" }).hover();
     await page.getByRole("img", { name: "Output Stream" }).click();
-    await pipelinePage.toggleCreateStream();
-    await page.getByLabel("Name *").click();
-    await page.getByLabel("Name *").fill("destination-node");
-    await page
-      .locator(
-        ".q-form > div:nth-child(2) > .q-field > .q-field__inner > .q-field__control > .q-field__control-container > .q-field__native"
-      )
-      .click();
-    await page
-      .getByRole("option", { name: "Logs" })
-      .locator("div")
-      .nth(2)
-      .click();
-    await pipelinePage.clickSaveStream();
+    // await pipelinePage.toggleCreateStream();
+    await page.getByLabel("Stream Name *").click();
+    await page.getByLabel("Stream Name *").fill("destination-node");
+    await page.waitForTimeout(100);
+    // await page
+    //   .locator(
+    //     ".q-form > div:nth-child(2) > .q-field > .q-field__inner > .q-field__control > .q-field__control-container > .q-field__native"
+    //   )
+    //   .click();
+    // await page
+    //   .getByRole("option", { name: "Logs" })
+    //   .locator("div")
+    //   .nth(2)
+    //   .click();
+    // await pipelinePage.clickSaveStream();
+
     await pipelinePage.clickInputNodeStreamSave();
     const pipelineName = `pipeline-${Math.random().toString(36).substring(7)}`;
     await pipelinePage.enterPipelineName(pipelineName);
@@ -411,20 +413,23 @@ test.describe("Pipeline testcases", () => {
     await page.waitForTimeout(3000);
     await page.getByRole("button", { name: randomFunctionName }).hover();
     await page.getByRole("img", { name: "Output Stream" }).click();
-    await pipelinePage.toggleCreateStream();
-    await page.getByLabel("Name *").click();
-    await page.getByLabel("Name *").fill("destination-node");
-    await page
-      .locator(
-        ".q-form > div:nth-child(2) > .q-field > .q-field__inner > .q-field__control > .q-field__control-container > .q-field__native"
-      )
-      .click();
-    await page
-      .getByRole("option", { name: "Logs" })
-      .locator("div")
-      .nth(2)
-      .click();
-    await pipelinePage.clickSaveStream();
+    // await pipelinePage.toggleCreateStream();
+    // await page.getByLabel("Name *").click();
+    // await page.getByLabel("Name *").fill("destination-node");
+    // await page
+    //   .locator(
+    //     ".q-form > div:nth-child(2) > .q-field > .q-field__inner > .q-field__control > .q-field__control-container > .q-field__native"
+    //   )
+    //   .click();
+    // await page
+    //   .getByRole("option", { name: "Logs" })
+    //   .locator("div")
+    //   .nth(2)
+    //   .click();
+    // await pipelinePage.clickSaveStream();
+    await page.getByLabel("Stream Name *").click();
+    await page.getByLabel("Stream Name *").fill("destination-node");
+    await page.waitForTimeout(100);
     await pipelinePage.clickInputNodeStreamSave();
     const pipelineName = `pipeline-${Math.random().toString(36).substring(7)}`;
     await pipelinePage.enterPipelineName(pipelineName);
@@ -553,20 +558,23 @@ test.describe("Pipeline testcases", () => {
       .getByRole("button", { name: "kubernetes_container_name" })
       .hover();
     await page.getByRole("img", { name: "Output Stream" }).click();
-    await pipelinePage.toggleCreateStream();
-    await page.getByLabel("Name *").click();
-    await page.getByLabel("Name *").fill("destination-node");
-    await page
-      .locator(
-        ".q-form > div:nth-child(2) > .q-field > .q-field__inner > .q-field__control > .q-field__control-container > .q-field__native"
-      )
-      .click();
-    await page
-      .getByRole("option", { name: "Logs" })
-      .locator("div")
-      .nth(2)
-      .click();
-    await pipelinePage.clickSaveStream();
+    // await pipelinePage.toggleCreateStream();
+    // await page.getByLabel("Name *").click();
+    // await page.getByLabel("Name *").fill("destination-node");
+    // await page
+    //   .locator(
+    //     ".q-form > div:nth-child(2) > .q-field > .q-field__inner > .q-field__control > .q-field__control-container > .q-field__native"
+    //   )
+    //   .click();
+    // await page
+    //   .getByRole("option", { name: "Logs" })
+    //   .locator("div")
+    //   .nth(2)
+    //   .click();
+    // await pipelinePage.clickSaveStream();
+    await page.getByLabel("Stream Name *").click();
+    await page.getByLabel("Stream Name *").fill("destination-node");
+    await page.waitForTimeout(100);
     await pipelinePage.clickInputNodeStreamSave();
     const pipelineName = `pipeline-${Math.random().toString(36).substring(7)}`;
     await pipelinePage.enterPipelineName(pipelineName);
@@ -639,20 +647,23 @@ test.describe("Pipeline testcases", () => {
     // Select the second stream, drag, and drop
     await pipelinePage.selectAndDragSecondStream();
     await page.waitForTimeout(2000);
-    await pipelinePage.toggleCreateStream();
-    await page.getByLabel("Name *").click();
-    await page.getByLabel("Name *").fill("destination-node");
-    await page
-      .locator(
-        ".q-form > div:nth-child(2) > .q-field > .q-field__inner > .q-field__control > .q-field__control-container > .q-field__native"
-      )
-      .click();
-    await page
-      .getByRole("option", { name: "Logs" })
-      .locator("div")
-      .nth(2)
-      .click();
-    await pipelinePage.clickSaveStream();
+    // await pipelinePage.toggleCreateStream();
+    // await page.getByLabel("Name *").click();
+    // await page.getByLabel("Name *").fill("destination-node");
+    // await page
+    //   .locator(
+    //     ".q-form > div:nth-child(2) > .q-field > .q-field__inner > .q-field__control > .q-field__control-container > .q-field__native"
+    //   )
+    //   .click();
+    // await page
+    //   .getByRole("option", { name: "Logs" })
+    //   .locator("div")
+    //   .nth(2)
+    //   .click();
+    // await pipelinePage.clickSaveStream();
+    await page.getByLabel("Stream Name *").click();
+    await page.getByLabel("Stream Name *").fill("destination-node");
+    await page.waitForTimeout(100);
     await pipelinePage.clickInputNodeStreamSave();
     const pipelineName = `pipeline-${Math.random().toString(36).substring(7)}`;
     await pipelinePage.enterPipelineName(pipelineName);

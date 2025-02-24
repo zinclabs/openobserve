@@ -607,7 +607,7 @@ function getIcon(data, ioType) {
 
     <q-tooltip :style="{ maxWidth: '300px', whiteSpace: 'pre-wrap' }">
   <div>
-    <strong>SQL:</strong> <pre style="max-width: 200px ; text-wrap: wrap;">{{ data.query_condition.sql }}</pre><br />
+    <strong>{{  data.query_condition.type == 'sql' ? 'SQL' : 'PromQL' }}:</strong> <pre style="max-width: 200px ; text-wrap: wrap;">{{  data.query_condition.type == 'sql' ? data.query_condition.sql : data.query_condition.promql }}</pre><br />
     <strong>Period:</strong> {{ data.trigger_condition.period }}<br />
     <strong>Frequency:</strong> {{ data.trigger_condition.frequency }} {{ data.trigger_condition.frequency_type }}<br />
     <strong>Operator:</strong> {{ data.trigger_condition.operator }}<br />

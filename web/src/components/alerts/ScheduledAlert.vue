@@ -1394,7 +1394,7 @@ defineExpose({
   overflow: hidden;
 }
 </style>
-<style lang="scss">
+<style lang="scss" >
 .scheduled-alert-tabs {
   .q-tab--active {
     background-color: $primary;

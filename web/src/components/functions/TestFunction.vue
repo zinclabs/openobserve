@@ -95,7 +95,7 @@
             </div>
             <q-select
               v-model="selectedStream.name"
-              :options="streams"
+              :options="filteredStreams"
               :popup-content-style="{ textTransform: 'lowercase' }"
               color="input-border"
               bg-color="input-bg"
@@ -104,6 +104,9 @@
               outlined
               filled
               dense
+              use-input
+              hide-selected
+              fill-input
               :loading="isFetchingStreams"
               style="min-width: 120px"
               @filter="filterStreams"

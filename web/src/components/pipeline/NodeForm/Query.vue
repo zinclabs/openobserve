@@ -16,37 +16,22 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 <template>
   <div
-    data-test="add-stream-query-routing-section"
-    class="full-width stream-routing-section"
-    :class="store.state.theme === 'dark' ? 'bg-dark' : 'bg-white'"
+    data-test="add-stream-query-routing-section "
+    class="full-width stream-routing-section "
+    :class="[
+      store.state.theme === 'dark' ? 'bg-dark' : 'bg-white',
+      { 'fullscreen-mode': isFullscreenMode }
+    ]"
   >
-    <div class="stream-routing-title q-pb-sm q-pl-md">
-      {{ t("pipeline.query") }}
-    </div>
+
+
     <q-separator />
 
-    <div class="stream-routing-container q-px-md q-pt-md q-pr-xl">
+    <div class="stream-routing-container q-px-md  ">
       <q-form ref="queryFormRef" @submit="saveQueryData">
-        <div>
-          <q-select
-            v-model="streamRoute.stream_type"
-            :options="streamTypes"
-            :label="t('alerts.streamType') + ' *'"
-            :popup-content-style="{ textTransform: 'lowercase' }"
-            color="input-border"
-            bg-color="input-bg"
-            class="showLabelOnTop no-case"
-            stack-label
-            outlined
-            filled
-            dense
-            v-bind:readonly="isUpdating"
-            v-bind:disable="isUpdating"
-            :rules="[(val: any) => !!val || 'Field is required!']"
-            style="width: 400px"
-          />
+        <div class="full-width">
           <scheduled-pipeline
-            ref="scheduledAlertRef"
+            ref="scheduledPipelineRef"
             :columns="filteredColumns"
             :conditions="[]"
             :alertData="streamRoute"
@@ -56,47 +41,25 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
             :disableQueryTypeSelection="true"
             v-model:trigger="streamRoute.trigger_condition"
             v-model:sql="streamRoute.query_condition.sql"
+            v-model:promql="streamRoute.query_condition.promql"
             v-model:query_type="streamRoute.query_condition.type"
             v-model:aggregation="streamRoute.query_condition.aggregation"
+            v-model:stream_type="streamRoute.stream_type"
             v-model:isAggregationEnabled="isAggregationEnabled"
+            v-model:streamType="streamRoute.stream_type"
             @validate-sql="validateSqlQuery"
+            @submit:form="saveQueryData"
+            @cancel:form="openCancelDialog"
+            @delete:node="openDeleteDialog"
+            @update:fullscreen="updateFullscreenMode"
+            @update:stream_type="updateStreamType"
+
+            
             class="q-mt-sm"
           />
         </div>
 
-        <div
-          class="flex justify-start full-width"
-          :class="store.state.theme === 'dark' ? 'bg-dark' : 'bg-white'"
-        >
-          <q-btn
-            data-test="stream-routing-query-cancel-btn"
-            class="text-bold"
-            :label="t('alerts.cancel')"
-            text-color="light-text"
-            padding="sm md"
-            no-caps
-            @click="openCancelDialog"
-          />
-          <q-btn
-            data-test="stream-routing-query-save-btn"
-            :label="t('alerts.save')"
-            class="text-bold no-border q-ml-md"
-            color="secondary"
-            padding="sm xl"
-            no-caps
-            type="submit"
-          />
-          <q-btn
-            v-if="pipelineObj.isEditNode"
-            data-test="stream-routing-query-delete-btn"
-            :label="t('pipeline.deleteNode')"
-            class="text-bold no-border q-ml-md"
-            color="negative"
-            padding="sm xl"
-            no-caps
-            @click="openDeleteDialog"
-          />
-        </div>
+ 
       </q-form>
     </div>
   </div>
@@ -146,6 +109,7 @@ interface StreamRoute {
   conditions: RouteCondition[];
   query_condition: {
     sql: string;
+    promql: string | null;
     type: string;
     aggregation: {
       group_by: string[];
@@ -206,7 +170,7 @@ const isValidSqlQuery = ref(true);
 
 const validateSqlQueryPromise = ref<Promise<unknown>>();
 
-const scheduledAlertRef = ref<any>(null);
+const scheduledPipelineRef = ref<any>(null);
 
 const filteredStreams: Ref<any[]> = ref([]);
 
@@ -231,6 +195,12 @@ const dialog = ref({
   message: "",
   okCallback: () => {},
 });
+
+const isFullscreenMode = ref(false);
+
+const updateFullscreenMode = (val: boolean) => {
+  isFullscreenMode.value = val;
+};
 
 const getDefaultStreamRoute: any = () => {
   if (pipelineObj.isEditNode) {
@@ -363,7 +333,7 @@ const openCancelDialog = () => {
 
 // TODO OK : Add check for duplicate routing name
 const saveQueryData = async () => {
-  if (!scheduledAlertRef.value.validateInputs()) {
+  if (!scheduledPipelineRef.value.validateInputs()) {
     return false;
   }
 
@@ -395,7 +365,7 @@ const saveQueryData = async () => {
       type: formData.query_condition.type,
       conditions: null,
       sql: formData.query_condition.sql,
-      promql: null,
+      promql: formData.query_condition.promql || null,
       promql_condition: null,
       aggregation: formData.query_condition.aggregation,
       vrl_function: null,
@@ -413,6 +383,15 @@ const saveQueryData = async () => {
       timezone: formData.trigger_condition.timezone,
     },
   };
+  if(formData.query_condition.type == 'promql'){
+    if(queryPayload?.query_condition){
+     queryPayload.query_condition.search_event_type  = "";
+    }
+    if(queryPayload?.query_condition){
+       queryPayload.query_condition.sql = "";
+    }
+    
+  }
   addNode(queryPayload);
   emit("cancel:hideform");
 };
@@ -461,10 +440,15 @@ const removeVariable = (variable: any) => {
 };
 
 const validateSqlQuery = () => {
+  if(streamRoute.value.query_condition.type == 'promql'){
+    isValidSqlQuery.value = true;
+    return;
+  }
   const query = buildQueryPayload({
     sqlMode: true,
     streamName: streamRoute.value.name as string,
   });
+
 
   delete query.aggs;
 
@@ -499,20 +483,34 @@ const validateSqlQuery = () => {
       });
   });
 };
+const updateStreamType = (val: string) => {
+  streamRoute.value.stream_type = val;
+};
+const updateQueryType = (val: string) => {
+  streamRoute.value.query_condition.type = val;
+  if(val == 'promql'){
+    streamRoute.value.query_condition.sql = '';
+  }
+};
 </script>
 
 <style scoped>
 .stream-routing-title {
   font-size: 20px;
-  padding-top: 16px;
 }
 .stream-routing-container {
-  width: 720px;
+  width: 100%;
   border-radius: 8px;
   /* box-shadow: 0px 0px 10px 0px #d2d1d1; */
 }
 
 .stream-routing-section {
   min-height: 100%;
+  width: 97vw !important;
+  padding-left: 1rem;
+
+  &.fullscreen-mode {
+    width: 100vw !important;
+  }
 }
 </style>

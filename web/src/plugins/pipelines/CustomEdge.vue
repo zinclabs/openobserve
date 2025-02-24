@@ -4,6 +4,7 @@
     :style="style"
     :path="path[0]"
     :marker-end="markerEnd"
+    type="smoothstep"
   />
   <EdgeLabelRenderer v-if="!isInView">
     <div

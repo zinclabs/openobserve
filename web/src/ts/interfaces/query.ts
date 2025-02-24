@@ -63,6 +63,7 @@ export interface WebSocketSearchPayload {
   isPagination: boolean;
   traceId: string;
   org_id: string;
+  meta?: any;
 }
 
 export interface ErrorContent {

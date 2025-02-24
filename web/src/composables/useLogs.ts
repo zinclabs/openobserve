@@ -1489,9 +1489,10 @@ const useLogs = () => {
 
   const getQueryData = async (isPagination = false) => {
     try {
-
       // Reset cancel query on new search request initation
       searchObj.data.isOperationCancelled = false;
+      searchObj.data.searchRequestTraceIds = [];
+      searchObj.data.searchWebSocketRequestIdsAndTraceIds = [];
 
       // get websocket enable config from store
       // window will have more priority
@@ -4174,6 +4175,12 @@ const useLogs = () => {
     }
 
     const tracesIds = [...searchObj.data.searchRequestTraceIds];
+
+    if (!searchObj.data.searchRequestTraceIds.length) {
+      searchObj.data.isOperationCancelled = false;
+      return;
+    }
+
     searchObj.data.isOperationCancelled = true;
 
     searchService
@@ -4670,6 +4677,7 @@ const useLogs = () => {
     queryReq: SearchRequestPayload,
     isPagination: boolean,
     type: "search" | "histogram" | "pageCount",
+    meta?: any,
   ) => {
     const { traceId } = generateTraceContext();
     addTraceId(traceId);
@@ -4680,12 +4688,14 @@ const useLogs = () => {
       isPagination: boolean;
       traceId: string;
       org_id: string;
+      meta?: any;
     } = {
       queryReq,
       type,
       isPagination,
       traceId,
       org_id: searchObj.organizationIdentifier,
+      meta,
     };
 
     return payload;
@@ -4768,7 +4778,12 @@ const useLogs = () => {
       }
 
       if (payload.type === "histogram") {
-        handleHistogramResponse(payload.queryReq, payload.traceId, response);
+        handleHistogramResponse(
+          payload.queryReq,
+          payload.traceId,
+          response,
+          payload.meta,
+        );
       }
 
       if (payload.type === "pageCount") {
@@ -4964,6 +4979,7 @@ const useLogs = () => {
     queryReq: SearchRequestPayload,
     traceId: string,
     response: any,
+    meta?: any,
   ) => {
     searchObjDebug["histogramProcessingStartTime"] = performance.now();
 
@@ -5039,7 +5055,7 @@ const useLogs = () => {
     (async () => {
       try {
         generateHistogramData();
-        refreshPagination(true);
+        if (!meta?.isHistogramOnly) refreshPagination(true);
       } catch (error) {
         console.error("Error processing histogram data:", error);
         searchObj.loadingHistogram = false;
@@ -5059,7 +5075,8 @@ const useLogs = () => {
     //   searchObj.data.queryResults.total = res.data.total;
     // }
 
-    searchObj.data.histogram.chartParams.title = getHistogramTitle();
+    if (!meta?.isHistogramOnly)
+      searchObj.data.histogram.chartParams.title = getHistogramTitle();
 
     searchObjDebug["histogramProcessingEndTime"] = performance.now();
     searchObjDebug["histogramEndTime"] = performance.now();
@@ -5250,6 +5267,7 @@ const useLogs = () => {
     if (payload.type === "search") searchObj.loading = false;
     if (payload.type === "histogram" || payload.type === "pageCount")
       searchObj.loadingHistogram = false;
+
     searchObj.data.isOperationCancelled = false;
   };
 
@@ -5386,7 +5404,10 @@ const useLogs = () => {
 
   const sendCancelSearchMessage = (searchRequests: any[]) => {
     try {
-      if (!searchRequests.length) return;
+      if (!searchRequests.length) {
+        searchObj.data.isOperationCancelled = false;
+        return;
+      }
 
       searchObj.data.isOperationCancelled = true;
 
@@ -5507,6 +5528,9 @@ const useLogs = () => {
     initialQueryPayload,
     refreshPagination,
     enableRefreshInterval,
+    buildWebSocketPayload,
+    initializeWebSocketConnection,
+    addRequestId,
   };
 };
 

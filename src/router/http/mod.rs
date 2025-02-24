@@ -426,7 +426,7 @@ async fn proxy_ws(
     start: std::time::Instant,
 ) -> actix_web::Result<HttpResponse, Error> {
     let cfg = get_config();
-    if cfg.common.websocket_enabled {
+    if cfg.websocket.enabled {
         // Convert the HTTP/HTTPS URL to a WebSocket URL (WS/WSS)
         let ws_url = match ws::convert_to_websocket_url(&new_url.full_url) {
             Ok(url) => url,

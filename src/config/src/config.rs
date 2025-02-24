@@ -354,6 +354,7 @@ pub static BLOCKED_STREAMS: Lazy<Vec<String>> = Lazy::new(|| {
 #[derive(EnvConfig)]
 pub struct Config {
     pub auth: Auth,
+    pub websocket: WebSocket,
     pub report_server: ReportServer,
     pub http: Http,
     pub grpc: Grpc,
@@ -378,6 +379,22 @@ pub struct Config {
     pub pipeline: Pipeline,
     pub health_check: HealthCheck,
     pub encryption: Encryption,
+}
+
+#[derive(EnvConfig)]
+pub struct WebSocket {
+    #[env_config(name = "ZO_WEBSOCKET_ENABLED", default = false)]
+    pub enabled: bool,
+    #[env_config(name = "ZO_WEBSOCKET_CLOSE_FRAME_DELAY", default = 50)]
+    pub close_frame_delay: u64, // in milliseconds
+    #[env_config(name = "ZO_WEBSOCKET_SESSION_IDLE_TIMEOUT_SECS", default = 300)]
+    pub session_idle_timeout_secs: i64,
+    #[env_config(name = "ZO_WEBSOCKET_SESSION_MAX_LIFETIME_SECS", default = 3600)]
+    pub session_max_lifetime_secs: i64,
+    #[env_config(name = "ZO_WEBSOCKET_SESSION_GC_INTERVAL_SECS", default = 60)]
+    pub session_gc_interval_secs: i64,
+    #[env_config(name = "ZO_WEBSOCKET_PING_INTERVAL_SECS", default = 15)]
+    pub ping_interval_secs: i64,
 }
 
 #[derive(EnvConfig)]
@@ -978,10 +995,6 @@ pub struct Common {
     pub swagger_enabled: bool,
     #[env_config(name = "ZO_FAKE_ES_VERSION", default = "")]
     pub fake_es_version: String,
-    #[env_config(name = "ZO_WEBSOCKET_ENABLED", default = false)]
-    pub websocket_enabled: bool,
-    #[env_config(name = "ZO_WEBSOCKET_CLOSE_FRAME_DELAY", default = 0)]
-    pub websocket_close_frame_delay: u64, // in milliseconds
     #[env_config(
         name = "ZO_MIN_AUTO_REFRESH_INTERVAL",
         default = 5,

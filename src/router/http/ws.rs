@@ -20,23 +20,65 @@ use actix_ws::Message;
 use config::get_config;
 use futures_util::{SinkExt, StreamExt};
 use reqwest::header::{HeaderName, HeaderValue};
-use tokio::sync::oneshot;
 use tokio_tungstenite::{connect_async, tungstenite};
 use url::Url;
 
-/// WebSocket proxy handler
+/// WebSocket proxy that manages bidirectional communication using two concurrent tasks.
+///
+/// # Architecture Overview
+/// ```text
+/// +--------+     +-----------------Router Process----------------+     +---------+
+/// |        |     |  +-------------+        +-------------+       |     |         |
+/// |        |     |  |    Task 1   |        |    Task 2   |       |     |         |
+/// |        |     |  |client_to_bkd|        |backend_to_cl|       |     |         |
+/// |        |     |  +-------------+        +-------------+       |     |         |
+/// |        |     |    ↑    |               |     ↓               |     |         |
+/// |Client  |<--->| msg_stream  ws_sink   ws_stream  session      |<--->| Backend |
+/// |        |     |                                               |     |         |
+/// +--------+     +-----------------------------------------------+     +---------+
+/// ```
+///
+/// # Stream Flow
+/// ```text
+/// 1. Client -> Backend (Task 1: client_to_backend)
+///    client_msg_stream -> convert format -> backend_ws_sink
+///
+/// 2. Backend -> Client (Task 2: backend_to_client)
+///    backend_ws_stream -> convert format -> session.send
+/// ```
+///
+/// # Key Features
+/// - Two independent tasks handle each direction
+/// - No shared state between tasks
+/// - Tasks complete naturally on connection close
+/// - Automatic message format conversion between protocols
+///
+/// # Example Message Flow
+/// ```text
+/// Client Message:
+///   1. Client sends message
+///   2. Task 1 receives via client_msg_stream
+///   3. Task 1 converts format (actix -> tungstenite)
+///   4. Task 1 sends to backend via ws_sink
+///
+/// Backend Message:
+///   1. Backend sends message
+///   2. Task 2 receives via ws_stream
+///   3. Task 2 converts format (tungstenite -> actix)
+///   4. Task 2 sends to client via session
+/// ```
 pub async fn ws_proxy(
     req: HttpRequest,
     payload: web::Payload,
     ws_base_url: &str,
 ) -> Result<HttpResponse, Error> {
-    // log node role
     let cfg = get_config();
     let node_role = cfg.common.node_role.clone();
 
-    // Upgrade the client connection to a WebSocket
+    // Session 1: Client<->Router WebSocket connection
     let (response, mut session, mut client_msg_stream) = actix_ws::handle(&req, payload)?;
 
+    // Prepare backend connection request
     let ws_req = match convert_actix_to_tungstenite_request(&req, ws_base_url) {
         Ok(req) => req,
         Err(e) => {
@@ -50,7 +92,7 @@ pub async fn ws_proxy(
         }
     };
 
-    // Connect to the backend WebSocket service
+    // Session 2: Router<->Backend WebSocket connection
     let (backend_ws_stream, _) = connect_async(ws_req).await.map_err(|e| {
         log::error!(
             "[WS_PROXY] Node Role: {} Failed to connect to backend WebSocket service, error: {:?}",
@@ -59,126 +101,99 @@ pub async fn ws_proxy(
         );
         actix_web::error::ErrorInternalServerError("Failed to connect to backend websocket service")
     })?;
-
-    // Split backend Websocket stream into sink and stream
     let (mut backend_ws_sink, mut backend_ws_stream) = backend_ws_stream.split();
 
-    // Add coordination channels for graceful shutdown
-    let (client_kill_tx, client_kill_rx) = oneshot::channel::<()>();
-    let (backend_kill_tx, backend_kill_rx) = oneshot::channel::<()>();
-
-    let client_to_backend = {
-        let mut client_kill_rx = client_kill_rx; // Take ownership here
-        async move {
-            loop {
-                tokio::select! {
-                    Some(msg_result) = client_msg_stream.next() => {
-                        match msg_result {
-                            Ok(msg) => {
-                                // Convert actix message to tungstenite message
-                                let ws_msg = from_actix_message(msg);
-                                match ws_msg {
-                                    tungstenite::protocol::Message::Close(_) => {
-                                        log::info!("[WS_PROXY] Client initiated close");
-                                        let _ = backend_kill_tx.send(());
-                                        break;
-                                    }
-                                    _ => {
-                                        if backend_ws_sink.send(ws_msg).await.is_err() {
-                                            break;
-                                        }
-                                    }
-                                }
+    // Task 1: Forward messages from Client to Backend
+    let client_to_backend = async move {
+        while let Some(msg_result) = client_msg_stream.next().await {
+            match msg_result {
+                Ok(msg) => {
+                    let ws_msg = from_actix_message(msg);
+                    match ws_msg {
+                        tungstenite::protocol::Message::Close(reason) => {
+                            // Forward close to backend
+                            log::info!("[WS_PROXY] Client -> Router close");
+                            let close_msg = tungstenite::protocol::Message::Close(reason.clone());
+                            if let Err(e) = backend_ws_sink.send(close_msg).await {
+                                log::error!("[WS_PROXY] Failed to forward close: {}", e);
                             }
-                            Err(e) => {
-                                log::error!("[WS_PROXY] Client error: {:?}", e);
+                            log::info!("[WS_PROXY] Client -> Router close completed");
+                            break;
+                        }
+                        _ => {
+                            if backend_ws_sink.send(ws_msg).await.is_err() {
                                 break;
                             }
                         }
                     }
-                    _ = &mut client_kill_rx => {  // Use &mut reference
-                        log::info!("[WS_PROXY] Client task received shutdown signal");
-                        break;
-                    }
+                }
+                Err(e) => {
+                    log::error!("[WS_PROXY] Client error: {:?}", e);
+                    break;
                 }
             }
         }
     };
 
-    let backend_to_client = {
-        let mut backend_kill_rx = backend_kill_rx;
-        let mut closed_normally = false;
-        async move {
-            loop {
-                tokio::select! {
-                    Some(msg_result) = backend_ws_stream.next() => {
-                        let ws_msg = from_tungstenite_msg_to_actix_msg(msg_result.unwrap());
-                        match ws_msg {
-                            Message::Close(reason) => {
-                                log::info!("[WS_PROXY] Backend initiated close: {:?}", reason);
-                                let _ = client_kill_tx.send(());
-                                let _ = session.close(reason).await;
-                                closed_normally = true;
+    // Task 2: Forward messages from Backend to Client
+    let backend_to_client = async move {
+        while let Some(msg_result) = backend_ws_stream.next().await {
+            match msg_result {
+                Ok(msg) => {
+                    let ws_msg = from_tungstenite_msg_to_actix_msg(msg);
+                    match ws_msg {
+                        Message::Close(reason) => {
+                            // This handles both:
+                            // 1. Backend initiated close
+                            // 2. Backend's acknowledgment of client's close
+                            log::info!("[WS_PROXY] Backend -> Router close");
+                            if let Err(e) = session.close(reason).await {
+                                log::error!("[WS_PROXY] Failed to close client: {}", e);
+                            }
+                            log::info!("[WS_PROXY] Backend -> Router close completed");
+                            break;
+                        }
+                        Message::Text(text) => {
+                            if session.text(text).await.is_err() {
                                 break;
                             }
-                            Message::Text(text) => {
-                                if session.text(text).await.is_err() {
-                                    break;
-                                }
-                            }
-                            Message::Binary(bin) => {
-                                if session.binary(bin).await.is_err() {
-                                    break;
-                                }
-                            }
-                            Message::Ping(ping) => {
-                                if session.ping(&ping).await.is_err() {
-                                    break;
-                                }
-                            }
-                            Message::Pong(pong) => {
-                                if session.pong(&pong).await.is_err() {
-                                    break;
-                                }
-                            }
-                            Message::Continuation(_) => {
-                                log::warn!("[WS_PROXY] Unsupported message type from backend: {:?}", ws_msg);
-                            }
-                            Message::Nop => {
-                                log::warn!("[WS_PROXY] Unsupported message type from backend: Nop");
+                        }
+                        Message::Binary(bin) => {
+                            if session.binary(bin).await.is_err() {
+                                break;
                             }
                         }
-                    }
-                    _ = &mut backend_kill_rx => {
-                        log::info!("[WS_PROXY] Backend task received shutdown signal");
-                        closed_normally = true;
-                        break;
+                        Message::Ping(ping) => {
+                            if session.ping(&ping).await.is_err() {
+                                break;
+                            }
+                        }
+                        Message::Pong(pong) => {
+                            if session.pong(&pong).await.is_err() {
+                                break;
+                            }
+                        }
+                        _ => log::warn!("[WS_PROXY] Unsupported message type: {:?}", ws_msg),
                     }
                 }
-            }
-
-            if !closed_normally {
-                log::warn!("[WS_PROXY] Backend connection closed unexpectedly");
-            } else {
-                log::info!("[WS_PROXY] Backend connection closed normally");
+                Err(e) => {
+                    log::error!("[WS_PROXY] Backend error: {:?}", e);
+                    break;
+                }
             }
         }
     };
 
-    // Spawn tasks with cleanup
-    let backend_handle = rt::spawn(backend_to_client);
-    let client_handle = rt::spawn(client_to_backend);
-
-    // Join the tasks and log when they complete
+    // Spawn tasks
     rt::spawn(async move {
-        let _ = tokio::join!(backend_handle, client_handle);
-        log::info!("[WS_PROXY] backend and client tasks completed");
+        let _ = tokio::join!(rt::spawn(client_to_backend), rt::spawn(backend_to_client));
+        log::info!("[WS_PROXY] WebSocket proxy completed");
     });
 
-    // Return the WebSocket handshake response
     Ok(response)
 }
 
+/// Convert actix-web WebSocket message to tungstenite message format
 fn from_actix_message(msg: Message) -> tungstenite::protocol::Message {
     match msg {
         Message::Text(text) => tungstenite::protocol::Message::Text(text.to_string()),
@@ -204,6 +219,7 @@ fn from_actix_message(msg: Message) -> tungstenite::protocol::Message {
     }
 }
 
+/// Convert tungstenite WebSocket message to actix-web message format
 fn from_tungstenite_msg_to_actix_msg(msg: tungstenite::protocol::Message) -> Message {
     match msg {
         tungstenite::protocol::Message::Text(text) => Message::Text(text.into()),

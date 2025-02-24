@@ -304,7 +304,7 @@ pub async fn zo_config() -> Result<HttpResponse, Error> {
         all_fields_name: cfg.common.column_all.to_string(),
         usage_enabled: cfg.common.usage_enabled,
         usage_publish_interval: cfg.common.usage_publish_interval,
-        websocket_enabled: cfg.common.websocket_enabled,
+        websocket_enabled: cfg.websocket.enabled,
         min_auto_refresh_interval: cfg.common.min_auto_refresh_interval,
         query_default_limit: cfg.limit.query_default_limit,
     }))

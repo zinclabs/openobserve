@@ -32,7 +32,7 @@ pub async fn websocket(
 ) -> Result<HttpResponse, Error> {
     let cfg = get_config();
 
-    if !cfg.common.websocket_enabled {
+    if !cfg.websocket.enabled {
         log::info!(
             "[WS_HANDLER]: Node Role: {} Websocket is disabled",
             cfg.common.node_role
@@ -66,4 +66,11 @@ pub async fn websocket(
     actix_web::rt::spawn(session::run(msg_stream, user_id, request_id, org_id, path));
 
     Ok(res)
+}
+
+/// Initialize the job init for websocket
+pub async fn init() -> Result<(), anyhow::Error> {
+    // Run the garbage collector for websocket sessions
+    sessions_cache_utils::run_gc_ws_sessions().await;
+    Ok(())
 }

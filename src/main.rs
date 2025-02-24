@@ -43,6 +43,7 @@ use openobserve::{
         utils::zo_logger,
     },
     handler::{
+        self,
         grpc::{
             auth::check_auth,
             flight::FlightServiceImpl,
@@ -295,6 +296,15 @@ async fn main() -> Result<(), anyhow::Error> {
                 job_init_tx.send(false).ok();
                 panic!("meter provider init failed");
             };
+
+            // init websocket gc
+            if cfg.websocket.enabled {
+                log::info!("Initializing WebSocket session garbage collector");
+                if let Err(e) = handler::http::request::websocket::init().await {
+                    job_init_tx.send(false).ok();
+                    panic!("websocket gc init failed: {}", e);
+                }
+            }
 
             job_init_tx.send(true).ok();
             job_shutdown_rx.await.ok();

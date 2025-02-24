@@ -95,7 +95,7 @@ async fn create(
 
     if let Some(enable_websocket_search) = settings.enable_websocket_search {
         // allow only if websocket is enabled
-        if get_config().common.websocket_enabled {
+        if get_config().websocket.enabled {
             field_found = true;
             data.enable_websocket_search = enable_websocket_search;
         }

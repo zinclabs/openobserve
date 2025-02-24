@@ -86,9 +86,115 @@ pub mod enterprise_utils {
 }
 
 pub mod sessions_cache_utils {
+    use actix_ws::{CloseCode, CloseReason};
+    use config::get_config;
+    use futures::FutureExt;
+
+    use super::search_registry_utils::SearchState;
     use crate::{
-        common::infra::config::WS_SESSIONS, handler::http::request::websocket::session::WsSession,
+        common::infra::config::WS_SESSIONS,
+        handler::http::request::websocket::session::{WsSession, SEARCH_REGISTRY},
     };
+
+    pub async fn run_gc_ws_sessions() {
+        log::info!("[WS_GC] Running garbage collector for websocket sessions");
+        let cfg = get_config();
+        let interval_secs = cfg.websocket.session_gc_interval_secs;
+
+        let mut interval =
+            tokio::time::interval(std::time::Duration::from_secs(interval_secs as u64));
+
+        tokio::spawn(async move {
+            loop {
+                interval.tick().await;
+                log::info!("[WS_GC] Running garbage collector for websocket sessions");
+
+                // Use catch_unwind to prevent task from crashing
+                if let Err(e) = std::panic::AssertUnwindSafe(cleanup_expired_sessions())
+                    .catch_unwind()
+                    .await
+                {
+                    log::error!("[WS_GC] Panic in cleanup: {:?}", e);
+                    // Add delay before next attempt
+                    tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+                    continue;
+                }
+
+                // Add delay between runs if too many sessions
+                if WS_SESSIONS.len() > 1000 {
+                    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                }
+            }
+        });
+    }
+
+    async fn cleanup_expired_sessions() {
+        let expired: Vec<String> = WS_SESSIONS
+            .iter()
+            .filter(|entry| entry.value().is_expired())
+            .map(|entry| entry.key().clone())
+            .collect();
+
+        for session_id in expired {
+            // Clean up associated searches first
+            cleanup_searches_for_session(&session_id);
+
+            // Close and remove session
+            if let Some(mut session) = get_mut_session(&session_id) {
+                log::info!("[WS_GC] Closing expired session: {}", session_id);
+
+                if let Err(e) = session
+                    .close(Some(CloseReason {
+                        code: CloseCode::Normal,
+                        description: Some("Session expired".to_string()),
+                    }))
+                    .await
+                {
+                    log::warn!("[WS_GC] Error closing session {}: {}", session_id, e);
+                }
+            }
+
+            remove_session(&session_id);
+            log::info!("[WS_GC] Removed expired session: {}", session_id);
+        }
+
+        log::info!("[WS_GC] Remaining active sessions: {}", len_sessions());
+    }
+
+    fn cleanup_searches_for_session(session_id: &str) {
+        let searches_to_remove: Vec<String> = SEARCH_REGISTRY
+            .iter()
+            .filter_map(|entry| {
+                if entry.value().get_req_id() == session_id {
+                    Some(entry.key().clone())
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        for trace_id in searches_to_remove {
+            if let Some((_, state)) = SEARCH_REGISTRY.remove(&trace_id) {
+                match state {
+                    SearchState::Running { cancel_tx, req_id } => {
+                        let _ = cancel_tx.try_send(());
+                        log::info!(
+                            "[WS_GC] Cancelled running search: {} for session: {}",
+                            trace_id,
+                            req_id
+                        );
+                    }
+                    _ => {
+                        log::debug!(
+                            "[WS_GC] Removed search: {} for session: {}",
+                            trace_id,
+                            session_id
+                        );
+                    }
+                }
+            }
+        }
+    }
 
     /// Insert a new session into the cache
     pub fn insert_session(session_id: &str, session: WsSession) {
@@ -123,22 +229,35 @@ pub mod search_registry_utils {
 
     use crate::handler::http::request::websocket::session::SEARCH_REGISTRY;
 
-    // Core state management
     #[derive(Debug)]
     pub enum SearchState {
         Running {
-            #[allow(unused)]
             cancel_tx: mpsc::Sender<()>,
+            req_id: String,
         },
-        Cancelled,
-        Completed,
+        Cancelled {
+            req_id: String,
+        },
+        Completed {
+            req_id: String,
+        },
     }
 
-    pub fn is_cancelled(trace_id: &str) -> bool {
+    impl SearchState {
+        pub fn get_req_id(&self) -> &str {
+            match self {
+                SearchState::Running { req_id, .. } => req_id,
+                SearchState::Cancelled { req_id } => req_id,
+                SearchState::Completed { req_id } => req_id,
+            }
+        }
+    }
+
+    // Add this function to check if a search is cancelled
+    pub fn is_cancelled(trace_id: &str) -> Option<bool> {
         SEARCH_REGISTRY
             .get(trace_id)
-            .map(|state| matches!(state.value(), SearchState::Cancelled))
-            .unwrap_or(false)
+            .map(|state| matches!(*state, SearchState::Cancelled { .. }))
     }
 }
 
@@ -174,10 +293,6 @@ pub enum WsClientEvents {
 }
 
 impl WsClientEvents {
-    pub fn to_json(&self) -> String {
-        serde_json::to_string(self).expect("Failed to serialize WsClientEvents")
-    }
-
     pub fn get_type(&self) -> String {
         match self {
             WsClientEvents::Search(_) => "search",
@@ -186,6 +301,10 @@ impl WsClientEvents {
             WsClientEvents::Benchmark { .. } => "benchmark",
         }
         .to_string()
+    }
+
+    pub fn to_json(&self) -> String {
+        serde_json::to_string(self).expect("Failed to serialize WsClientEvents")
     }
 }
 

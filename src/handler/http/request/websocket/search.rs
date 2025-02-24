@@ -554,15 +554,14 @@ async fn process_delta(
 
     for (idx, &[start_time, end_time]) in partitions.iter().enumerate() {
         // Check if the cancellation flag is set
-        if search_registry_utils::is_cancelled(&trace_id) {
-            log::info!(
-                "[WS_SEARCH]: Cancellation detected for trace_id: {}, stopping delta search",
-                trace_id
-            );
-            return Err(Error::ErrorCode(ErrorCodes::SearchCancelQuery(format!(
-                "Search cancel detected for trace_id: {}",
-                trace_id
-            ))));
+        if let Some(is_cancelled) = search_registry_utils::is_cancelled(&trace_id) {
+            if is_cancelled {
+                // Search is cancelled, stop processing
+                return Ok(());
+            }
+        } else {
+            // Search not found in registry, stop processing
+            return Ok(());
         }
 
         let mut req = req.clone();
@@ -727,16 +726,24 @@ async fn send_cached_responses(
     curr_res_size: &mut i64,
     fallback_order_by_col: Option<String>,
 ) -> Result<(), Error> {
-    if search_registry_utils::is_cancelled(trace_id) {
-        log::info!(
-            "[WS_SEARCH]: Cancellation detected for trace_id: {}, stopping cached response",
-            trace_id
-        );
+    if let Some(is_cancelled) = search_registry_utils::is_cancelled(trace_id) {
+        if is_cancelled {
+            log::info!(
+                "[WS_SEARCH]: Cancellation detected for trace_id: {}, stopping cached response",
+                trace_id
+            );
+            return Err(Error::ErrorCode(ErrorCodes::SearchCancelQuery(format!(
+                "Search cancel detected for trace_id: {}",
+                trace_id
+            ))));
+        };
+    } else {
+        // Search not found in registry, stop processing
         return Err(Error::ErrorCode(ErrorCodes::SearchCancelQuery(format!(
             "Search cancel detected for trace_id: {}",
             trace_id
         ))));
-    };
+    }
 
     log::info!(
         "[WS_SEARCH]: Processing cached response for trace_id: {}",
@@ -855,15 +862,17 @@ async fn do_partitioned_search(
 
     for (idx, &[start_time, end_time]) in partitions.iter().enumerate() {
         // Check if the cancellation flag is set
-        if search_registry_utils::is_cancelled(trace_id) {
-            log::info!(
-                "[WS_SEARCH]: Cancellation detected for trace_id: {}, stopping partitioned search",
-                trace_id
-            );
-            return Err(Error::ErrorCode(ErrorCodes::SearchCancelQuery(format!(
-                "Search cancel detected for trace_id: {}",
-                trace_id
-            ))));
+        if let Some(is_cancelled) = search_registry_utils::is_cancelled(trace_id) {
+            if is_cancelled {
+                log::info!(
+                    "[WS_SEARCH]: Cancellation detected for trace_id: {}, stopping partitioned search",
+                    trace_id
+                );
+                return Ok(());
+            }
+        } else {
+            // Search not found in registry, stop processing
+            return Ok(());
         }
 
         let mut req = req.clone();

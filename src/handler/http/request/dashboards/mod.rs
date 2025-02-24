@@ -43,7 +43,8 @@ impl From<DashboardError> for HttpResponse {
             DashboardError::CreateFolderNotFound => MetaHttpResponse::not_found("Folder not found"),
             DashboardError::CreateDefaultFolder => MetaHttpResponse::internal_error("Error saving default folder"),
             DashboardError::DistinctValueError => MetaHttpResponse::internal_error("Error in updating distinct values"),
-            DashboardError::MoveDashboardDeleteOld(dashb_id, folder_id, e) => MetaHttpResponse::internal_error(format!("error deleting the dashboard {dashb_id} from old folder {folder_id} : {e}"))
+            DashboardError::MoveDashboardDeleteOld(dashb_id, folder_id, e) => MetaHttpResponse::internal_error(format!("error deleting the dashboard {dashb_id} from old folder {folder_id} : {e}")),
+            DashboardError::ListPermittedDashboardsError(err) => MetaHttpResponse::forbidden(err),
         }
     }
 }
@@ -161,7 +162,10 @@ async fn list_dashboards(org_id: web::Path<String>, req: HttpRequest) -> impl Re
         return MetaHttpResponse::bad_request("Error parsing query parameters");
     };
     let params = query.into_inner().into(&org_id.into_inner());
-    let dashboards = match dashboards::list_dashboards(params).await {
+    let Some(user_id) = get_user_id(req) else {
+        return MetaHttpResponse::unauthorized("User ID not found in request headers");
+    };
+    let dashboards = match dashboards::list_dashboards(&user_id, params).await {
         Ok(dashboards) => dashboards,
         Err(err) => return err.into(),
     };
@@ -270,4 +274,12 @@ async fn move_dashboard(
 fn get_folder(req: HttpRequest) -> String {
     let query = web::Query::<HashMap<String, String>>::from_query(req.query_string()).unwrap();
     crate::common::utils::http::get_folder(&query)
+}
+
+/// Tries to get the user ID from the request headers.
+fn get_user_id(req: HttpRequest) -> Option<String> {
+    req.headers()
+        .get("user_id")
+        .and_then(|v| v.to_str().ok())
+        .map(|s| s.to_string())
 }

@@ -95,6 +95,15 @@ impl HttpResponse {
         ))
     }
 
+    /// Send an Unauthorized response in json format and sets the
+    /// provided error as the `error` field.
+    pub fn unauthorized(error: impl ToString) -> ActixHttpResponse {
+        ActixHttpResponse::Forbidden().json(Self::error(
+            StatusCode::UNAUTHORIZED.into(),
+            error.to_string(),
+        ))
+    }
+
     /// Send a Forbidden response in json format and associate the
     /// provided error as `error` field.
     pub fn forbidden(error: impl ToString) -> ActixHttpResponse {

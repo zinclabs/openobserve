@@ -101,6 +101,11 @@ pub enum DashboardError {
     /// dashboard variables
     #[error("error in updating distinct values")]
     DistinctValueError,
+
+    /// Error that occurs when trying to get the list of dashboards that a user is permitted to
+    /// get.
+    #[error(transparent)]
+    ListPermittedDashboardsError(crate::handler::http::auth::validator::Error),
 }
 
 async fn add_distinct_field_entry(
@@ -360,9 +365,11 @@ pub async fn update_dashboard(
 
 #[tracing::instrument]
 pub async fn list_dashboards(
+    user_id: &str,
     params: ListDashboardsParams,
 ) -> Result<Vec<(Folder, Dashboard)>, DashboardError> {
     let dashboards = table::dashboards::list(params).await?;
+    let dashboards = filter_permitted_dashboards(&params.org_id, user_id, dashboards).await?;
     Ok(dashboards)
 }
 
@@ -521,4 +528,46 @@ pub(crate) async fn get_folder_and_dashboard(
     table::dashboards::get_by_id(org_id, dashboard_id)
         .await?
         .ok_or(DashboardError::DashboardNotFound)
+}
+
+/// Filters dashboards, returning only those that the user has permission to get.
+#[cfg(not(feature = "enterprise"))]
+async fn filter_permitted_dashboards(
+    _org_id: &str,
+    _user_id: &str,
+    dashboards: Vec<Dashboard>,
+) -> Result<Vec<Dashboard>, DashboardError> {
+    Ok(dashboards)
+}
+
+/// Filters dashboards, returning only those that the user has permission to get.
+#[cfg(feature = "enterprise")]
+async fn filter_permitted_dashboards(
+    org_id: &str,
+    user_id: &str,
+    dashboards: Vec<Dashboard>,
+) -> Result<Vec<(Folder, Dashboard)>, DashboardError> {
+    let permitted_objects = crate::handler::http::auth::validator::list_objects_for_user(
+        org_id,
+        user_id,
+        "GET",
+        "dashboards",
+    )
+    .await
+    .map_err(DashboardError::ListPermittedDashboardsError)?;
+    let permitted_dashboards = dashboards
+        .into_iter()
+        .filter(|d| {
+            permitted_objects.is_none()
+                || permitted_objects
+                    .as_ref()
+                    .unwrap()
+                    .contains(&format!("dashboards:{}", d.dashboard_id()))
+                || permitted_objects
+                    .as_ref()
+                    .unwrap()
+                    .contains(&format!("dashboards:_all_{}", org_id))
+        })
+        .collect();
+    Ok(permitted_dashboards)
 }

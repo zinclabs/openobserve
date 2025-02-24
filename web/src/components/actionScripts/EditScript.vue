@@ -237,7 +237,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                 </div>
 
                 <div
-                  v-if="frequency.type === 'Once'"
+                  v-if="frequency.type === 'once'"
                   class="flex justify-start items-center q-mt-md"
                   data-test="add-action-script-frequency-info"
                 >
@@ -247,7 +247,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                   </div>
                 </div>
 
-                <template v-if="frequency.type === 'Repeat'">
+                <template v-if="frequency.type === 'repeat'">
                   <div class="flex items-center justify-start q-mt-md o2-input">
                     <div
                       data-test="add-action-script-cron-input"
@@ -611,7 +611,7 @@ const defaultActionScript = {
   start: 0,
   frequency: {
     interval: 1,
-    type: "Repeat",
+    type: "repeat",
     cron: "",
   },
   environment_variables: {},
@@ -664,11 +664,11 @@ const timeTabs = [
 const frequencyTabs = [
   {
     label: "Cron Job",
-    value: "Repeat",
+    value: "repeat",
   },
   {
     label: "Once",
-    value: "Once",
+    value: "once",
   },
 ];
 
@@ -698,7 +698,7 @@ const environmentalVariables = ref([{ key: "", value: "", uuid: getUUID() }]);
 const cronError = ref("");
 
 const frequency = ref({
-  type: "Once",
+  type: "once",
   custom: {
     interval: 1,
     period: "days",
@@ -810,7 +810,7 @@ const saveActionScript = async () => {
   // );
 
   // Add cron expression if needed
-  if (frequency.value.type === "Repeat") {
+  if (frequency.value.type === "repeat") {
     commonFields.cron_expr = frequency.value.cron.toString().trim();
     // commonFields.timezoneOffset = convertedDateTime.offset.toString();
     // commonFields.timezone = scheduling.value.timezone;
@@ -930,7 +930,7 @@ const validateActionScriptData = async () => {
     return;
   }
 
-  if (formData.value.execution_details === "Repeat") {
+  if (formData.value.execution_details === "repeat") {
     try {
       cronError.value = "";
       cronParser.parseExpression(frequency.value.cron);
@@ -941,7 +941,7 @@ const validateActionScriptData = async () => {
     }
   }
 
-  if (formData.value.execution_details === "Repeat" && cronError.value) {
+  if (formData.value.execution_details === "repeat" && cronError.value) {
     step.value = 2;
     return;
   }
@@ -1017,14 +1017,14 @@ const setupEditingActionScript = async (report: any) => {
   // selectedTimeTab.value = "scheduleLater";
 
   // set frequency
-  if (report.execution_details == "Repeat") {
-    frequency.value.type = "Repeat";
+  if (report.execution_details == "repeat") {
+    frequency.value.type = "repeat";
     frequency.value.cron =
       report.cron_expr.split(" ").length === 7
         ? report.cron_expr.split(" ").slice(0, 6).join(" ")
         : report.cron_expr;
   } else {
-    frequency.value.type = "Once";
+    frequency.value.type = "once";
   }
   if (Object.keys(formData.value.environment_variables).length) {
     environmentalVariables.value = [];

@@ -1720,6 +1720,17 @@ pub struct IngestionRequest {
     pub data: ::core::option::Option<IngestionData>,
     #[prost(enumeration = "IngestionType", optional, tag = "5")]
     pub ingestion_type: ::core::option::Option<i32>,
+    #[prost(message, optional, tag = "6")]
+    pub metadata: ::core::option::Option<IngestRequestMetadata>,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct IngestRequestMetadata {
+    #[prost(map = "string, string", tag = "1")]
+    pub data: ::std::collections::HashMap<
+        ::prost::alloc::string::String,
+        ::prost::alloc::string::String,
+    >,
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]

@@ -967,6 +967,12 @@ async fn handle_derived_stream_triggers(
                     // Ingest result into destination stream
                     if ingestion_error_msg.is_none() {
                         for (dest_stream, records) in json_data_by_stream {
+                            // need to get the metadata from the destination node with the same
+                            // stream_params since this is a scheduled
+                            // pipeline, only the destination node can be of stream node.
+                            let request_metadata = pipeline
+                                .get_metadata_by_stream_params(&dest_stream)
+                                .map(|meta| cluster_rpc::IngestRequestMetadata { data: meta });
                             let (org_id, stream_name, stream_type): (String, String, String) = {
                                 (
                                     dest_stream.org_id.into(),
@@ -980,6 +986,7 @@ async fn handle_derived_stream_triggers(
                                 stream_type: stream_type.clone(),
                                 data: Some(cluster_rpc::IngestionData::from(records)),
                                 ingestion_type: Some(cluster_rpc::IngestionType::Json.into()),
+                                metadata: request_metadata,
                             };
                             match ingestion_service::ingest(req).await {
                                 Ok(resp) if resp.status_code == 200 => {

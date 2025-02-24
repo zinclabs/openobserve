@@ -249,6 +249,7 @@ pub(super) async fn ingest_reporting_data(
             stream_type,
             data: Some(cluster_rpc::IngestionData::from(reporting_data_json)),
             ingestion_type: Some(cluster_rpc::IngestionType::Usage.into()),
+            metadata: None,
         };
 
         match service::ingestion::ingestion_service::ingest(req).await {

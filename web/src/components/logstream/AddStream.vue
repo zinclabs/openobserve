@@ -139,8 +139,7 @@ const { t } = useI18n();
 const streamTypes = [
   { label: "Logs", value: "logs" },
   { label: "Metrics", value: "metrics" },
-  { label: "Traces", value: "traces" },
-  { label: "Enrichment_Tables", value: "enrichment_tables" },
+  { label: "Traces", value: "traces" }
 ];
 
 const emits = defineEmits(["streamAdded", "close","added:stream-aded"]);

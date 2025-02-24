@@ -53,6 +53,7 @@ async fn send_metrics(config: &config::Config, metrics: Vec<Value>) -> Result<()
         stream_type: StreamType::Metrics.to_string(),
         data: Some(IngestionData::from(metrics)),
         ingestion_type: Some(IngestionType::Json.into()),
+        metadata: None,
     };
     let org_header_key: MetadataKey<_> = config.grpc.org_header_key.parse().unwrap();
     let token: MetadataValue<_> = get_internal_grpc_token().parse().unwrap();

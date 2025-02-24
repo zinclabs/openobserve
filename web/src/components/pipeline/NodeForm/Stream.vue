@@ -89,16 +89,30 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
             :rules="[(val: any) => !!val || 'Field is required!']"
             :option-disable="(option : any)  => option.isDisable"
             @input-value="handleDynamicStreamName"
-           
             />
+
+
+            <q-toggle
+            v-if="stream_type == 'enrichment_tables' && selectedNodeType == 'output'"
+              class="col-12 q-py-md text-grey-8 text-bold"
+              v-model="appendData"
+              :label="t('function.appendData')"
+            />
+
+
 
 
 
 
           </div>
           <div v-if="selectedNodeType == 'output'" style="font-size: 14px;" class="note-message" >
-          <span class="tw-flex tw-items-center"> <q-icon name="info" class="q-pr-xs"</q-icon> Use curly braces '{}' to configure stream name dynamically. e.g. static_text_{fieldname}_postfix. Static text before/after {} is optional</span>
+            <span class="tw-flex tw-items-center"> <q-icon name="info" class="q-pr-xs"</q-icon>
+              Enrichment_tables as destination stream is only available for scheduled pipelines
+             </span>
+
+          <span class="tw-flex"> <q-icon name="info" class="q-pr-xs q-pt-xs"</q-icon> Use curly braces '{}' to configure stream name dynamically. e.g. static_text_{fieldname}_postfix. Static text before/after {} is optional</span>
             </div>
+
         </div>
 
         <div
@@ -193,9 +207,11 @@ const streams: any = ref({});
 const usedStreams: any = ref([]);
 const streamTypes = ["logs", "metrics", "traces"];
 //for testing purpose but remove metrics and traces as discuessedf
-const outputStreamTypes = ["logs", "metrics", "traces"];
+const outputStreamTypes = ["logs", "metrics", "traces","enrichment_tables"];
 const stream_name = ref((pipelineObj.currentSelectedNodeData?.data as { stream_name?: string })?.stream_name || {label: "", value: "", isDisable: false});
 const dynamic_stream_name = ref((pipelineObj.currentSelectedNodeData?.data as { stream_name?: string })?.stream_name || {label: "", value: "", isDisable: false});
+
+const appendData = ref((pipelineObj.currentSelectedNodeData?.data as { meta?: { append_data?: boolean } })?.meta?.append_data || false);
 
 const stream_type = ref((pipelineObj.currentSelectedNodeData?.data as { stream_type?: string })?.stream_type || "logs");
 const selectedNodeType = ref((pipelineObj.currentSelectedNodeData as { io_type?: string })?.io_type || "");
@@ -341,13 +357,22 @@ const deleteNode = () => {
   emit("cancel:hideform");
 };
 
+
+
 const saveStream = () => {
-  const streamNodeData = {
+  // Validate pipeline configuration
+
+  const streamNodeData: any = {
     stream_type: stream_type,
     stream_name: stream_name,
     org_id: store.state.selectedOrganization.identifier,
     node_type: "stream",
   };
+
+  if(stream_type.value == 'enrichment_tables'){
+    streamNodeData.meta = { append_data: appendData.value };
+  }
+
   if( typeof stream_name.value === 'object' && stream_name.value !== null && stream_name.value.hasOwnProperty('value') && stream_name.value.value === ""){
     $q.notify({
       message: "Please select Stream from the list",

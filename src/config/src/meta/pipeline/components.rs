@@ -13,6 +13,8 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+use std::collections::HashMap;
+
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
@@ -57,6 +59,8 @@ pub struct DerivedStream {
 pub struct Node {
     pub id: String,
     pub data: NodeData,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub meta: Option<HashMap<String, String>>,
     position: Position,
     io_type: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -74,6 +78,7 @@ impl Node {
         Self {
             id,
             data,
+            meta: None,
             position: Position { x: pos_x, y: pos_y },
             io_type,
             style: None,

@@ -17,11 +17,12 @@ message IngestionData {
 }
 
 message IngestionRequest {
-    string                         org_id = 1;
-    string                    stream_type = 2;
-    string                    stream_name = 3;
-    IngestionData                    data = 4;
-    optional IngestionType ingestion_type = 5;
+    string                           org_id = 1;
+    string                      stream_type = 2;
+    string                      stream_name = 3;
+    IngestionData                      data = 4;
+    optional IngestionType   ingestion_type = 5;
+    optional IngestRequestMetadata metadata = 6;
 }
 
 enum IngestionType {
@@ -31,6 +32,10 @@ enum IngestionType {
     KINESISFH = 3;
     RUM       = 4;
     USAGE     = 5;
+}
+
+message IngestRequestMetadata {
+    map<string, string> data = 1;
 }
 
 message IngestionResponse {

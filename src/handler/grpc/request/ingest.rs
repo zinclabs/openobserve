@@ -110,11 +110,19 @@ impl Ingest for Ingester {
                             })
                             .collect()
                     });
+                let append_data = match req.metadata {
+                    Some(metadata) => metadata
+                        .data
+                        .get("append_data")
+                        .and_then(|v| v.parse::<bool>().ok())
+                        .unwrap_or(true),
+                    None => true,
+                };
                 match crate::service::enrichment_table::save_enrichment_data(
                     &org_id,
                     &stream_name,
                     json_records,
-                    true,
+                    append_data,
                 )
                 .await
                 {

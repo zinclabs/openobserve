@@ -783,7 +783,7 @@ test.describe("dashboard variables setting", () => {
       .click();
 
       await page.locator('[data-test="dashboard-variable-field-select"]').click();
-    await page.locator('[data-test="dashboard-variable-field-select"]').fill('names');
+    await page.locator('[data-test="dashboard-variable-field-select"]').fill('kubernetes_container_name');
     await page.getByText('kubernetes_container_name').click();
 
     await page.locator('[data-test="dashboard-variable-save-btn"]').click();

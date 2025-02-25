@@ -16,7 +16,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 <template>
   <q-page class="q-pa-none" style="min-height: inherit">
-    <div v-if="!showDestinationEditor">
+    <div v-if="!showDestinationEditor && !showImportDestination">
       <q-table
         data-test="alert-destinations-list-table"
         ref="qTable"
@@ -58,6 +58,18 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
         </template>
         <template v-slot:body-cell-actions="props">
           <q-td :props="props">
+            <q-btn
+              icon="download"
+              title="Export Destination"
+              class="q-ml-xs"
+              padding="sm"
+              unelevated
+              size="sm"
+              round
+              flat
+              @click.stop="exportDestination(props.row)"
+              data-test="destination-export"
+            ></q-btn>
             <q-btn
               :data-test="`alert-destination-list-${props.row.name}-update-destination`"
               icon="edit"
@@ -102,6 +114,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
             </template>
           </q-input>
           <q-btn
+            class="q-ml-md text-bold"
+            padding="sm lg"
+            outline
+            no-caps
+            :label="t(`dashboard.import`)"
+            @click="importDestination"
+            data-test="alert-import"
+          />
+          <q-btn
             data-test="alert-destination-list-add-alert-btn"
             class="q-ml-md q-mb-xs text-bold no-border"
             padding="sm lg"
@@ -133,7 +154,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
         </template>
       </q-table>
     </div>
-    <div v-else>
+    <div v-else-if="showDestinationEditor && !showImportDestination">
       <AddDestination
         :is-alerts="true"
         :destination="editingDestination"
@@ -141,6 +162,14 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
         @cancel:hideform="toggleDestinationEditor"
         @get:destinations="getDestinations"
       />
+    </div>
+    <div v-else>
+      <ImportDestination
+      :destinations="destinations"
+      :templates="templates"
+      @update:destinations="getDestinations"
+       />
+
     </div>
 
     <ConfirmDialog
@@ -170,6 +199,7 @@ import type { DestinationPayload } from "@/ts/interfaces";
 import type { Template } from "@/ts/interfaces/index";
 
 import { outlinedDelete } from "@quasar/extras/material-icons-outlined";
+import ImportDestination from "./ImportDestination.vue";
 
 interface ConformDelete {
   visible: boolean;
@@ -177,7 +207,7 @@ interface ConformDelete {
 }
 export default defineComponent({
   name: "PageAlerts",
-  components: { AddDestination, NoData, ConfirmDialog, QTablePagination },
+  components: { AddDestination, NoData, ConfirmDialog, QTablePagination ,ImportDestination},
   setup() {
     const qTable = ref();
     const store = useStore();
@@ -230,6 +260,7 @@ export default defineComponent({
       data: null,
     });
     const showDestinationEditor = ref(false);
+    const showImportDestination = ref(false);
     const router = useRouter();
     const filterQuery = ref("");
     const perPageOptions: any = [
@@ -257,7 +288,10 @@ export default defineComponent({
     watch(
       () => router.currentRoute.value.query.action,
       (action) => {
-        if (!action) showDestinationEditor.value = false;
+        if (!action) {
+          showDestinationEditor.value = false
+          showImportDestination.value = false
+        };
       }
     );
 
@@ -317,6 +351,8 @@ export default defineComponent({
         editDestination(
           getDestinationByName(router.currentRoute.value.query.name as string)
         );
+      if(router.currentRoute.value.query.action === "import")
+        showImportDestination.value = true;
     };
     const getDestinationByName = (name: string) => {
       return destinations.value.find(
@@ -423,6 +459,38 @@ export default defineComponent({
       });
     };
 
+    const exportDestination = (row: any) =>{
+
+      const findDestination: any = getDestinationByName(row.name);
+      const destinationByName = {...findDestination}
+      if(destinationByName.hasOwnProperty("#")) delete destinationByName["#"];
+      const destinationJson = JSON.stringify(destinationByName,null,2);
+      const blob = new Blob([destinationJson], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        // Create an anchor element to trigger the download
+        const link = document.createElement('a');
+        link.href = url;
+
+        // Set the filename of the download
+        link.download = `${destinationByName.name}.json`;
+
+        // Trigger the download by simulating a click
+        link.click();
+
+        // Clean up the URL object after download
+        URL.revokeObjectURL(url);
+    }
+    const importDestination = () =>{
+      showImportDestination.value = true;
+      router.push({
+        name: "alertDestinations",
+        query: {
+          action: "import",
+          org_identifier: store.state.selectedOrganization.identifier,
+        },
+      });
+    }
+
     return {
       t,
       qTable,
@@ -447,6 +515,9 @@ export default defineComponent({
       pagination,
       outlinedDelete,
       routeTo,
+      exportDestination,
+      showImportDestination,
+      importDestination,
     };
   },
 });

@@ -16,7 +16,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 <template>
   <q-page class="q-pa-none" style="min-height: inherit">
-    <div v-if="!showTemplateEditor">
+    <div v-if=" !showImportTemplate  && !showTemplateEditor">
       <q-table
         data-test="alert-templates-list-table"
         ref="q-table"
@@ -34,6 +34,18 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
         </template>
         <template v-slot:body-cell-actions="props">
           <q-td :props="props">
+            <q-btn
+              icon="download"
+              title="Export Destination"
+              class="q-ml-xs"
+              padding="sm"
+              unelevated
+              size="sm"
+              round
+              flat
+              @click.stop="exportTemplate(props.row)"
+              data-test="destination-export"
+            ></q-btn>
             <q-btn
               :data-test="`alert-template-list-${props.row.name}-update-template`"
               icon="edit"
@@ -78,6 +90,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
             </template>
           </q-input>
           <q-btn
+            class="q-ml-md text-bold"
+            padding="sm lg"
+            outline
+            no-caps
+            :label="t(`dashboard.import`)"
+            @click="importTemplate"
+            data-test="alert-import"
+          />
+          <q-btn
             data-test="alert-template-list-add-alert-btn"
             class="q-ml-md q-mb-xs text-bold no-border"
             padding="sm lg"
@@ -89,13 +110,21 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
         </template>
       </q-table>
     </div>
-    <div v-else>
+    <div v-else-if="!showImportTemplate && showTemplateEditor">
       <AddTemplate
         :template="editingTemplate"
         @cancel:hideform="toggleTemplateEditor"
         @get:templates="getTemplates"
       />
     </div>
+    <div v-else>
+      <ImportTemplate
+      :templates="templates"
+      @update:templates="getTemplates"
+       />
+    </div>
+
+
 
     <ConfirmDialog
       title="Delete Template"
@@ -118,10 +147,12 @@ import type { TemplateData, Template } from "@/ts/interfaces";
 import { useStore } from "vuex";
 import { useRouter } from "vue-router";
 import { outlinedDelete } from "@quasar/extras/material-icons-outlined";
+import ImportTemplate from "./ImportTemplate.vue";
 
 const AddTemplate = defineAsyncComponent(
   () => import("@/components/alerts/AddTemplate.vue")
 );
+
 const store = useStore();
 const { t } = useI18n();
 const router = useRouter();
@@ -151,6 +182,7 @@ const columns: any = ref<QTableProps["columns"]>([
   },
 ]);
 const showTemplateEditor = ref(false);
+const showImportTemplate = ref(false);
 const editingTemplate: Ref<TemplateData | null> = ref(null);
 const confirmDelete: Ref<{
   visible: boolean;
@@ -171,7 +203,10 @@ onMounted(() => {
 watch(
   () => router.currentRoute.value.query.action,
   (action) => {
-    if (!action) showTemplateEditor.value = false;
+    if (!action){ 
+      showTemplateEditor.value = false;
+      showImportTemplate.value = false;
+    };
   }
 );
 
@@ -211,6 +246,9 @@ const updateRoute = () => {
     editTemplate(
       getTemplateByName(router.currentRoute.value.query.name as string)
     );
+  if(router.currentRoute.value.query.action === "import") {
+    showImportTemplate.value = true
+  }
 };
 const getTemplateByName = (name: string) => {
   return templates.value.find((template) => template.name === name);
@@ -276,6 +314,16 @@ const deleteTemplate = () => {
       });
   }
 };
+const importTemplate = () => {
+  showImportTemplate.value = true;
+  router.push({
+        name: "alertTemplates",
+        query: {
+          action: "import",
+          org_identifier: store.state.selectedOrganization.identifier,
+        },
+      });
+}
 const conformDeleteDestination = (destination: any) => {
   confirmDelete.value.visible = true;
   confirmDelete.value.data = destination;
@@ -304,5 +352,26 @@ const filterData = (rows: any, terms: any) => {
   }
   return filtered;
 };
+const exportTemplate = (row: any) => {
+  const findTemplate: any = getTemplateByName(row.name);
+      const templateByName = {...findTemplate}
+      if(templateByName.hasOwnProperty("#")) delete templateByName["#"];
+      const templateJson = JSON.stringify(templateByName,null,2);
+      const blob = new Blob([templateJson], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        // Create an anchor element to trigger the download
+        const link = document.createElement('a');
+        link.href = url;
+
+        // Set the filename of the download
+        link.download = `${templateByName.name}.json`;
+
+        // Trigger the download by simulating a click
+        link.click();
+
+        // Clean up the URL object after download
+        URL.revokeObjectURL(url);
+
+}
 </script>
 <style lang=""></style>

@@ -16,18 +16,23 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 <!-- eslint-disable vue/x-invalid-end-tag -->
 <template>
-  <q-page class="page">
+  <q-page class="management-page">
     <div class="head q-table__title q-mx-md q-my-sm">
       {{ t("settings.header") }}
     </div>
     <q-separator class="separator" />
-    <q-splitter
+      <q-splitter
+      class="management_splitter"
       v-model="splitterModel"
       unit="px"
-      style="min-height: calc(100vh - 104px)"
+      style="min-height: calc(100vh - 104px); overflow: hidden;"
     >
-      <template v-slot:before>
-        <q-tabs
+      <template style="background-color: red;" v-slot:before>
+        
+        <div class="absolute-position full-height" >
+          <q-tabs
+          class="management-tabs"
+          v-if="showManagementTabs"
           v-model="settingsTab"
           indicator-color="transparent"
           inline-label
@@ -111,12 +116,34 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
             content-class="tab_content"
           />
         </q-tabs>
+
+        </div>
       </template>
 
       <template v-slot:after>
+        <div
+      style="position: absolute;  top: -5px; left: -16px; z-index: 90; "
+    >
+      <!-- Place the content you want in the middle here -->
+      <q-btn
+        data-test="logs-search-field-list-collapse-btn"
+        :icon="showManagementTabs ? 'chevron_left' : 'chevron_right'"
+        :title="showManagementTabs ? 'Collapse Fields' : 'Open Fields'"
+        dense
+        size="20px"
+        round
+        class="field-list-collapse-btn "
+        :style="{
+                      right: showManagementTabs ? '0px' : '-4px',
+                    }"
+        color="primary"
+        @click="controlManagementTabs"
+      ></q-btn>
+    </div>
         <router-view title=""> </router-view>
       </template>
     </q-splitter>
+
   </q-page>
 </template>
 
@@ -128,6 +155,7 @@ import {
   onBeforeMount,
   onActivated,
   onUpdated,
+  watch,
 } from "vue";
 import { useI18n } from "vue-i18n";
 import { useStore } from "vuex";
@@ -146,6 +174,8 @@ export default defineComponent({
     const router: any = useRouter();
     const settingsTab = ref("general");
     const { isMetaOrg } = useIsMetaOrg();
+    const splitterModel = ref(250);
+    const storePreviousStoreModel  = ref(250);
 
     const handleSettingsRouting = () => {
       if (router.currentRoute.value.name === "settings") {
@@ -180,6 +210,31 @@ export default defineComponent({
     onUpdated(() => {
       handleSettingsRouting();
     });
+    watch(()=> splitterModel.value,
+    (val) => {
+      if(val == 50 || val == 0){
+        splitterModel.value = 0;
+        showManagementTabs.value = false
+      }
+      else{
+        showManagementTabs.value = true
+      }
+    }
+  )
+    const showManagementTabs = ref(true);
+    const controlManagementTabs = () => {
+      if(showManagementTabs.value){
+        const prevVal = splitterModel.value;
+        storePreviousStoreModel.value = prevVal;
+        splitterModel.value = 0;
+        showManagementTabs.value = false;
+      }
+      else{
+        splitterModel.value = storePreviousStoreModel.value || 250;
+        
+        showManagementTabs.value = true;
+      }
+    }
 
     return {
       t,
@@ -187,15 +242,35 @@ export default defineComponent({
       router,
       config,
       settingsTab,
-      splitterModel: ref(250),
+      splitterModel,
       outlinedSettings,
       isMetaOrg,
+      showManagementTabs,
+      controlManagementTabs
     };
   },
 });
 </script>
-<style scoped lang="scss">
+<style lang="scss">
+.management-page{
+  .management_splitter {
+    .q-splitter__before {
+      overflow: visible !important ;
+    }
+    .q-splitter__after {
+      overflow: visible !important ;
+    }
+    .q-splitter__panel{
+      z-index: auto;
+    }
+  }
+
+}
+
+
 .q-tabs {
+
+
   &--vertical {
     margin: 1.5rem 1rem 0 1rem;
     .q-tab {
@@ -220,4 +295,12 @@ export default defineComponent({
     }
   }
 }
+    .field-list-collapse-btn {
+      z-index: 90;
+      position: relative;
+      
+      top: 5px;
+      font-size: 12px !important;
+    }
+
 </style>

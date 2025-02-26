@@ -820,6 +820,34 @@ export default defineComponent({
       });
     };
 
+    const replaceDrilldownToLogs = (str: any, obj: any) => {
+      // If str is exactly equal to a key, return its value directly
+      for (const key in obj) {
+        if (`\$\{${key}\}` === str) {
+          let value = obj[key];
+
+          // Ensure string values are wrapped in quotes
+          return typeof value === "string" ? `'${value}'` : value;
+        }
+      }
+
+      return str.replace(/\$\{([^}]+)\}/g, function (_: any, key: any) {
+        // Split the key into parts by either a dot or a ["xyz"] pattern and filter out empty strings
+        let parts = key.split(/\.|\["(.*?)"\]/).filter(Boolean);
+
+        let value = obj;
+        for (let part of parts) {
+          if (value && part in value) {
+            value = value[part];
+          } else {
+            return "${" + key + "}"; // Keep the placeholder if the key is not found
+          }
+        }
+
+        // Ensure string values are wrapped in quotes
+        return typeof value === "string" ? `'${value}'` : value;
+      });
+    };
     // get offset from parent
     function getOffsetFromParent(parent: any, child: any) {
       const parentRect = parent.getBoundingClientRect();
@@ -1157,7 +1185,6 @@ export default defineComponent({
 
           const { originalQuery, streamName } =
             getOriginalQueryAndStream(queryDetails, metadata) || {};
-
           if (!originalQuery || !streamName) return;
 
           const hoveredTime = drilldownParams[0]?.value?.[0];
@@ -1170,6 +1197,7 @@ export default defineComponent({
             hoveredTimestamp,
             intervalMicro.value,
           );
+
           let modifiedQuery = originalQuery;
 
           if (drilldownData.data.logsMode === "auto") {
@@ -1191,17 +1219,15 @@ export default defineComponent({
             const breakdownColumn = breakdown[0]?.column;
 
             const seriesIndex = drilldownParams[0]?.seriesIndex;
-
             const breakdownSeriesName =
               seriesIndex !== undefined
                 ? panelData.value.options.series[seriesIndex]
                 : undefined;
-
             const uniqueSeriesName = breakdownSeriesName
               ? breakdownSeriesName.originalSeriesName
               : drilldownParams[0]?.seriesName;
-
             const breakdownValue = uniqueSeriesName;
+
             const whereClause = buildWhereClause(
               ast,
               breakdownColumn,
@@ -1210,12 +1236,102 @@ export default defineComponent({
 
             modifiedQuery = `SELECT * FROM "${streamName}"${aliasClause} ${whereClause}`;
           } else {
-            modifiedQuery = replaceVariablesValue(
+            // Create drilldown variables object exactly as you do for other drilldown types
+            const drilldownVariables: any = {};
+
+            // Add time range
+            if (
+              selectedTimeObj?.value?.start_time &&
+              selectedTimeObj?.value?.start_time != "Invalid Date"
+            ) {
+              drilldownVariables.start_time = new Date(
+                selectedTimeObj?.value?.start_time?.toISOString(),
+              ).getTime();
+            }
+            if (
+              selectedTimeObj?.value?.end_time &&
+              selectedTimeObj?.value?.end_time != "Invalid Date"
+            ) {
+              drilldownVariables.end_time = new Date(
+                selectedTimeObj?.value?.end_time?.toISOString(),
+              ).getTime();
+            }
+
+            // Add query and encoded query
+            drilldownVariables.query =
+              metadata?.value?.queries[0]?.query ??
+              panelSchema?.value?.queries[0]?.query ??
+              "";
+            drilldownVariables.query_encoded = b64EncodeUnicode(
+              drilldownVariables.query,
+            );
+
+            // Handle different chart types
+            if (panelSchema.value.type == "table") {
+              const fields: any = {};
+              panelSchema.value.queries.forEach((query: any) => {
+                const panelFields: any = [
+                  ...query.fields.x,
+                  ...query.fields.y,
+                  ...query.fields.z,
+                ];
+                panelFields.forEach((field: any) => {
+                  fields[field.label] = drilldownParams[1][0][field.alias];
+                  fields[field.alias] = drilldownParams[1][0][field.alias];
+                });
+              });
+              drilldownVariables.row = {
+                field: fields,
+                index: drilldownParams[1][1],
+              };
+            } else if (panelSchema.value.type == "sankey") {
+              if (drilldownParams[0].dataType == "node") {
+                drilldownVariables.node = {
+                  __name: drilldownParams[0]?.name ?? "",
+                  __value: drilldownParams[0]?.value ?? "",
+                };
+              } else {
+                drilldownVariables.edge = {
+                  __source: drilldownParams[0]?.data?.source ?? "",
+                  __target: drilldownParams[0]?.data?.target ?? "",
+                  __value: drilldownParams[0]?.data?.value ?? "",
+                };
+              }
+            } else {
+              drilldownVariables.series = {
+                __name: ["pie", "donut", "heatmap"].includes(
+                  panelSchema.value.type,
+                )
+                  ? drilldownParams[0].name
+                  : drilldownParams[0].seriesName,
+                __value: Array.isArray(drilldownParams[0].value)
+                  ? drilldownParams[0].value[
+                      drilldownParams[0].value.length - 1
+                    ]
+                  : drilldownParams[0].value,
+              };
+            }
+
+            variablesData?.value?.values?.forEach((variable: any) => {
+              if (variable.type != "dynamic_filters") {
+                drilldownVariables[variable.name] = variable.value;
+              }
+            });
+
+            let queryWithReplacedPlaceholders = replaceVariablesValue(
               drilldownData?.data?.logsQuery,
               variablesData?.value?.values,
               panelSchema,
             );
+
+            queryWithReplacedPlaceholders = replaceDrilldownToLogs(
+              queryWithReplacedPlaceholders,
+              drilldownVariables,
+            );
+
+            modifiedQuery = queryWithReplacedPlaceholders;
           }
+
           modifiedQuery = modifiedQuery.replace(/`/g, '"');
 
           const encodedQuery: any = b64EncodeUnicode(modifiedQuery);

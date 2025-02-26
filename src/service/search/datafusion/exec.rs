@@ -320,7 +320,7 @@ pub fn create_session_config(
 ) -> Result<SessionConfig> {
     let cfg = get_config();
     let mut target_partitions = if target_partitions == 0 {
-        cfg.limit.cpu_num
+        cfg.limit.query_thread_num
     } else {
         std::cmp::max(cfg.limit.datafusion_min_partition_num, target_partitions)
     };
@@ -527,7 +527,7 @@ pub async fn create_parquet_table(
 ) -> Result<Arc<dyn TableProvider>> {
     let cfg = get_config();
     let target_partitions = if session.target_partitions == 0 {
-        cfg.limit.cpu_num
+        cfg.limit.query_thread_num
     } else {
         std::cmp::max(
             cfg.limit.datafusion_min_partition_num,

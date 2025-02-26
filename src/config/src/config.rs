@@ -1075,6 +1075,8 @@ pub struct Limit {
     pub usage_reporting_thread_num: usize,
     #[env_config(name = "ZO_QUERY_THREAD_NUM", default = 0)]
     pub query_thread_num: usize,
+    #[env_config(name = "ZO_FILE_DOWNLOAD_THREAD_NUM", default = 0)]
+    pub file_download_thread_num: usize,
     #[env_config(name = "ZO_QUERY_TIMEOUT", default = 600)]
     pub query_timeout: u64,
     #[env_config(name = "ZO_QUERY_INGESTER_TIMEOUT", default = 0)]
@@ -1813,6 +1815,11 @@ fn check_limit_config(cfg: &mut Config) -> Result<(), anyhow::Error> {
             cfg.limit.query_thread_num = cpu_num * 4;
         }
     }
+
+    if cfg.limit.file_download_thread_num == 0 {
+        cfg.limit.file_download_thread_num = cfg.limit.query_thread_num;
+    }
+
     // HACK for move_file_thread_num equal to CPU core
     if cfg.limit.file_move_thread_num == 0 {
         if cfg.common.local_mode {

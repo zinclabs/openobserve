@@ -41,9 +41,15 @@ use infra::{
     errors::{Error, ErrorCodes},
 };
 use itertools::Itertools;
+use once_cell::sync::Lazy;
 use tantivy::Directory;
 use tokio::sync::Semaphore;
 use tracing::Instrument;
+
+static DOWNLOAD_SEMAPHORE: Lazy<std::sync::Arc<Semaphore>> = Lazy::new(|| {
+    let cfg = get_config();
+    std::sync::Arc::new(Semaphore::new(cfg.limit.file_download_thread_num))
+});
 
 use crate::service::{
     db, file_list,
@@ -394,13 +400,11 @@ async fn cache_files_inner(
     files: &[&str],
     cache_type: file_data::CacheType,
 ) -> Result<file_data::CacheType, Error> {
-    let cfg = get_config();
     let mut tasks = Vec::new();
-    let semaphore = std::sync::Arc::new(Semaphore::new(cfg.limit.query_thread_num));
     for file in files.iter() {
         let trace_id = trace_id.to_string();
         let file_name = file.to_string();
-        let permit = semaphore.clone().acquire_owned().await.unwrap();
+        let permit = DOWNLOAD_SEMAPHORE.clone().acquire_owned().await.unwrap();
         let task: tokio::task::JoinHandle<()> = tokio::task::spawn(async move {
             let cfg = get_config();
             let ret = match cache_type {

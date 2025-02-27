@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use std::io::Error;
+use std::io::{Error, ErrorKind};
 
 use actix_web::{
     http::{self, StatusCode},
@@ -258,27 +258,28 @@ pub async fn update_function(
 pub async fn list_functions(
     org_id: String,
     permitted: Option<Vec<String>>,
-) -> Result<HttpResponse, Error> {
-    if let Ok(functions) = db::functions::list(&org_id).await {
-        let mut result = Vec::new();
-        for function in functions {
-            if permitted.is_none()
-                || permitted
-                    .as_ref()
-                    .unwrap()
-                    .contains(&format!("function:{}", function.name))
-                || permitted
-                    .as_ref()
-                    .unwrap()
-                    .contains(&format!("function:_all_{}", org_id))
-            {
-                result.push(function);
+) -> Result<FunctionList, Error> {
+    match db::functions::list(&org_id).await {
+        Ok(functions) => {
+            let mut result = Vec::new();
+            for function in functions {
+                if permitted.is_none()
+                    || permitted
+                        .as_ref()
+                        .unwrap()
+                        .contains(&format!("function:{}", function.name))
+                    || permitted
+                        .as_ref()
+                        .unwrap()
+                        .contains(&format!("function:_all_{}", org_id))
+                {
+                    result.push(function);
+                }
             }
-        }
 
-        Ok(HttpResponse::Ok().json(FunctionList { list: result }))
-    } else {
-        Ok(HttpResponse::Ok().json(FunctionList { list: vec![] }))
+            Ok(FunctionList { list: result })
+        }
+        Err(e) => Err(Error::new(ErrorKind::Other, e.to_string())),
     }
 }
 

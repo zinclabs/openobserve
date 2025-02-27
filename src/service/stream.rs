@@ -56,6 +56,7 @@ pub async fn get_stream(
     org_id: &str,
     stream_name: &str,
     stream_type: StreamType,
+    page_size_and_idx: Option<(usize, usize)>,
 ) -> Result<HttpResponse, Error> {
     let schema = infra::schema::get(org_id, stream_name, stream_type)
         .await
@@ -64,7 +65,13 @@ pub async fn get_stream(
     let mut stats = stats::get_stream_stats(org_id, stream_name, stream_type);
     transform_stats(&mut stats);
     if schema != Schema::empty() {
-        let stream = stream_res(stream_name, stream_type, schema, Some(stats));
+        let stream = stream_res(
+            stream_name,
+            stream_type,
+            schema,
+            Some(stats),
+            page_size_and_idx,
+        );
         Ok(HttpResponse::Ok().json(stream))
     } else {
         Ok(HttpResponse::NotFound().json(MetaHttpResponse::error(
@@ -121,6 +128,7 @@ pub async fn get_streams(
                 stream_loc.stream_type,
                 stream_loc.schema,
                 None,
+                None,
             ));
         } else {
             transform_stats(&mut stats);
@@ -129,6 +137,7 @@ pub async fn get_streams(
                 stream_loc.stream_type,
                 stream_loc.schema,
                 Some(stats),
+                None,
             ));
         }
     }
@@ -140,16 +149,20 @@ pub fn stream_res(
     stream_type: StreamType,
     schema: Schema,
     stats: Option<StreamStats>,
+    page_size_and_idx: Option<(usize, usize)>,
 ) -> Stream {
     let storage_type = if is_local_disk_storage() { LOCAL } else { S3 };
-    let mappings = schema
-        .fields()
-        .iter()
-        .map(|field| StreamProperty {
+    let mappings = {
+        let iter = schema.fields().iter().map(|field| StreamProperty {
             prop_type: field.data_type().to_string(),
             name: field.name().to_string(),
-        })
-        .collect::<Vec<_>>();
+        });
+        if let Some((page_size, page_idx)) = page_size_and_idx {
+            iter.skip(page_idx * page_size).take(page_size).collect()
+        } else {
+            iter.collect()
+        }
+    };
 
     let mut stats = stats.unwrap_or_default();
     stats.created_at = stream_created(&schema).unwrap_or_default();
@@ -682,7 +695,7 @@ mod tests {
     fn test_stream_res() {
         let stats = StreamStats::default();
         let schema = Schema::new(vec![Field::new("f.c", DataType::Int32, false)]);
-        let res = stream_res("Test", StreamType::Logs, schema, Some(stats.clone()));
+        let res = stream_res("Test", StreamType::Logs, schema, Some(stats.clone()), None);
         assert_eq!(res.stats, stats);
     }
 }

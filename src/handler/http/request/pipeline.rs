@@ -90,15 +90,16 @@ pub async fn save_pipeline(
 #[get("/{org_id}/pipelines")]
 async fn list_pipelines(
     org_id: web::Path<String>,
-    _req: HttpRequest,
+    req: HttpRequest,
 ) -> Result<HttpResponse, Error> {
     let mut _permitted = None;
+    let query = web::Query::<HashMap<String, String>>::from_query(req.query_string()).unwrap();
     // Get List of allowed objects
     #[cfg(feature = "enterprise")]
     {
         use o2_openfga::meta::mapping::OFGA_MODELS;
 
-        let user_id = _req.headers().get("user_id").unwrap();
+        let user_id = req.headers().get("user_id").unwrap();
         match crate::handler::http::auth::validator::list_objects_for_user(
             &org_id,
             user_id.to_str().unwrap(),
@@ -122,7 +123,24 @@ async fn list_pipelines(
     }
 
     match pipeline::list_pipelines(org_id.into_inner(), _permitted).await {
-        Ok(pipeline_list) => Ok(HttpResponse::Ok().json(pipeline_list)),
+        Ok(mut pipeline_list) => {
+            if let Some(page_size) = query
+                .get("pageSize")
+                .and_then(|size| size.parse::<usize>().ok())
+            {
+                let page_idx = query
+                    .get("pageIdx")
+                    .and_then(|size| size.parse::<usize>().ok())
+                    .unwrap_or_default();
+                pipeline_list.list = pipeline_list
+                    .list
+                    .into_iter()
+                    .skip(page_idx * page_size)
+                    .take(page_size)
+                    .collect();
+            }
+            Ok(HttpResponse::Ok().json(pipeline_list))
+        }
         Err(e) => Ok(e.into()),
     }
 }

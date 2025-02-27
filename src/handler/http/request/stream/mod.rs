@@ -62,7 +62,20 @@ async fn schema(
     let (org_id, stream_name) = path.into_inner();
     let query = web::Query::<HashMap<String, String>>::from_query(req.query_string()).unwrap();
     let stream_type = get_stream_type_from_request(&query).unwrap_or_default();
-    stream::get_stream(&org_id, &stream_name, stream_type).await
+
+    let page_size_and_idx = if let Some(page_size) = query
+        .get("pageSize")
+        .and_then(|size| size.parse::<usize>().ok())
+    {
+        let page_idx = query
+            .get("pageIdx")
+            .and_then(|size| size.parse::<usize>().ok())
+            .unwrap_or_default();
+        Some((page_size, page_idx))
+    } else {
+        None
+    };
+    stream::get_stream(&org_id, &stream_name, stream_type, page_size_and_idx).await
 }
 
 /// CreateStreamSettings
@@ -349,6 +362,21 @@ async fn list(org_id: web::Path<String>, req: HttpRequest) -> impl Responder {
     )
     .await;
     indices.sort_by(|a, b| a.name.cmp(&b.name));
+
+    if let Some(page_size) = query
+        .get("pageSize")
+        .and_then(|size| size.parse::<usize>().ok())
+    {
+        let page_idx = query
+            .get("pageIdx")
+            .and_then(|size| size.parse::<usize>().ok())
+            .unwrap_or_default();
+        indices = indices
+            .into_iter()
+            .skip(page_idx * page_size)
+            .take(page_size)
+            .collect();
+    }
     Ok(HttpResponse::Ok().json(ListStream { list: indices }))
 }
 

@@ -323,6 +323,7 @@ pub fn get_service_routes(svc: &mut web::ServiceConfig) {
         ))
         .wrap(cors.clone())
         .wrap(middleware::DefaultHeaders::new().add(("X-Api-Node", server)))
+        .service(lookup::lookup_by_name)
         .service(users::list)
         .service(users::save)
         .service(users::delete)

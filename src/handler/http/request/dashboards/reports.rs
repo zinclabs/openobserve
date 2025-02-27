@@ -162,7 +162,23 @@ async fn list_reports(org_id: web::Path<String>, req: HttpRequest) -> Result<Htt
     }
 
     match reports::list(&org_id, filters, _permitted).await {
-        Ok(data) => Ok(MetaHttpResponse::json(data)),
+        Ok(mut data) => {
+            if let Some(page_size) = query
+                .get("pageSize")
+                .and_then(|size| size.parse::<usize>().ok())
+            {
+                let page_idx = query
+                    .get("pageIdx")
+                    .and_then(|size| size.parse::<usize>().ok())
+                    .unwrap_or_default();
+                data = data
+                    .into_iter()
+                    .skip(page_idx * page_size)
+                    .take(page_size)
+                    .collect();
+            }
+            Ok(MetaHttpResponse::json(data))
+        }
         Err(e) => Ok(MetaHttpResponse::bad_request(e)),
     }
 }

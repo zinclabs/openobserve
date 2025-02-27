@@ -1,4 +1,4 @@
-// Copyright 2024 OpenObserve Inc.
+// Copyright 2025 OpenObserve Inc.
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published by
@@ -27,6 +27,7 @@ pub mod functions;
 pub mod keys;
 pub mod kv;
 pub mod logs;
+pub mod lookup;
 pub mod metrics;
 pub mod organization;
 pub mod pipeline;

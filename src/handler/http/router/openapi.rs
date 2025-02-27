@@ -22,6 +22,7 @@ use crate::{common::meta, handler::http::request};
 #[openapi(
     paths(
         request::status::healthz,
+        request::lookup::lookup_by_name,
         request::users::list,
         request::users::save,
         request::users::update,
@@ -179,6 +180,9 @@ use crate::{common::meta, handler::http::request};
             config::meta::timed_annotations::TimedAnnotationReq,
             config::meta::timed_annotations::TimedAnnotationDelete,
             config::meta::timed_annotations::TimedAnnotationUpdate,
+            crate::handler::http::models::lookup::LookupRequestQuery,
+            crate::handler::http::models::lookup::Resource,
+            crate::handler::http::models::lookup::PaginationMetadata,
             // Dashboards
             crate::handler::http::models::dashboards::CreateDashboardRequestBody,
             crate::handler::http::models::dashboards::CreateDashboardResponseBody,

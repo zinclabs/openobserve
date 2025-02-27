@@ -258,6 +258,11 @@ pub async fn ingest(
                     ID_COL_NAME.to_string(),
                     json::Value::String(record_id.to_string()),
                 );
+            } else {
+                // remove _original and _record_id if exist
+                // when records are results of a scheduled pipeline
+                local_val.remove(ORIGINAL_DATA_COL_NAME);
+                local_val.remove(ID_COL_NAME);
             }
 
             let (ts_data, fn_num) = json_data_by_stream
@@ -327,6 +332,11 @@ pub async fn ingest(
                                 ID_COL_NAME.to_string(),
                                 json::Value::String(record_id.to_string()),
                             );
+                        } else {
+                            // remove _original and _record_id if exist
+                            // when records are results of a scheduled pipeline
+                            local_val.remove(ORIGINAL_DATA_COL_NAME);
+                            local_val.remove(ID_COL_NAME);
                         }
 
                         let Some(timestamp) =

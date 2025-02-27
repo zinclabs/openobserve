@@ -125,6 +125,7 @@ pub async fn save_enrichment_data(
 
     if stream_schema.has_fields && !append_data {
         delete_enrichment_table(org_id, stream_name, StreamType::EnrichmentTables).await;
+        stream_schema_map.remove(stream_name);
     }
 
     let mut records = vec![];
@@ -287,7 +288,9 @@ async fn delete_enrichment_table(org_id: &str, stream_name: &str, stream_type: S
     }
 
     // delete stream key
-    let _ = enrichment_table::delete(org_id, stream_name).await;
+    if let Err(e) = enrichment_table::delete(org_id, stream_name).await {
+        log::error!("Error deleting enrichment table: {}", e);
+    }
 
     // delete stream stats cache
     stats::remove_stream_stats(org_id, stream_name, stream_type);

@@ -148,7 +148,12 @@ pub async fn watch() -> Result<(), anyhow::Error> {
                     },
                 );
             }
-            db::Event::Delete(_) => {}
+            db::Event::Delete(ev) => {
+                let item_key = ev.key.strip_prefix(key).unwrap();
+                if let Some((key, _)) = ENRICHMENT_TABLES.remove(item_key) {
+                    log::info!("deleted enrichment table: {}", key);
+                }
+            }
             db::Event::Empty => {}
         }
     }

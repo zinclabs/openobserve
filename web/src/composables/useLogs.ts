@@ -4574,6 +4574,10 @@ const useLogs = () => {
 
   const extractValueQuery = () => {
     try {
+      if(searchObj.meta.sqlMode == false || searchObj.data.query == "") {
+        return {};
+      }
+      
       const orgQuery: string = searchObj.data.query
         .split("\n")
         .filter((line: string) => !line.trim().startsWith("--"))

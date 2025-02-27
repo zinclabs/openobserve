@@ -84,7 +84,8 @@ pub async fn set(
             }
 
             let schedule_key = scheduler_key(stream_type, stream_name, &alert.name);
-            let trigger = db::scheduler::Trigger {
+            // Get the trigger from scheduler
+            let mut trigger = db::scheduler::Trigger {
                 org: org_id.to_string(),
                 module_key: schedule_key.clone(),
                 next_run_at: chrono::Utc::now().timestamp_micros(),
@@ -101,27 +102,31 @@ pub async fn set(
                         Ok(())
                     }
                 }
-            } else if db::scheduler::exists(
-                org_id,
-                db::scheduler::TriggerModule::Alert,
-                &schedule_key,
-            )
-            .await
-            {
-                match db::scheduler::update_trigger(trigger).await {
-                    Ok(_) => Ok(()),
-                    Err(e) => {
-                        log::error!("Failed to update trigger for alert {schedule_key}: {}", e);
-                        Ok(())
-                    }
-                }
             } else {
-                match db::scheduler::push(trigger).await {
-                    Ok(_) => Ok(()),
-                    Err(e) => {
-                        log::error!("Failed to save trigger for alert {schedule_key}: {}", e);
-                        Ok(())
+                match db::scheduler::get(org_id, db::scheduler::TriggerModule::Alert, &schedule_key)
+                    .await
+                {
+                    Ok(job) => {
+                        trigger.data = job.data;
+                        trigger.start_time = job.start_time;
+                        match db::scheduler::update_trigger(trigger).await {
+                            Ok(_) => Ok(()),
+                            Err(e) => {
+                                log::error!(
+                                    "Failed to update trigger for alert {schedule_key}: {}",
+                                    e
+                                );
+                                Ok(())
+                            }
+                        }
                     }
+                    Err(_) => match db::scheduler::push(trigger).await {
+                        Ok(_) => Ok(()),
+                        Err(e) => {
+                            log::error!("Failed to save trigger for alert {schedule_key}: {}", e);
+                            Ok(())
+                        }
+                    },
                 }
             }
         }
@@ -185,7 +190,7 @@ pub async fn update<C: ConnectionTrait + TransactionTrait>(
     super_cluster::emit_update_event(org_id, folder_id, alert.clone()).await?;
 
     let schedule_key = scheduler_key(alert.stream_type, &alert.stream_name, &alert.name);
-    let trigger = db::scheduler::Trigger {
+    let mut trigger = db::scheduler::Trigger {
         org: org_id.to_string(),
         module_key: schedule_key.clone(),
         next_run_at: chrono::Utc::now().timestamp_micros(),
@@ -194,10 +199,13 @@ pub async fn update<C: ConnectionTrait + TransactionTrait>(
         ..Default::default()
     };
 
-    if db::scheduler::exists(org_id, db::scheduler::TriggerModule::Alert, &schedule_key).await {
+    if let Ok(job) =
+        db::scheduler::get(org_id, db::scheduler::TriggerModule::Alert, &schedule_key).await
+    {
+        trigger.data = job.data;
+        trigger.start_time = job.start_time;
         let _ = db::scheduler::update_trigger(trigger).await.map_err(|e| {
             log::error!("Failed to update trigger for alert {schedule_key}: {}", e);
-            e
         });
     } else {
         let _ = db::scheduler::push(trigger).await.map_err(|e| {

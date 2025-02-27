@@ -215,8 +215,8 @@ async fn prepare_alert(
             if create {
                 return Err(AlertError::CreateAlreadyExists);
             }
-            alert.last_triggered_at = old_alert.last_triggered_at;
-            alert.last_satisfied_at = old_alert.last_satisfied_at;
+            alert.set_last_triggered_at(old_alert.get_last_triggered_at_from_table());
+            alert.set_last_satisfied_at(old_alert.get_last_satisfied_at_from_table());
             alert.owner = old_alert.owner;
         }
         Ok(None) => {
@@ -1493,10 +1493,8 @@ mod tests {
         let org_id = "default";
         let stream_name = "default";
         let alert_name = "abc/alert";
-        let alert = Alert {
-            name: alert_name.to_string(),
-            ..Default::default()
-        };
+        let mut alert: Alert = Default::default();
+        alert.name = alert_name.to_string();
         let ret = save(org_id, stream_name, alert_name, alert, true).await;
         // alert name should not contain /
         assert!(ret.is_err());

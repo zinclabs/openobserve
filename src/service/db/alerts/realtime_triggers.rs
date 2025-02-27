@@ -50,7 +50,7 @@ pub async fn watch() -> Result<(), anyhow::Error> {
                     if ev.value.is_none() || ev.value.as_ref().unwrap().is_empty() {
                         match db::scheduler::get(
                             columns.0,
-                            infra::scheduler::TriggerModule::Alert,
+                            config::meta::triggers::TriggerModule::Alert,
                             columns.1,
                         )
                         .await

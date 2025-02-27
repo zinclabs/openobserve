@@ -14,9 +14,11 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use async_trait::async_trait;
-use config::meta::meta_store::MetaStore;
+use config::meta::{
+    meta_store::MetaStore,
+    triggers::{Trigger, TriggerId, TriggerModule, TriggerStatus},
+};
 use once_cell::sync::Lazy;
-use serde::{Deserialize, Serialize};
 
 use crate::errors::Result;
 
@@ -48,6 +50,7 @@ pub trait Scheduler: Sync + Send + 'static {
         key: &str,
         status: TriggerStatus,
         retries: i32,
+        data: Option<&str>,
     ) -> Result<()>;
     async fn update_trigger(&self, trigger: Trigger) -> Result<()>;
     async fn pull(
@@ -58,68 +61,13 @@ pub trait Scheduler: Sync + Send + 'static {
     ) -> Result<Vec<Trigger>>;
     async fn get(&self, org: &str, module: TriggerModule, key: &str) -> Result<Trigger>;
     async fn list(&self, module: Option<TriggerModule>) -> Result<Vec<Trigger>>;
+    async fn list_by_org(&self, org: &str, module: Option<TriggerModule>) -> Result<Vec<Trigger>>;
     async fn clean_complete(&self) -> Result<()>;
     async fn watch_timeout(&self) -> Result<()>;
     async fn len_module(&self, module: TriggerModule) -> usize;
     async fn len(&self) -> usize;
     async fn is_empty(&self) -> bool;
     async fn clear(&self) -> Result<()>;
-}
-
-#[derive(Debug, Clone, sqlx::Type, PartialEq, Serialize, Deserialize, Default)]
-#[repr(i32)]
-pub enum TriggerStatus {
-    #[default]
-    Waiting,
-    Processing,
-    Completed,
-}
-
-#[derive(
-    Debug, Clone, sqlx::Type, PartialEq, Serialize, Deserialize, Default, Eq, std::hash::Hash,
-)]
-#[repr(i32)]
-pub enum TriggerModule {
-    Report,
-    #[default]
-    Alert,
-    DerivedStream,
-}
-
-impl std::fmt::Display for TriggerModule {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        match self {
-            TriggerModule::Alert => write!(f, "alert"),
-            TriggerModule::Report => write!(f, "report"),
-            TriggerModule::DerivedStream => write!(f, "derived_stream"),
-        }
-    }
-}
-
-#[derive(sqlx::FromRow, Debug, Clone, Default)]
-pub struct TriggerId {
-    pub id: i64,
-}
-
-#[derive(sqlx::FromRow, Debug, Clone, Serialize, Deserialize, Default)]
-pub struct Trigger {
-    pub org: String,
-    pub module: TriggerModule,
-    pub module_key: String,
-    pub next_run_at: i64,
-    pub is_realtime: bool,
-    pub is_silenced: bool,
-    pub status: TriggerStatus,
-    // #[sqlx(default)] only works when the column itself is missing.
-    // For NULL value it does not work.
-    // TODO: See https://github.com/launchbadge/sqlx/issues/1106
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub start_time: Option<i64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub end_time: Option<i64>,
-    pub retries: i32,
-    #[serde(default)]
-    pub data: String,
 }
 
 /// Initializes the scheduler - creates table and index
@@ -150,9 +98,10 @@ pub async fn update_status(
     key: &str,
     status: TriggerStatus,
     retries: i32,
+    data: Option<&str>,
 ) -> Result<()> {
     CLIENT
-        .update_status(org, module, key, status, retries)
+        .update_status(org, module, key, status, retries, data)
         .await
 }
 
@@ -223,6 +172,12 @@ pub async fn len() -> usize {
 #[inline]
 pub async fn list(module: Option<TriggerModule>) -> Result<Vec<Trigger>> {
     CLIENT.list(module).await
+}
+
+/// List the jobs for the given module
+#[inline]
+pub async fn list_by_org(org: &str, module: Option<TriggerModule>) -> Result<Vec<Trigger>> {
+    CLIENT.list_by_org(org, module).await
 }
 
 #[inline]

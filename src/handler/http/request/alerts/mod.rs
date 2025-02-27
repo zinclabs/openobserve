@@ -14,7 +14,12 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use actix_web::{delete, get, post, put, web, HttpRequest, HttpResponse};
-use config::meta::{alerts::alert::Alert as MetaAlert, folder::DEFAULT_FOLDER};
+use config::meta::{
+    alerts::alert::Alert as MetaAlert,
+    folder::DEFAULT_FOLDER,
+    triggers::{Trigger, TriggerModule},
+};
+use hashbrown::HashMap;
 use infra::db::{connect_to_orm, ORM_CLIENT};
 use svix_ksuid::Ksuid;
 
@@ -27,7 +32,10 @@ use crate::{
         },
         responses::{EnableAlertResponseBody, GetAlertResponseBody, ListAlertsResponseBody},
     },
-    service::alerts::alert::{self, AlertError},
+    service::{
+        alerts::alert::{self, AlertError},
+        db::scheduler,
+    },
 };
 
 #[allow(deprecated)]
@@ -133,7 +141,11 @@ async fn get_alert(path: web::Path<(String, Ksuid)>) -> HttpResponse {
     let client = ORM_CLIENT.get_or_init(connect_to_orm).await;
     match alert::get_by_id(client, &org_id, alert_id).await {
         Ok(alert) => {
-            let resp_body: GetAlertResponseBody = alert.into();
+            let key = alert.get_unique_key();
+            let scheduled_job = scheduler::get(&org_id, TriggerModule::Alert, &key)
+                .await
+                .ok();
+            let resp_body: GetAlertResponseBody = (alert, scheduled_job).into();
             MetaHttpResponse::json(resp_body)
         }
         Err(e) => e.into(),
@@ -237,11 +249,28 @@ async fn list_alerts(path: web::Path<String>, req: HttpRequest) -> HttpResponse 
     };
 
     let client = ORM_CLIENT.get_or_init(connect_to_orm).await;
-    let folders_and_alerts = match alert::list_v2(client, user_id, query.into(&org_id)).await {
-        Ok(f_a) => f_a,
-        Err(e) => return e.into(),
-    };
-    let Ok(resp_body) = ListAlertsResponseBody::try_from(folders_and_alerts) else {
+    let scheduled_jobs = scheduler::list_by_org(&org_id, Some(TriggerModule::Alert))
+        .await
+        .unwrap_or_default();
+    let mut scheduled_jobs: HashMap<String, Trigger> = scheduled_jobs
+        .into_iter()
+        .map(|t| (t.module_key.clone(), t))
+        .collect();
+    let folders_and_alerts_scheduled_job =
+        match alert::list_v2(client, user_id, query.into(&org_id)).await {
+            Ok(f_a) => {
+                let f_a: Vec<_> = f_a
+                    .into_iter()
+                    .map(|(folder, alert)| {
+                        let key = alert.get_unique_key();
+                        (folder, alert, scheduled_jobs.remove(&key))
+                    })
+                    .collect();
+                f_a
+            }
+            Err(e) => return e.into(),
+        };
+    let Ok(resp_body) = ListAlertsResponseBody::try_from(folders_and_alerts_scheduled_job) else {
         return MetaHttpResponse::internal_error("");
     };
     MetaHttpResponse::json(resp_body)

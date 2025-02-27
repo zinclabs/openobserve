@@ -13,10 +13,10 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use config::utils::json;
+use config::{meta::triggers::Trigger, utils::json};
 use infra::{
     errors::{Error, Result},
-    scheduler::{self, Trigger},
+    scheduler,
 };
 use o2_enterprise::enterprise::super_cluster::queue::{Message, MessageType};
 
@@ -84,6 +84,12 @@ async fn update_status(msg: Message) -> Result<()> {
         &trigger.module_key,
         trigger.status,
         trigger.retries,
+        // Only update trigger data if it is not empty
+        if trigger.data.is_empty() {
+            None
+        } else {
+            Some(&trigger.data)
+        },
     )
     .await
     {

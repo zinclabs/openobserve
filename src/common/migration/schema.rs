@@ -19,7 +19,13 @@
 // the changes in executing different migration logic.
 
 use chrono::Utc;
-use config::{meta::dashboards::reports::Report, utils::json};
+use config::{
+    meta::{
+        dashboards::reports::Report,
+        triggers::{Trigger, TriggerModule, TriggerStatus},
+    },
+    utils::json,
+};
 use datafusion::arrow::datatypes::Schema;
 use infra::{
     db::{self as infra_db, NO_NEED_WATCH},
@@ -209,14 +215,14 @@ async fn upgrade_trigger() -> Result<(), anyhow::Error> {
         };
         let data: json::Value = json::from_slice(&val).unwrap();
         let data = data.as_object().unwrap();
-        scheduler::push(scheduler::Trigger {
+        scheduler::push(Trigger {
             org: org_id.to_string(),
-            module: scheduler::TriggerModule::Alert,
+            module: TriggerModule::Alert,
             module_key: module_key.to_string(),
             next_run_at: data.get("next_run_at").unwrap().as_i64().unwrap(),
             is_realtime: data.get("is_realtime").unwrap().as_bool().unwrap(),
             is_silenced: data.get("is_silenced").unwrap().as_bool().unwrap(),
-            status: scheduler::TriggerStatus::Waiting,
+            status: TriggerStatus::Waiting,
             ..Default::default()
         })
         .await?;

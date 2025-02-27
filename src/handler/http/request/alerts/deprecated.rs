@@ -13,12 +13,17 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+use core::result::Result::Ok;
 use std::collections::HashMap;
 
 use actix_web::{delete, get, post, put, web, HttpRequest, HttpResponse};
-use config::meta::{
-    alerts::alert::{Alert, AlertListFilter},
-    dashboards::datetime_now,
+use config::{
+    meta::{
+        alerts::alert::{Alert, AlertListFilter},
+        dashboards::datetime_now,
+        triggers::{ScheduledTriggerData, TriggerModule},
+    },
+    utils::json,
 };
 
 use crate::{
@@ -26,7 +31,10 @@ use crate::{
         meta::http::HttpResponse as MetaHttpResponse,
         utils::{auth::UserEmail, http::get_stream_type_from_request},
     },
-    service::alerts::alert::{self, AlertError},
+    service::{
+        alerts::alert::{self, AlertError},
+        db::scheduler,
+    },
 };
 
 /// CreateAlert
@@ -62,8 +70,8 @@ pub async fn save_alert(
     alert.owner = Some(user_email.user_id.clone());
     alert.last_edited_by = Some(user_email.user_id);
     alert.updated_at = Some(datetime_now());
-    alert.last_triggered_at = None;
-    alert.last_satisfied_at = None;
+    alert.set_last_satisfied_at(None);
+    alert.set_last_triggered_at(None);
 
     match alert::save(&org_id, &stream_name, "", alert, true).await {
         Ok(_) => MetaHttpResponse::ok("Alert saved"),
@@ -235,9 +243,35 @@ async fn list_alerts(path: web::Path<String>, req: HttpRequest) -> HttpResponse 
     .await
     {
         Ok(mut data) => {
-            // Hack for frequency: convert seconds to minutes
-            for alert in data.iter_mut() {
-                alert.trigger_condition.frequency /= 60;
+            // `last_triggered_at` and `last_satisfied_at` are not part
+            // of the alerts anymore, so fetch the scheduled_jobs to get
+            // the last_triggered_at and last_satisfied_at.
+
+            if let Ok(scheduled_jobs) =
+                scheduler::list_by_org(&org_id, Some(TriggerModule::Alert)).await
+            {
+                for alert in data.iter_mut() {
+                    // Hack for frequency: convert seconds to minutes
+                    alert.trigger_condition.frequency /= 60;
+                    if let Some(scheduled_job) = scheduled_jobs.iter().find(|job| {
+                        job.module_key.eq(&format!(
+                            "{}/{}/{}",
+                            alert.stream_type, alert.stream_name, alert.name
+                        ))
+                    }) {
+                        alert.set_last_triggered_at(scheduled_job.start_time);
+                        let trigger_data: Result<ScheduledTriggerData, json::Error> =
+                            json::from_str(&scheduled_job.data);
+                        if let Ok(trigger_data) = trigger_data {
+                            alert.set_last_satisfied_at(trigger_data.last_satisfied_at);
+                        }
+                    }
+                }
+            } else {
+                // Hack for frequency: convert seconds to minutes
+                for alert in data.iter_mut() {
+                    alert.trigger_condition.frequency /= 60;
+                }
             }
 
             let mut mapdata = HashMap::new();
@@ -274,6 +308,20 @@ async fn get_alert(path: web::Path<(String, String, String)>, req: HttpRequest) 
     let stream_type = get_stream_type_from_request(&query).unwrap_or_default();
     match alert::get_by_name(&org_id, stream_type, &stream_name, &name).await {
         Ok(Some(mut data)) => {
+            if let Ok(scheduled_job) = scheduler::get(
+                &org_id,
+                TriggerModule::Alert,
+                &format!("{}/{}/{}", stream_type, stream_name, name),
+            )
+            .await
+            {
+                data.set_last_triggered_at(scheduled_job.start_time);
+                let trigger_data: Result<ScheduledTriggerData, json::Error> =
+                    json::from_str(&scheduled_job.data);
+                if let Ok(trigger_data) = trigger_data {
+                    data.set_last_satisfied_at(trigger_data.last_satisfied_at);
+                }
+            }
             // Hack for frequency: convert seconds to minutes
             data.trigger_condition.frequency /= 60;
             MetaHttpResponse::json(data)

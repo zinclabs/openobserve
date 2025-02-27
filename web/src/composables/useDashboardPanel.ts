@@ -20,6 +20,12 @@ import useNotifications from "./useNotifications";
 import { splitQuotedString, escapeSingleQuotes } from "@/utils/zincutils";
 import { extractFields } from "@/utils/query/sqlUtils";
 import { validateSQLPanelFields } from "@/utils/dashboard/convertDataIntoUnitValue";
+import {
+  buildSQLQueryFromInput,
+  buildSQLJoinsFromInput,
+} from "@/utils/dashboard/convertDataIntoUnitValue";
+import { buildSQLQueryWithParser } from "@/utils/query/sqlUtils";
+import useStreams from "./useStreams";
 
 const colors = [
   "#5960b2",
@@ -116,6 +122,7 @@ const getDefaultDashboardPanelData: any = () => ({
         query: "",
         vrlFunctionQuery: "",
         customQuery: false,
+        joins: [],
         fields: {
           stream: "",
           stream_type: "logs",
@@ -188,6 +195,9 @@ const getDefaultDashboardPanelData: any = () => ({
       streamResultsType: "",
       filterField: "",
     },
+    streamFields: {
+      groupedFields: [],
+    },
   },
 });
 
@@ -197,12 +207,13 @@ const dashboardPanelDataObj: any = {
 
 const getDefaultCustomChartText = () => {
   return `\ // To know more about ECharts , \n// visit: https://echarts.apache.org/examples/en/index.html \n// Example: https://echarts.apache.org/examples/en/editor.html?c=line-simple \n// Define your ECharts 'option' here. \n// 'data' variable is available for use and contains the response data from the search result and it is an array.\noption = {  \n \n};
-  `
-}
+  `;
+};
 
 const useDashboardPanelData = (pageKey: string = "dashboard") => {
   const store = useStore();
   const { showErrorNotification } = useNotifications();
+  const { getStreams, getStream } = useStreams();
 
   // Initialize the state for this page key if it doesn't already exist
   if (!dashboardPanelDataObj[pageKey]) {
@@ -312,6 +323,172 @@ const useDashboardPanelData = (pageKey: string = "dashboard") => {
     return dashboardPanelData.meta.stream.selectedStreamFields ?? [];
   });
 
+  const streamCache: any = {};
+
+  async function loadStreamFields(streamName: string) {
+    try {
+      if (!streamName) return;
+      console.log(streamName, JSON.parse(JSON.stringify(streamCache)));
+
+      // If the stream data is already cached, return it immediately
+      if (streamCache[streamName]) {
+        console.log("Stream data already cached", streamCache[streamName]);
+        return streamCache[streamName]; // Return cached result
+      }
+
+      // Create a new request and store it in the cache
+      const requestPromise = getStream(
+        streamName,
+        dashboardPanelData.data.queries[
+          dashboardPanelData.layout.currentQueryIndex
+        ].fields.stream_type ?? "logs",
+        true,
+      )
+        .then((res: any) => {
+          console.log("then", res);
+          return res;
+        })
+        .catch((error) => {
+          throw error;
+        })
+        .finally(() => {
+          streamCache[streamName] = null; // Remove from cache on error
+        });
+
+      console.log("Stream data loaded", streamName, JSON.parse(JSON.stringify(requestPromise)));
+      streamCache[streamName] = requestPromise; // Store the promise in cache
+      return requestPromise;
+    } catch (e: any) {
+      console.log("Error while loading stream fields", e);
+    }
+  }
+
+  let latestRequestId: any = null;
+
+  watch(
+    () => [
+      dashboardPanelData.data.queries[
+        dashboardPanelData.layout.currentQueryIndex
+      ].fields.stream,
+      dashboardPanelData.data.queries[
+        dashboardPanelData.layout.currentQueryIndex
+      ].fields.stream_type,
+      dashboardPanelData.data.queries[
+        dashboardPanelData.layout.currentQueryIndex
+      ].joins,
+    ],
+    async () => {
+      // Generate a unique request ID
+      const requestId = Symbol();
+      latestRequestId = requestId;
+
+      const joins =
+        dashboardPanelData.data.queries[
+          dashboardPanelData.layout.currentQueryIndex
+        ].joins ?? [];
+
+      // Collect streams (main + joins)
+      const joinsStreams = [
+        {
+          stream:
+            dashboardPanelData.data.queries[
+              dashboardPanelData.layout.currentQueryIndex
+            ].fields.stream,
+        },
+        ...joins.filter((stream: any) => stream?.stream),
+      ];
+
+      console.log(joinsStreams, "joinsStreams");
+
+      // Fetch stream fields
+      const groupedFields = await Promise.all(
+        joinsStreams.map(async (stream: any) => {
+          return {
+            ...(await loadStreamFields(stream?.stream)),
+            stream_alias: stream?.streamAlias,
+          };
+        }),
+      );
+
+      // Only update if this is the latest request
+      if (latestRequestId === requestId) {
+        dashboardPanelData.meta.streamFields.groupedFields = groupedFields;
+      }
+    },
+    {
+      deep: true,
+    },
+  );
+
+  const flattenGroupedFields = computed(() => {
+    const flattenedFields: any[] = [];
+    dashboardPanelData.meta.streamFields.groupedFields.forEach((group: any) => {
+      // Add a group header row
+      flattenedFields.push({
+        isGroup: true,
+        groupName: group.name,
+      });
+
+      if (
+        group.settings.hasOwnProperty("defined_schema_fields") &&
+        group.settings.defined_schema_fields.length > 0
+      ) {
+        // add the user defined fields
+        // _timestamp field + user defined fields + all_fields_name
+
+        // add _timestamp field
+        flattenedFields.push({
+          name: store.state.zoConfig?.timestamp_column,
+          type: "Int64",
+          stream: group.name,
+          streamAlias: group.stream_alias,
+          isGroup: false,
+        });
+
+        // add user defined fields
+        for (const field of group.schema) {
+          if (
+            store.state.zoConfig.user_defined_schemas_enabled &&
+            group.settings.hasOwnProperty("defined_schema_fields") &&
+            group.settings.defined_schema_fields.length > 0
+          ) {
+            if (group.settings.defined_schema_fields.includes(field.name)) {
+              // push as a user defined schema
+              flattenedFields.push({
+                ...field,
+                stream: group.name,
+                streamAlias: group.stream_alias,
+                isGroup: false,
+              });
+            }
+          }
+        }
+
+        // add all_fields_name
+        flattenedFields.push({
+          name: store.state.zoConfig?.all_fields_name,
+          type: "Utf8",
+          stream: group.name,
+          streamAlias: group.stream_alias,
+          isGroup: false,
+        });
+      } else {
+        // use schema of the group
+        // Add the fields in the group, including the group name
+        group.schema.forEach((field: any) => {
+          flattenedFields.push({
+            ...field,
+            stream: group.name,
+            streamAlias: group.stream_alias,
+            isGroup: false,
+          });
+        });
+      }
+    });
+
+    return flattenedFields;
+  });
+
   const isAddXAxisNotAllowed = computed((e: any) => {
     switch (dashboardPanelData.data.type) {
       case "pie":
@@ -416,7 +593,7 @@ const useDashboardPanelData = (pageKey: string = "dashboard") => {
     );
   };
 
-  const addXAxisItem = (row: { name: string }) => {
+  const addXAxisItem = (row: { name: string; streamAlias?: string }) => {
     if (
       !dashboardPanelData.data.queries[
         dashboardPanelData.layout.currentQueryIndex
@@ -434,44 +611,70 @@ const useDashboardPanelData = (pageKey: string = "dashboard") => {
     const isDerived = checkIsDerivedField(row.name) ?? false;
 
     // check for existing field
-    if (
-      !dashboardPanelData.data.queries[
+    // if (
+    //   !dashboardPanelData.data.queries[
+    //     dashboardPanelData.layout.currentQueryIndex
+    //   ].fields.x.find((it: any) => it.column == row.name)
+    // ) {
+    dashboardPanelData.data.queries[
+      dashboardPanelData.layout.currentQueryIndex
+    ].fields.x.push({
+      label: !dashboardPanelData.data.queries[
         dashboardPanelData.layout.currentQueryIndex
-      ].fields.x.find((it: any) => it.column == row.name)
-    ) {
-      dashboardPanelData.data.queries[
-        dashboardPanelData.layout.currentQueryIndex
-      ].fields.x.push({
-        label: !dashboardPanelData.data.queries[
+      ].customQuery
+        ? generateLabelFromName(row.name)
+        : row.name,
+      alias:
+        !dashboardPanelData.data.queries[
           dashboardPanelData.layout.currentQueryIndex
-        ].customQuery
-          ? generateLabelFromName(row.name)
+        ].customQuery && !isDerived
+          ? "x_axis_" +
+            (dashboardPanelData.data.queries[
+              dashboardPanelData.layout.currentQueryIndex
+            ].fields.x.length +
+              1)
           : row.name,
-        alias:
-          !dashboardPanelData.data.queries[
-            dashboardPanelData.layout.currentQueryIndex
-          ].customQuery && !isDerived
-            ? "x_axis_" +
-              (dashboardPanelData.data.queries[
-                dashboardPanelData.layout.currentQueryIndex
-              ].fields.x.length +
-                1)
-            : row.name,
-        column: row.name,
-        color: null,
-        aggregationFunction:
-          row.name == store.state.zoConfig.timestamp_column && !isDerived
-            ? "histogram"
-            : null,
-        sortBy:
-          row.name == store.state.zoConfig.timestamp_column
-            ? dashboardPanelData.data.type == "table"
-              ? "DESC"
-              : "ASC"
-            : null,
-        isDerived,
-      });
-    }
+      // column: row.name,
+      color: null,
+      type: "build",
+      functionName:
+        row.name == store.state.zoConfig.timestamp_column && !isDerived
+          ? "histogram"
+          : null,
+      args:
+        row.name == store.state.zoConfig.timestamp_column && !isDerived
+          ? [
+              {
+                type: "field",
+                value: {
+                  field: row.name,
+                  streamAlias: row.streamAlias,
+                },
+              },
+              {
+                type: "histogramInterval",
+                value: null,
+              },
+            ]
+          : [
+              {
+                type: "field",
+                value: {
+                  field: row.name,
+                  streamAlias: row.streamAlias,
+                },
+              },
+            ],
+      sortBy:
+        row.name == store.state.zoConfig.timestamp_column
+          ? dashboardPanelData.data.type == "table"
+            ? "DESC"
+            : "ASC"
+          : null,
+      isDerived,
+    });
+
+    // }
 
     updateArrayAlias();
   };
@@ -494,44 +697,69 @@ const useDashboardPanelData = (pageKey: string = "dashboard") => {
     const isDerived = checkIsDerivedField(row.name) ?? false;
 
     // check for existing field
-    if (
-      !dashboardPanelData.data.queries[
+    // if (
+    //   !dashboardPanelData.data.queries[
+    //     dashboardPanelData.layout.currentQueryIndex
+    //   ].fields.breakdown.find((it: any) => it.column == row.name)
+    // ) {
+    dashboardPanelData.data.queries[
+      dashboardPanelData.layout.currentQueryIndex
+    ].fields.breakdown.push({
+      label: !dashboardPanelData.data.queries[
         dashboardPanelData.layout.currentQueryIndex
-      ].fields.breakdown.find((it: any) => it.column == row.name)
-    ) {
-      dashboardPanelData.data.queries[
-        dashboardPanelData.layout.currentQueryIndex
-      ].fields.breakdown.push({
-        label: !dashboardPanelData.data.queries[
+      ].customQuery
+        ? generateLabelFromName(row.name)
+        : row.name,
+      alias:
+        !dashboardPanelData.data.queries[
           dashboardPanelData.layout.currentQueryIndex
-        ].customQuery
-          ? generateLabelFromName(row.name)
+        ].customQuery && !isDerived
+          ? "breakdown_" +
+            (dashboardPanelData.data.queries[
+              dashboardPanelData.layout.currentQueryIndex
+            ].fields.breakdown.length +
+              1)
           : row.name,
-        alias:
-          !dashboardPanelData.data.queries[
-            dashboardPanelData.layout.currentQueryIndex
-          ].customQuery && !isDerived
-            ? "breakdown_" +
-              (dashboardPanelData.data.queries[
-                dashboardPanelData.layout.currentQueryIndex
-              ].fields.breakdown.length +
-                1)
-            : row.name,
-        column: row.name,
-        color: null,
-        aggregationFunction:
-          row.name == store.state.zoConfig.timestamp_column && !isDerived
-            ? "histogram"
-            : null,
-        sortBy:
-          row.name == store.state.zoConfig.timestamp_column
-            ? dashboardPanelData.data.type == "table"
-              ? "DESC"
-              : "ASC"
-            : null,
-        isDerived,
-      });
-    }
+      // column: row.name,
+      color: null,
+      type: "build",
+      functionName:
+        row.name == store.state.zoConfig.timestamp_column && !isDerived
+          ? "histogram"
+          : null,
+      args:
+        row.name == store.state.zoConfig.timestamp_column && !isDerived
+          ? [
+              {
+                type: "field",
+                value: {
+                  field: row.name,
+                  streamAlias: row.streamAlias,
+                },
+              },
+              {
+                type: "histogramInterval",
+                value: null,
+              },
+            ]
+          : [
+              {
+                type: "field",
+                value: {
+                  field: row.name,
+                  streamAlias: row.streamAlias,
+                },
+              },
+            ],
+      sortBy:
+        row.name == store.state.zoConfig.timestamp_column
+          ? dashboardPanelData.data.type == "table"
+            ? "DESC"
+            : "ASC"
+          : null,
+      isDerived,
+    });
+    // }
 
     updateArrayAlias();
   };
@@ -553,38 +781,47 @@ const useDashboardPanelData = (pageKey: string = "dashboard") => {
 
     const isDerived = checkIsDerivedField(row.name) ?? false;
 
-    if (
-      !dashboardPanelData.data.queries[
+    // HERE NEED CHANGES
+    // if (
+    //   !dashboardPanelData.data.queries[
+    //     dashboardPanelData.layout.currentQueryIndex
+    //   ].fields.y.find((it: any) => it?.column == row.name)
+    // ) {
+    dashboardPanelData.data.queries[
+      dashboardPanelData.layout.currentQueryIndex
+    ].fields.y.push({
+      label: !dashboardPanelData.data.queries[
         dashboardPanelData.layout.currentQueryIndex
-      ].fields.y.find((it: any) => it?.column == row.name)
-    ) {
-      dashboardPanelData.data.queries[
-        dashboardPanelData.layout.currentQueryIndex
-      ].fields.y.push({
-        label: !dashboardPanelData.data.queries[
+      ].customQuery
+        ? generateLabelFromName(row.name)
+        : row.name,
+      alias:
+        !dashboardPanelData.data.queries[
           dashboardPanelData.layout.currentQueryIndex
-        ].customQuery
-          ? generateLabelFromName(row.name)
+        ].customQuery && !isDerived
+          ? "y_axis_" +
+            (dashboardPanelData.data.queries[
+              dashboardPanelData.layout.currentQueryIndex
+            ].fields.y.length +
+              1)
           : row.name,
-        alias:
-          !dashboardPanelData.data.queries[
-            dashboardPanelData.layout.currentQueryIndex
-          ].customQuery && !isDerived
-            ? "y_axis_" +
-              (dashboardPanelData.data.queries[
-                dashboardPanelData.layout.currentQueryIndex
-              ].fields.y.length +
-                1)
-            : row.name,
-        column: row.name,
-        color: getNewColorValue(),
-        aggregationFunction:
-          dashboardPanelData.data.type == "heatmap" || isDerived
-            ? null
-            : "count",
-        isDerived,
-      });
-    }
+      // column: row.name,
+      color: getNewColorValue(),
+      type: "build",
+      functionName:
+        dashboardPanelData.data.type == "heatmap" || isDerived ? null : "count",
+      args: [
+        {
+          type: "field",
+          value: {
+            field: row.name,
+            streamAlias: row.streamAlias,
+          },
+        },
+      ],
+      isDerived,
+    });
+    // }
     updateArrayAlias();
   };
 
@@ -605,192 +842,289 @@ const useDashboardPanelData = (pageKey: string = "dashboard") => {
 
     const isDerived = checkIsDerivedField(row.name) ?? false;
 
-    if (
-      !dashboardPanelData.data.queries[
+    // HERE NEED CHANGES
+    // if (
+    //   !dashboardPanelData.data.queries[
+    //     dashboardPanelData.layout.currentQueryIndex
+    //   ].fields.z.find((it: any) => it.column == row.name)
+    // ) {
+    dashboardPanelData.data.queries[
+      dashboardPanelData.layout.currentQueryIndex
+    ].fields.z.push({
+      label: !dashboardPanelData.data.queries[
         dashboardPanelData.layout.currentQueryIndex
-      ].fields.z.find((it: any) => it.column == row.name)
-    ) {
-      dashboardPanelData.data.queries[
-        dashboardPanelData.layout.currentQueryIndex
-      ].fields.z.push({
-        label: !dashboardPanelData.data.queries[
+      ].customQuery
+        ? generateLabelFromName(row.name)
+        : row.name,
+      alias:
+        !dashboardPanelData.data.queries[
           dashboardPanelData.layout.currentQueryIndex
-        ].customQuery
-          ? generateLabelFromName(row.name)
+        ].customQuery && !isDerived
+          ? "z_axis_" +
+            (dashboardPanelData.data.queries[
+              dashboardPanelData.layout.currentQueryIndex
+            ].fields.z.length +
+              1)
           : row.name,
-        alias:
-          !dashboardPanelData.data.queries[
-            dashboardPanelData.layout.currentQueryIndex
-          ].customQuery && !isDerived
-            ? "z_axis_" +
-              (dashboardPanelData.data.queries[
-                dashboardPanelData.layout.currentQueryIndex
-              ].fields.z.length +
-                1)
-            : row.name,
-        column: row.name,
-        color: getNewColorValue(),
-        aggregationFunction: isDerived ? null : "count",
-        isDerived,
-      });
-    }
+      // column: row.name,
+      color: getNewColorValue(),
+      type: "build",
+      functionName: isDerived ? null : "count",
+      args: [
+        {
+          type: "field",
+          value: {
+            field: row.name,
+            streamAlias: row.streamAlias,
+          },
+        },
+      ],
+      isDerived,
+    });
+    // }
     updateArrayAlias();
   };
 
   const addLatitude = (row: any) => {
     const isDerived = checkIsDerivedField(row.name) ?? false;
-    if (
-      !dashboardPanelData.data.queries[
-        dashboardPanelData.layout.currentQueryIndex
-      ].fields.latitude
-    ) {
-      dashboardPanelData.data.queries[
-        dashboardPanelData.layout.currentQueryIndex
-      ].fields.latitude = {
-        label: generateLabelFromName(row.name),
-        alias: isDerived ? row.name : "latitude",
-        column: row.name,
-        color: getNewColorValue(),
-        aggregationFunction: null, // You can set the appropriate aggregation function here
-        isDerived,
-      };
-    }
+    // HERE NEED CHANGES
+    // if (
+    //   !dashboardPanelData.data.queries[
+    //     dashboardPanelData.layout.currentQueryIndex
+    //   ].fields.latitude
+    // ) {
+    dashboardPanelData.data.queries[
+      dashboardPanelData.layout.currentQueryIndex
+    ].fields.latitude = {
+      label: generateLabelFromName(row.name),
+      alias: isDerived ? row.name : "latitude",
+      // column: row.name,
+      color: getNewColorValue(),
+      type: "build",
+      functionName: null, // You can set the appropriate aggregation function here
+      args: [
+        {
+          type: "field",
+          value: {
+            field: row.name,
+            streamAlias: row.streamAlias,
+          },
+        },
+      ],
+      isDerived,
+    };
+    // }
   };
 
   const addLongitude = (row: any) => {
     const isDerived = checkIsDerivedField(row.name) ?? false;
-    if (
-      !dashboardPanelData.data.queries[
-        dashboardPanelData.layout.currentQueryIndex
-      ].fields.longitude
-    ) {
-      dashboardPanelData.data.queries[
-        dashboardPanelData.layout.currentQueryIndex
-      ].fields.longitude = {
-        label: generateLabelFromName(row.name),
-        alias: isDerived ? row.name : "longitude",
-        column: row.name,
-        color: getNewColorValue(),
-        aggregationFunction: null, // You can set the appropriate aggregation function here
-        isDerived,
-      };
-    }
+    // HERE NEED CHANGES
+    // if (
+    //   !dashboardPanelData.data.queries[
+    //     dashboardPanelData.layout.currentQueryIndex
+    //   ].fields.longitude
+    // ) {
+    dashboardPanelData.data.queries[
+      dashboardPanelData.layout.currentQueryIndex
+    ].fields.longitude = {
+      label: generateLabelFromName(row.name),
+      alias: isDerived ? row.name : "longitude",
+      // column: row.name,
+      color: getNewColorValue(),
+      type: "build",
+      functionName: null, // You can set the appropriate aggregation function here
+      args: [
+        {
+          type: "field",
+          value: {
+            field: row.name,
+            streamAlias: row.streamAlias,
+          },
+        },
+      ],
+      isDerived,
+    };
+    // }
   };
 
   const addWeight = (row: any) => {
     const isDerived = checkIsDerivedField(row.name) ?? false;
-    if (
-      !dashboardPanelData.data.queries[
-        dashboardPanelData.layout.currentQueryIndex
-      ].fields.weight
-    ) {
-      dashboardPanelData.data.queries[
-        dashboardPanelData.layout.currentQueryIndex
-      ].fields.weight = {
-        label: generateLabelFromName(row.name),
-        alias: isDerived ? row.name : "weight",
-        column: row.name,
-        color: getNewColorValue(),
-        aggregationFunction: isDerived ? null : "count", // You can set the appropriate aggregation function here
-        isDerived,
-      };
-    }
+    // HERE NEED CHANGES
+    // if (
+    //   !dashboardPanelData.data.queries[
+    //     dashboardPanelData.layout.currentQueryIndex
+    //   ].fields.weight
+    // ) {
+    dashboardPanelData.data.queries[
+      dashboardPanelData.layout.currentQueryIndex
+    ].fields.weight = {
+      label: generateLabelFromName(row.name),
+      alias: isDerived ? row.name : "weight",
+      // column: row.name,
+      color: getNewColorValue(),
+      type: "build",
+      functionName: isDerived ? null : "count", // You can set the appropriate aggregation function here
+      args: [
+        {
+          type: "field",
+          value: {
+            field: row.name,
+            streamAlias: row.streamAlias,
+          },
+        },
+      ],
+      isDerived,
+    };
+    // }
   };
 
   const addMapName = (row: any) => {
-    if (
-      !dashboardPanelData.data.queries[
-        dashboardPanelData.layout.currentQueryIndex
-      ].fields.name
-    ) {
-      dashboardPanelData.data.queries[
-        dashboardPanelData.layout.currentQueryIndex
-      ].fields.name = {
-        label: generateLabelFromName(row.name),
-        alias: "name",
-        column: row.name,
-        color: getNewColorValue(),
-        aggregationFunction: null, // You can set the appropriate aggregation function here
-      };
-    }
+    // if (
+    //   !dashboardPanelData.data.queries[
+    //     dashboardPanelData.layout.currentQueryIndex
+    //   ].fields.name
+    // ) {
+    dashboardPanelData.data.queries[
+      dashboardPanelData.layout.currentQueryIndex
+    ].fields.name = {
+      label: generateLabelFromName(row.name),
+      alias: "name",
+      // column: row.name,
+      color: getNewColorValue(),
+      type: "build",
+      functionName: null, // You can set the appropriate aggregation function here
+      args: [
+        {
+          type: "field",
+          value: {
+            field: row.name,
+            streamAlias: row.streamAlias,
+          },
+        },
+      ],
+    };
+    // }
   };
 
   const addMapValue = (row: any) => {
-    if (
-      !dashboardPanelData.data.queries[
-        dashboardPanelData.layout.currentQueryIndex
-      ].fields.value_for_maps
-    ) {
-      dashboardPanelData.data.queries[
-        dashboardPanelData.layout.currentQueryIndex
-      ].fields.value_for_maps = {
-        label: generateLabelFromName(row.name),
-        alias: "value_for_maps",
-        column: row.name,
-        color: getNewColorValue(),
-        aggregationFunction: "count", // You can set the appropriate aggregation function here
-      };
-    }
+    // if (
+    //   !dashboardPanelData.data.queries[
+    //     dashboardPanelData.layout.currentQueryIndex
+    //   ].fields.value_for_maps
+    // ) {
+    dashboardPanelData.data.queries[
+      dashboardPanelData.layout.currentQueryIndex
+    ].fields.value_for_maps = {
+      label: generateLabelFromName(row.name),
+      alias: "value_for_maps",
+      // column: row.name,
+      color: getNewColorValue(),
+      type: "build",
+      functionName: "count", // You can set the appropriate aggregation function here
+      args: [
+        {
+          type: "field",
+          value: {
+            field: row.name,
+            streamAlias: row.streamAlias,
+          },
+        },
+      ],
+    };
+    // }
   };
 
   const addSource = (row: any) => {
     const isDerived = checkIsDerivedField(row.name) ?? false;
-    if (
-      !dashboardPanelData.data.queries[
-        dashboardPanelData.layout.currentQueryIndex
-      ].fields.source
-    ) {
-      dashboardPanelData.data.queries[
-        dashboardPanelData.layout.currentQueryIndex
-      ].fields.source = {
-        label: generateLabelFromName(row.name),
-        alias: isDerived ? row.name : "source",
-        column: row.name,
-        color: getNewColorValue(),
-        aggregationFunction: null, // You can set the appropriate aggregation function here
-        isDerived,
-      };
-    }
+    // HERE NEED CHANGES
+    // if (
+    //   !dashboardPanelData.data.queries[
+    //     dashboardPanelData.layout.currentQueryIndex
+    //   ].fields.source
+    // ) {
+    dashboardPanelData.data.queries[
+      dashboardPanelData.layout.currentQueryIndex
+    ].fields.source = {
+      label: generateLabelFromName(row.name),
+      alias: isDerived ? row.name : "source",
+      // column: row.name,
+      color: getNewColorValue(),
+      type: "build",
+      functionName: null, // You can set the appropriate aggregation function here
+      args: [
+        {
+          type: "field",
+          value: {
+            field: row.name,
+            streamAlias: row.streamAlias,
+          },
+        },
+      ],
+      isDerived,
+    };
+    // }
   };
 
   const addTarget = (row: any) => {
     const isDerived = checkIsDerivedField(row.name) ?? false;
-    if (
-      !dashboardPanelData.data.queries[
-        dashboardPanelData.layout.currentQueryIndex
-      ].fields.target
-    ) {
-      dashboardPanelData.data.queries[
-        dashboardPanelData.layout.currentQueryIndex
-      ].fields.target = {
-        label: generateLabelFromName(row.name),
-        alias: isDerived ? row.name : "target",
-        column: row.name,
-        color: getNewColorValue(),
-        aggregationFunction: null, // You can set the appropriate aggregation function here
-        isDerived,
-      };
-    }
+    // HERE NEED CHANGES
+    // if (
+    //   !dashboardPanelData.data.queries[
+    //     dashboardPanelData.layout.currentQueryIndex
+    //   ].fields.target
+    // ) {
+    dashboardPanelData.data.queries[
+      dashboardPanelData.layout.currentQueryIndex
+    ].fields.target = {
+      label: generateLabelFromName(row.name),
+      alias: isDerived ? row.name : "target",
+      // column: row.name,
+      color: getNewColorValue(),
+      type: "build",
+      functionName: null, // You can set the appropriate aggregation function here
+      args: [
+        {
+          type: "field",
+          value: {
+            field: row.name,
+            streamAlias: row.streamAlias,
+          },
+        },
+      ],
+      isDerived,
+    };
+    // }
   };
 
   const addValue = (row: any) => {
     const isDerived = checkIsDerivedField(row.name) ?? false;
-    if (
-      !dashboardPanelData.data.queries[
-        dashboardPanelData.layout.currentQueryIndex
-      ].fields.value
-    ) {
-      dashboardPanelData.data.queries[
-        dashboardPanelData.layout.currentQueryIndex
-      ].fields.value = {
-        label: generateLabelFromName(row.name),
-        alias: isDerived ? row.name : "value",
-        column: row.name,
-        color: getNewColorValue(),
-        aggregationFunction: isDerived ? null : "sum", // You can set the appropriate aggregation function here
-        isDerived,
-      };
-    }
+    // HERE NEED CHANGES
+    // if (
+    //   !dashboardPanelData.data.queries[
+    //     dashboardPanelData.layout.currentQueryIndex
+    //   ].fields.value
+    // ) {
+    dashboardPanelData.data.queries[
+      dashboardPanelData.layout.currentQueryIndex
+    ].fields.value = {
+      label: generateLabelFromName(row.name),
+      alias: isDerived ? row.name : "value",
+      // column: row.name,
+      color: getNewColorValue(),
+      type: "build",
+      functionName: isDerived ? null : "sum", // You can set the appropriate aggregation function here
+      args: [
+        {
+          type: "field",
+          value: {
+            field: row.name,
+            streamAlias: row.streamAlias,
+          },
+        },
+      ],
+      isDerived,
+    };
+    // }
   };
 
   // get new color value based on existing color from the chart
@@ -811,7 +1145,9 @@ const useDashboardPanelData = (pageKey: string = "dashboard") => {
         dashboardPanelData.data.queries[
           dashboardPanelData.layout.currentQueryIndex
         ].fields.y.forEach((itemY: any) => {
-          itemY.aggregationFunction = null;
+          itemY.functionName = null;
+          // take first arg
+          itemY.args = itemY.args.length ? [itemY?.args?.[0]] : [];
         });
         dashboardPanelData.data.queries[
           dashboardPanelData.layout.currentQueryIndex
@@ -833,7 +1169,8 @@ const useDashboardPanelData = (pageKey: string = "dashboard") => {
         }
         dashboardPanelData.data.htmlContent = "";
         dashboardPanelData.data.markdownContent = "";
-        dashboardPanelData.data.customChartContent = getDefaultCustomChartText();
+        dashboardPanelData.data.customChartContent =
+          getDefaultCustomChartText();
         dashboardPanelData.data.queries[
           dashboardPanelData.layout.currentQueryIndex
         ].config.time_shift = [];
@@ -850,8 +1187,10 @@ const useDashboardPanelData = (pageKey: string = "dashboard") => {
         dashboardPanelData.data.queries[
           dashboardPanelData.layout.currentQueryIndex
         ].fields.y.forEach((itemY: any) => {
-          if (itemY.aggregationFunction === null && !itemY.isDerived) {
-            itemY.aggregationFunction = "count";
+          if (itemY.functionName === null && !itemY.isDerived) {
+            itemY.functionName = "count";
+            // take first arg
+            itemY.args = itemY.args.length ? [itemY?.args?.[0]] : [];
           }
         });
         dashboardPanelData.data.queries[
@@ -876,7 +1215,8 @@ const useDashboardPanelData = (pageKey: string = "dashboard") => {
         }
         dashboardPanelData.data.htmlContent = "";
         dashboardPanelData.data.markdownContent = "";
-        dashboardPanelData.data.customChartContent = getDefaultCustomChartText();
+        dashboardPanelData.data.customChartContent =
+          getDefaultCustomChartText();
         break;
       case "table":
       case "pie":
@@ -886,8 +1226,10 @@ const useDashboardPanelData = (pageKey: string = "dashboard") => {
         dashboardPanelData.data.queries[
           dashboardPanelData.layout.currentQueryIndex
         ].fields.y.forEach((itemY: any) => {
-          if (itemY.aggregationFunction === null && !itemY.isDerived) {
-            itemY.aggregationFunction = "count";
+          if (itemY.functionName === null && !itemY.isDerived) {
+            itemY.functionName = "count";
+            // take first arg
+            itemY.args = itemY.args.length ? [itemY?.args?.[0]] : [];
           }
         });
         dashboardPanelData.data.queries[
@@ -915,7 +1257,8 @@ const useDashboardPanelData = (pageKey: string = "dashboard") => {
         }
         dashboardPanelData.data.htmlContent = "";
         dashboardPanelData.data.markdownContent = "";
-        dashboardPanelData.data.customChartContent = getDefaultCustomChartText();
+        dashboardPanelData.data.customChartContent =
+          getDefaultCustomChartText();
 
         dashboardPanelData.data.queries[
           dashboardPanelData.layout.currentQueryIndex
@@ -940,7 +1283,8 @@ const useDashboardPanelData = (pageKey: string = "dashboard") => {
         ].fields.breakdown = [];
         dashboardPanelData.data.htmlContent = "";
         dashboardPanelData.data.markdownContent = "";
-        dashboardPanelData.data.customChartContent = getDefaultCustomChartText();
+        dashboardPanelData.data.customChartContent =
+          getDefaultCustomChartText();
 
         dashboardPanelData.data.queries?.forEach((query: any) => {
           query.fields.source = null;
@@ -957,7 +1301,8 @@ const useDashboardPanelData = (pageKey: string = "dashboard") => {
       case "html":
         dashboardPanelData.data.queries = getDefaultQueries();
         dashboardPanelData.data.markdownContent = "";
-        dashboardPanelData.data.customChartContent = getDefaultCustomChartText();
+        dashboardPanelData.data.customChartContent =
+          getDefaultCustomChartText();
         dashboardPanelData.data.queryType = "";
         dashboardPanelData.data.queries[
           dashboardPanelData.layout.currentQueryIndex
@@ -966,7 +1311,8 @@ const useDashboardPanelData = (pageKey: string = "dashboard") => {
       case "markdown":
         dashboardPanelData.data.queries = getDefaultQueries();
         dashboardPanelData.data.htmlContent = "";
-        dashboardPanelData.data.customChartContent = getDefaultCustomChartText();
+        dashboardPanelData.data.customChartContent =
+          getDefaultCustomChartText();
 
         dashboardPanelData.data.queryType = "";
         dashboardPanelData.data.queries[
@@ -1026,7 +1372,8 @@ const useDashboardPanelData = (pageKey: string = "dashboard") => {
         };
         dashboardPanelData.data.htmlContent = "";
         dashboardPanelData.data.markdownContent = "";
-        dashboardPanelData.data.customChartContent = getDefaultCustomChartText();
+        dashboardPanelData.data.customChartContent =
+          getDefaultCustomChartText();
         dashboardPanelData.data.queries?.forEach((query: any) => {
           query.fields.latitude = null;
           query.fields.longitude = null;
@@ -1096,6 +1443,7 @@ const useDashboardPanelData = (pageKey: string = "dashboard") => {
   };
 
   const removeXAxisItem = (name: string) => {
+    // HERE NEED CHANGES
     const index = dashboardPanelData.data.queries[
       dashboardPanelData.layout.currentQueryIndex
     ].fields.x.findIndex((it: any) => it.column == name);
@@ -1107,6 +1455,7 @@ const useDashboardPanelData = (pageKey: string = "dashboard") => {
   };
 
   const removeBreakdownItem = (name: string) => {
+    // HERE NEED CHANGES
     const index = dashboardPanelData.data.queries[
       dashboardPanelData.layout.currentQueryIndex
     ].fields.breakdown.findIndex((it: any) => it.column == name);
@@ -1118,6 +1467,7 @@ const useDashboardPanelData = (pageKey: string = "dashboard") => {
   };
 
   const removeYAxisItem = (name: string) => {
+    // HERE NEED CHANGES
     const index = dashboardPanelData.data.queries[
       dashboardPanelData.layout.currentQueryIndex
     ].fields.y.findIndex((it: any) => it.column == name);
@@ -1129,6 +1479,7 @@ const useDashboardPanelData = (pageKey: string = "dashboard") => {
   };
 
   const removeZAxisItem = (name: string) => {
+    // HERE NEED CHANGES
     const index = dashboardPanelData.data.queries[
       dashboardPanelData.layout.currentQueryIndex
     ].fields.z.findIndex((it: any) => it.column == name);
@@ -1670,7 +2021,9 @@ const useDashboardPanelData = (pageKey: string = "dashboard") => {
               (currentFieldType === "y" || currentFieldType === "z") &&
               !field.isDerived
             ) {
-              field.aggregationFunction = "count";
+              field.functionName = "count";
+              // take first arg
+              field.args = field.args.length ? [field?.args?.[0]] : [];
             }
           }
 
@@ -1877,6 +2230,7 @@ const useDashboardPanelData = (pageKey: string = "dashboard") => {
           const newName = newArray[changedIndex[0]]?.name;
 
           // Update the field alias and column to the new name
+          // HERE NEED CHANGES
           field.alias = newName;
           field.column = newName;
         }
@@ -2073,7 +2427,7 @@ const useDashboardPanelData = (pageKey: string = "dashboard") => {
     return "";
   };
 
-  const sqlchart = () => {
+  const sqlchart = async () => {
     // STEP 1: first check if there is at least 1 field selected
     if (
       dashboardPanelData.data.queries[
@@ -2093,8 +2447,18 @@ const useDashboardPanelData = (pageKey: string = "dashboard") => {
     }
 
     // STEP 2: Now, continue if we have at least 1 field selected
-    // merge the fields list
+
+    // To build the SQL query
+    // 1. SELECT
+    // 2. FROM & Join query
+    // 3. Filter
+    // 4. Group by
+    // 5. Order by
+    // 6. Limit
+
     let query = "SELECT ";
+    // 1. SELECT
+    // merge the fields list
     const fields = [
       ...dashboardPanelData.data.queries[
         dashboardPanelData.layout.currentQueryIndex
@@ -2124,60 +2488,37 @@ const useDashboardPanelData = (pageKey: string = "dashboard") => {
       .flat()
       .filter((fieldObj: any) => !fieldObj.isDerived);
 
-    const filter = [
-      ...dashboardPanelData.data.queries[
-        dashboardPanelData.layout.currentQueryIndex
-      ].fields?.filter.conditions,
-    ];
     const array = fields.map((field, i) => {
       let selector = "";
 
-      // TODO: add aggregator
-      if (field?.aggregationFunction) {
-        switch (field?.aggregationFunction) {
-          case "count-distinct":
-            selector += `count(distinct(${field?.column}))`;
-            break;
-          case "p50":
-            selector += `approx_percentile_cont(${field?.column}, 0.5)`;
-            break;
-          case "p90":
-            selector += `approx_percentile_cont(${field?.column}, 0.9)`;
-            break;
-          case "p95":
-            selector += `approx_percentile_cont(${field?.column}, 0.95)`;
-            break;
-          case "p99":
-            selector += `approx_percentile_cont(${field?.column}, 0.99)`;
-            break;
-          case "histogram": {
-            // if interval is not null, then use it
-            if (field?.args && field?.args?.length && field?.args[0].value) {
-              selector += `${field?.aggregationFunction}(${field?.column}, '${field?.args[0]?.value}')`;
-            } else {
-              selector += `${field?.aggregationFunction}(${field?.column})`;
-            }
-            break;
-          }
-          default:
-            selector += `${field?.aggregationFunction}(${field?.column})`;
-            break;
-        }
-      } else {
-        selector += `${field?.column}`;
-      }
+      selector += buildSQLQueryFromInput(
+        field,
+        dashboardPanelData.data.queries[
+          dashboardPanelData.layout.currentQueryIndex
+        ].fields?.stream,
+      );
+      // } else {
+      //   selector += `${field?.column}`;
+      // }
+
       selector += ` as "${field?.alias}"${i == fields.length - 1 ? " " : ", "}`;
       return selector;
     });
     query += array?.join("");
 
+    // 2. Stream, Join query
     // now add from stream name
     query += ` FROM "${
       dashboardPanelData.data.queries[
         dashboardPanelData.layout.currentQueryIndex
       ].fields?.stream
-    }" `;
+    }" ${buildSQLJoinsFromInput(
+      dashboardPanelData.data.queries[
+        dashboardPanelData.layout.currentQueryIndex
+      ].joins,
+    )}`;
 
+    // 3. Filter
     // Add the AND/OR condition logic
     const filterData =
       dashboardPanelData.data.queries[
@@ -2187,6 +2528,7 @@ const useDashboardPanelData = (pageKey: string = "dashboard") => {
     const whereClause = buildWhereClause(filterData);
     query += whereClause;
 
+    // 4. Group by
     // add group by statement
     const xAxisAlias = dashboardPanelData.data.queries[
       dashboardPanelData.layout.currentQueryIndex
@@ -2206,34 +2548,35 @@ const useDashboardPanelData = (pageKey: string = "dashboard") => {
       ?.filter((it: any) => !it?.isDerived)
       ?.map((it: any) => it?.alias);
 
-    const tableTypeWithXFieldOnly =
-      dashboardPanelData.data.type === "table" &&
-      xAxisAlias.length > 0 &&
-      yAxisAlias.length === 0 &&
-      !bAxisAlias?.length;
+    // const tableTypeWithXFieldOnly =
+    //   dashboardPanelData.data.type === "table" &&
+    //   xAxisAlias.length > 0 &&
+    //   yAxisAlias.length === 0 &&
+    //   !bAxisAlias?.length;
 
-    if (!tableTypeWithXFieldOnly) {
-      if (dashboardPanelData.data.type == "heatmap") {
-        query +=
-          xAxisAlias.length && yAxisAlias.length
-            ? " GROUP BY " +
-              xAxisAlias.join(", ") +
-              ", " +
-              yAxisAlias.join(", ")
-            : "";
-      } else if (bAxisAlias?.length) {
-        query +=
-          xAxisAlias.length && bAxisAlias.length
-            ? " GROUP BY " +
-              xAxisAlias.join(", ") +
-              ", " +
-              bAxisAlias.join(", ")
-            : "";
-      } else {
-        query += xAxisAlias.length ? " GROUP BY " + xAxisAlias.join(", ") : "";
-      }
-    }
+    // if (!tableTypeWithXFieldOnly) {
+    // if (dashboardPanelData.data.type == "heatmap") {
+    //   query +=
+    //     xAxisAlias.length && yAxisAlias.length
+    //       ? " GROUP BY " +
+    // xAxisAlias.join(", ") +
+    // ", " +
+    // yAxisAlias.join(", ")
+    //       : "";
+    // } else if (bAxisAlias?.length) {
+    //   query +=
+    //     xAxisAlias.length && bAxisAlias.length
+    //       ? " GROUP BY " +
+    // xAxisAlias.join(", ") +
+    // ", " +
+    // bAxisAlias.join(", ")
+    //       : "";
+    // } else {
+    //   query += xAxisAlias.length ? " GROUP BY " + xAxisAlias.join(", ") : "";
+    // }
+    // }
 
+    // 5. Order by
     // array of sorting fields with followed by asc or desc
     const orderByArr: string[] = [];
 
@@ -2247,6 +2590,7 @@ const useDashboardPanelData = (pageKey: string = "dashboard") => {
     // append with query by joining array with comma
     query += orderByArr.length ? " ORDER BY " + orderByArr.join(", ") : "";
 
+    // 6. Limit
     // append limit
     // if limit is less than or equal to 0 then don't add
     const queryLimit =
@@ -2276,31 +2620,50 @@ const useDashboardPanelData = (pageKey: string = "dashboard") => {
     let query = "";
 
     if (name && value_for_maps) {
-      query = `SELECT ${name.column} as "${name.alias}", `;
+      // query = `SELECT ${name.column} as "${name.alias}", `;
+      query = `SELECT ${buildSQLQueryFromInput(
+        name,
+        dashboardPanelData.data.queries[
+          dashboardPanelData.layout.currentQueryIndex
+        ].fields?.stream,
+      )} as "${name.alias}",  `;
 
-      if (value_for_maps?.aggregationFunction) {
-        switch (value_for_maps.aggregationFunction) {
-          case "p50":
-            query += `approx_percentile_cont(${value_for_maps.column}, 0.5) as ${value_for_maps.alias}`;
-            break;
-          case "p90":
-            query += `approx_percentile_cont(${value_for_maps.column}, 0.9) as ${value_for_maps.alias}`;
-            break;
-          case "p95":
-            query += `approx_percentile_cont(${value_for_maps.column}, 0.95) as ${value_for_maps.alias}`;
-            break;
-          case "p99":
-            query += `approx_percentile_cont(${value_for_maps.column}, 0.99) as ${value_for_maps.alias}`;
-            break;
-          case "count-distinct":
-            query += `count(distinct(${value_for_maps.column})) as "${value_for_maps.alias}"`;
-            break;
-          default:
-            query += `${value_for_maps.aggregationFunction}(${value_for_maps.column}) as "${value_for_maps.alias}"`;
-            break;
-        }
+      if (value_for_maps?.functionName) {
+        // switch (value_for_maps.functionName) {
+        //   case "p50":
+        //     query += `approx_percentile_cont(${value_for_maps.column}, 0.5) as ${value_for_maps.alias}`;
+        //     break;
+        //   case "p90":
+        //     query += `approx_percentile_cont(${value_for_maps.column}, 0.9) as ${value_for_maps.alias}`;
+        //     break;
+        //   case "p95":
+        //     query += `approx_percentile_cont(${value_for_maps.column}, 0.95) as ${value_for_maps.alias}`;
+        //     break;
+        //   case "p99":
+        //     query += `approx_percentile_cont(${value_for_maps.column}, 0.99) as ${value_for_maps.alias}`;
+        //     break;
+        //   case "count-distinct":
+        //     query += `count(distinct(${value_for_maps.column})) as "${value_for_maps.alias}"`;
+        //     break;
+        //   default:
+        //     query += `${value_for_maps.functionName}(${value_for_maps.column}) as "${value_for_maps.alias}"`;
+        //     break;
+        // }
+
+        query += `${buildSQLQueryFromInput(
+          value_for_maps,
+          dashboardPanelData.data.queries[
+            dashboardPanelData.layout.currentQueryIndex
+          ].fields?.stream,
+        )} as "${value_for_maps.alias}"`;
       } else {
-        query += `${value_for_maps.column} as "${value_for_maps.alias}"`;
+        // query += `${value_for_maps.column} as "${value_for_maps.alias}"`;
+        query += `${buildSQLQueryFromInput(
+          value_for_maps,
+          dashboardPanelData.data.queries[
+            dashboardPanelData.layout.currentQueryIndex
+          ].fields?.stream,
+        )} as "${value_for_maps.alias}"`;
       }
 
       query += ` FROM "${
@@ -2359,35 +2722,64 @@ const useDashboardPanelData = (pageKey: string = "dashboard") => {
       ].fields;
 
     if (latitude && !latitude.isDerived && longitude && !longitude.isDerived) {
-      query += `SELECT ${latitude.column} as ${latitude.alias}, ${longitude.column} as ${longitude.alias}`;
+      query += `SELECT ${buildSQLQueryFromInput(
+        latitude,
+        dashboardPanelData.data.queries[
+          dashboardPanelData.layout.currentQueryIndex
+        ].fields?.stream,
+      )} as ${latitude.alias}, ${buildSQLQueryFromInput(
+        longitude,
+        dashboardPanelData.data.queries[
+          dashboardPanelData.layout.currentQueryIndex
+        ].fields?.stream,
+      )} as ${longitude.alias}`;
+      // query += `SELECT ${latitude.column} as ${latitude.alias}, ${longitude.column} as ${longitude.alias}`;
     } else if (latitude && !latitude.isDerived) {
-      query += `SELECT ${latitude.column} as ${latitude.alias}`;
+      query += `SELECT ${buildSQLQueryFromInput(
+        latitude,
+        dashboardPanelData.data.queries[
+          dashboardPanelData.layout.currentQueryIndex
+        ].fields?.stream,
+      )} as ${latitude.alias}`;
+      // query += `SELECT ${latitude.column} as ${latitude.alias}`;
     } else if (longitude && !longitude.isDerived) {
-      query += `SELECT ${longitude.column} as ${longitude.alias}`;
+      query += `SELECT ${buildSQLQueryFromInput(
+        longitude,
+        dashboardPanelData.data.queries[
+          dashboardPanelData.layout.currentQueryIndex
+        ].fields?.stream,
+      )} as ${longitude.alias}`;
+      // query += `SELECT ${longitude.column} as ${longitude.alias}`;
     }
 
     if (query) {
       if (weight && !weight.isDerived) {
-        switch (weight?.aggregationFunction) {
-          case "p50":
-            query += `, approx_percentile_cont(${weight.column}, 0.5) as ${weight.alias}`;
-            break;
-          case "p90":
-            query += `, approx_percentile_cont(${weight.column}, 0.9) as ${weight.alias}`;
-            break;
-          case "p95":
-            query += `, approx_percentile_cont(${weight.column}, 0.95) as ${weight.alias}`;
-            break;
-          case "p99":
-            query += `, approx_percentile_cont(${weight.column}, 0.99) as ${weight.alias}`;
-            break;
-          case "count-distinct":
-            query += `, count(distinct(${weight.column})) as ${weight.alias}`;
-            break;
-          default:
-            query += `, ${weight.aggregationFunction}(${weight.column}) as ${weight.alias}`;
-            break;
-        }
+        // switch (weight?.functionName) {
+        //   case "p50":
+        //     query += `, approx_percentile_cont(${weight.column}, 0.5) as ${weight.alias}`;
+        //     break;
+        //   case "p90":
+        //     query += `, approx_percentile_cont(${weight.column}, 0.9) as ${weight.alias}`;
+        //     break;
+        //   case "p95":
+        //     query += `, approx_percentile_cont(${weight.column}, 0.95) as ${weight.alias}`;
+        //     break;
+        //   case "p99":
+        //     query += `, approx_percentile_cont(${weight.column}, 0.99) as ${weight.alias}`;
+        //     break;
+        //   case "count-distinct":
+        //     query += `, count(distinct(${weight.column})) as ${weight.alias}`;
+        //     break;
+        //   default:
+        //     query += `, ${weight.functionName}(${weight.column}) as ${weight.alias}`;
+        //     break;
+        // }
+        query += `, ${buildSQLQueryFromInput(
+          weight,
+          dashboardPanelData.data.queries[
+            dashboardPanelData.layout.currentQueryIndex
+          ].fields?.stream,
+        )} as ${weight.alias}`;
       }
       query += ` FROM "${
         dashboardPanelData.data.queries[
@@ -2461,41 +2853,65 @@ const useDashboardPanelData = (pageKey: string = "dashboard") => {
     const selectFields = [];
 
     if (source && !source.isDerived) {
-      selectFields.push(`${source.column} as ${source.alias}`);
+      // selectFields.push(`${source.column} as ${source.alias}`);
+      selectFields.push(
+        `${buildSQLQueryFromInput(
+          source,
+          dashboardPanelData.data.queries[
+            dashboardPanelData.layout.currentQueryIndex
+          ].fields?.stream,
+        )} as ${source.alias}`,
+      );
     }
 
     if (target && !target.isDerived) {
-      selectFields.push(`${target.column} as ${target.alias}`);
+      // selectFields.push(`${target.column} as ${target.alias}`);
+      selectFields.push(
+        `${buildSQLQueryFromInput(
+          target,
+          dashboardPanelData.data.queries[
+            dashboardPanelData.layout.currentQueryIndex
+          ].fields?.stream,
+        )} as ${target.alias}`,
+      );
     }
 
     if (value && !value.isDerived) {
-      switch (value?.aggregationFunction) {
-        case "p50":
-          selectFields.push(
-            `approx_percentile_cont(${value?.column}, 0.5) as ${value.alias}`,
-          );
-          break;
-        case "p90":
-          selectFields.push(
-            `approx_percentile_cont(${value?.column}, 0.9) as ${value.alias}`,
-          );
-          break;
-        case "p95":
-          selectFields.push(
-            `approx_percentile_cont(${value?.column}, 0.95) as ${value.alias}`,
-          );
-          break;
-        case "p99":
-          selectFields.push(
-            `approx_percentile_cont(${value?.column}, 0.99) as ${value.alias}`,
-          );
-          break;
-        default:
-          selectFields.push(
-            `${value.aggregationFunction}(${value.column}) as ${value.alias}`,
-          );
-          break;
-      }
+      // switch (value?.functionName) {
+      //   case "p50":
+      //     selectFields.push(
+      //       `approx_percentile_cont(${value?.column}, 0.5) as ${value.alias}`,
+      //     );
+      //     break;
+      //   case "p90":
+      //     selectFields.push(
+      //       `approx_percentile_cont(${value?.column}, 0.9) as ${value.alias}`,
+      //     );
+      //     break;
+      //   case "p95":
+      //     selectFields.push(
+      //       `approx_percentile_cont(${value?.column}, 0.95) as ${value.alias}`,
+      //     );
+      //     break;
+      //   case "p99":
+      //     selectFields.push(
+      //       `approx_percentile_cont(${value?.column}, 0.99) as ${value.alias}`,
+      //     );
+      //     break;
+      //   default:
+      //     selectFields.push(
+      //       `${value.functionName}(${value.column}) as ${value.alias}`,
+      //     );
+      //     break;
+      // }
+      selectFields.push(
+        `${buildSQLQueryFromInput(
+          value,
+          dashboardPanelData.data.queries[
+            dashboardPanelData.layout.currentQueryIndex
+          ].fields?.stream,
+        )} as ${value.alias}`,
+      );
     }
 
     // Adding the selected fields to the query
@@ -2547,7 +2963,7 @@ const useDashboardPanelData = (pageKey: string = "dashboard") => {
   };
 
   // based on chart type it will create auto sql query
-  const makeAutoSQLQuery = () => {
+  const makeAutoSQLQuery = async () => {
     // only continue if current mode is auto query generation
     if (
       !dashboardPanelData.data.queries[
@@ -2562,7 +2978,7 @@ const useDashboardPanelData = (pageKey: string = "dashboard") => {
       } else if (dashboardPanelData.data.type == "maps") {
         query = mapChart();
       } else {
-        query = sqlchart();
+        query = await sqlchart();
       }
       dashboardPanelData.data.queries[
         dashboardPanelData.layout.currentQueryIndex
@@ -2621,6 +3037,9 @@ const useDashboardPanelData = (pageKey: string = "dashboard") => {
       dashboardPanelData.data.queries[
         dashboardPanelData.layout.currentQueryIndex
       ].config.limit,
+      dashboardPanelData.data.queries[
+        dashboardPanelData.layout.currentQueryIndex
+      ].joins,
     ],
     () => {
       // only continue if current mode is auto query generation
@@ -2629,6 +3048,7 @@ const useDashboardPanelData = (pageKey: string = "dashboard") => {
           dashboardPanelData.layout.currentQueryIndex
         ].customQuery
       ) {
+        // makeAutoSQLQuery is async function
         makeAutoSQLQuery();
       }
     },
@@ -2748,23 +3168,25 @@ const useDashboardPanelData = (pageKey: string = "dashboard") => {
             dashboardPanelData.layout.currentQueryIndex
           ].customQuery
         ) {
-          const customQueryXFieldError = dashboardPanelData.data.queries[
-            dashboardPanelData.layout.currentQueryIndex
-          ].fields.x.filter(
-            (it: any) =>
-              ![
-                ...dashboardPanelData.meta.stream.customQueryFields,
-                ...dashboardPanelData.meta.stream.vrlFunctionFieldList,
-              ].find((i: any) => i.name == it.column),
-          );
-          if (customQueryXFieldError.length) {
-            errors.push(
-              ...customQueryXFieldError.map(
-                (it: any) =>
-                  `Please update X-Axis Selection. Current X-Axis field ${it.column} is invalid`,
-              ),
-            );
-          }
+          // const customQueryXFieldError = dashboardPanelData.data.queries[
+          //   dashboardPanelData.layout.currentQueryIndex
+          // ].fields.x.filter(
+          //   (it: any) =>
+          //     ![
+          //       ...dashboardPanelData.meta.stream.customQueryFields,
+          //       ...dashboardPanelData.meta.stream.vrlFunctionFieldList,
+          //     ].find((i: any) => i.name == it.column),
+          // );
+          //  HERE NEED CHANGES
+          // Now, we can not check field name is there on stream or not
+          // if (customQueryXFieldError.length) {
+          //   errors.push(
+          //     ...customQueryXFieldError.map(
+          //       (it: any) =>
+          //         `Please update X-Axis Selection. Current X-Axis field ${it.column} is invalid`,
+          //     ),
+          //   );
+          // }
 
           const customQueryYFieldError = dashboardPanelData.data.queries[
             dashboardPanelData.layout.currentQueryIndex
@@ -2785,41 +3207,40 @@ const useDashboardPanelData = (pageKey: string = "dashboard") => {
           }
         } else {
           // check if field selection is from the selected stream fields when the custom query mode is OFF
-          const customQueryXFieldError = dashboardPanelData.data.queries[
-            dashboardPanelData.layout.currentQueryIndex
-          ].fields.x.filter(
-            (it: any) =>
-              ![
-                ...selectedStreamFieldsBasedOnUserDefinedSchema.value,
-                ...dashboardPanelData.meta.stream.vrlFunctionFieldList,
-              ].find((i: any) => i.name == it.column),
-          );
-          if (customQueryXFieldError.length) {
-            errors.push(
-              ...customQueryXFieldError.map(
-                (it: any) =>
-                  `Please update X-Axis Selection. Current X-Axis field ${it.column} is invalid for selected stream`,
-              ),
-            );
-          }
-
-          const customQueryYFieldError = dashboardPanelData.data.queries[
-            dashboardPanelData.layout.currentQueryIndex
-          ].fields.y.filter(
-            (it: any) =>
-              ![
-                ...selectedStreamFieldsBasedOnUserDefinedSchema.value,
-                ...dashboardPanelData.meta.stream.vrlFunctionFieldList,
-              ].find((i: any) => i.name == it.column),
-          );
-          if (customQueryYFieldError.length) {
-            errors.push(
-              ...customQueryYFieldError.map(
-                (it: any) =>
-                  `Please update Y-Axis Selection. Current Y-Axis field ${it.column} is invalid for selected stream`,
-              ),
-            );
-          }
+          // const customQueryXFieldError = dashboardPanelData.data.queries[
+          //   dashboardPanelData.layout.currentQueryIndex
+          // ].fields.x.filter(
+          //   (it: any) =>
+          //     ![
+          //       ...selectedStreamFieldsBasedOnUserDefinedSchema.value,
+          //       ...dashboardPanelData.meta.stream.vrlFunctionFieldList,
+          //     ].find((i: any) => i.name == it.column),
+          // );
+          // if (customQueryXFieldError.length) {
+          //   errors.push(
+          //     ...customQueryXFieldError.map(
+          //       (it: any) =>
+          //         `Please update X-Axis Selection. Current X-Axis field ${it.column} is invalid for selected stream`,
+          //     ),
+          //   );
+          // }
+          // const customQueryYFieldError = dashboardPanelData.data.queries[
+          //   dashboardPanelData.layout.currentQueryIndex
+          // ].fields.y.filter(
+          //   (it: any) =>
+          //     ![
+          //       ...selectedStreamFieldsBasedOnUserDefinedSchema.value,
+          //       ...dashboardPanelData.meta.stream.vrlFunctionFieldList,
+          //     ].find((i: any) => i.name == it.column),
+          // );
+          // if (customQueryYFieldError.length) {
+          //   errors.push(
+          //     ...customQueryYFieldError.map(
+          //       (it: any) =>
+          //         `Please update Y-Axis Selection. Current Y-Axis field ${it.column} is invalid for selected stream`,
+          //     ),
+          //   );
+          // }
         }
       }
     }
@@ -3123,6 +3544,7 @@ const useDashboardPanelData = (pageKey: string = "dashboard") => {
     currentYLabel,
     generateLabelFromName,
     selectedStreamFieldsBasedOnUserDefinedSchema,
+    flattenGroupedFields,
   };
 };
 export default useDashboardPanelData;

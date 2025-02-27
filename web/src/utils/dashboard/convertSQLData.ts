@@ -1864,7 +1864,7 @@ export const convertSQLData = async (
 
         const field = panelSchema.queries[0].fields?.x.find(
           (it: any) =>
-            it.aggregationFunction == "histogram" &&
+            it.functionName == "histogram" &&
             it.column == store.state.zoConfig.timestamp_column,
         );
         // if histogram
@@ -2159,13 +2159,13 @@ export const convertSQLData = async (
     // auto SQL: if x axis has time series(aggregation function is histogram)
     const field = panelSchema.queries[0].fields?.x.find(
       (it: any) =>
-        it.aggregationFunction == "histogram" &&
+        it.functionName == "histogram" &&
         it.column == store.state.zoConfig.timestamp_column,
     );
 
     const timestampField = panelSchema.queries[0].fields?.x.find(
       (it: any) =>
-        !it.aggregationFunction &&
+        !it.functionName &&
         it.column == store.state.zoConfig.timestamp_column,
     );
 

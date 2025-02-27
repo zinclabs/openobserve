@@ -128,11 +128,18 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                             "
                             class="q-mr-xs q-mb-sm"
                           >
-                            <q-select
+                            <DynamicFunctionPopUp
                               v-model="
                                 dashboardPanelData.data.queries[
                                   dashboardPanelData.layout.currentQueryIndex
-                                ].fields.x[index].aggregationFunction
+                                ].fields.x[index]
+                              "
+                            />
+                            <!-- <q-select
+                              v-model="
+                                dashboardPanelData.data.queries[
+                                  dashboardPanelData.layout.currentQueryIndex
+                                ].fields.x[index].functionName
                               "
                               :options="triggerOperatorsWithHistogram"
                               dense
@@ -149,23 +156,24 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                                   @click.stop.prevent="
                                     dashboardPanelData.data.queries[
                                       dashboardPanelData.layout.currentQueryIndex
-                                    ].fields.x[index].aggregationFunction = null
+                                    ].fields.x[index].functionName = null
                                   "
                                   class="cursor-pointer"
                                 />
                               </template>
-                            </q-select>
+                            </q-select> -->
                           </div>
                         </div>
                         <!-- histogram interval if auto sql and aggregation function is histogram-->
-                        <div
+                        <!-- histogram interval for sql queries -->
+                        <!-- <div
                           v-if="
                             !dashboardPanelData.data.queries[
                               dashboardPanelData.layout.currentQueryIndex
                             ].customQuery &&
                             dashboardPanelData.data.queries[
                               dashboardPanelData.layout.currentQueryIndex
-                            ].fields?.x[index]?.aggregationFunction ===
+                            ].fields?.x[index]?.functionName ===
                               'histogram' &&
                             !dashboardPanelData.data.queries[
                               dashboardPanelData.layout.currentQueryIndex
@@ -173,7 +181,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                           "
                           class="q-mb-sm"
                         >
-                          <!-- histogram interval for sql queries -->
                           <HistogramIntervalDropDown
                             v-if="!promqlMode"
                             :model-value="
@@ -192,7 +199,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                               }
                             "
                           />
-                        </div>
+                        </div> -->
                         <q-input
                           dense
                           filled
@@ -380,11 +387,18 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                             "
                             class="q-mr-xs q-mb-sm"
                           >
-                            <q-select
+                            <DynamicFunctionPopUp
                               v-model="
                                 dashboardPanelData.data.queries[
                                   dashboardPanelData.layout.currentQueryIndex
-                                ].fields.breakdown[index].aggregationFunction
+                                ].fields.breakdown[index]
+                              "
+                            />
+                            <!-- <q-select
+                              v-model="
+                                dashboardPanelData.data.queries[
+                                  dashboardPanelData.layout.currentQueryIndex
+                                ].fields.breakdown[index].functionName
                               "
                               :options="triggerOperatorsWithHistogram"
                               dense
@@ -403,23 +417,24 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                                       dashboardPanelData.layout.currentQueryIndex
                                     ].fields.breakdown[
                                       index
-                                    ].aggregationFunction = null
+                                    ].functionName = null
                                   "
                                   class="cursor-pointer"
                                 />
                               </template>
-                            </q-select>
+                            </q-select> -->
                           </div>
                         </div>
                         <!-- histogram interval if auto sql and aggregation function is histogram-->
-                        <div
+                        <!-- histogram interval for sql queries -->
+                        <!-- <div
                           v-if="
                             !dashboardPanelData.data.queries[
                               dashboardPanelData.layout.currentQueryIndex
                             ].customQuery &&
                             dashboardPanelData.data.queries[
                               dashboardPanelData.layout.currentQueryIndex
-                            ].fields?.breakdown[index]?.aggregationFunction ===
+                            ].fields?.breakdown[index]?.functionName ===
                               'histogram' &&
                             !dashboardPanelData.data.queries[
                               dashboardPanelData.layout.currentQueryIndex
@@ -427,7 +442,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                           "
                           class="q-mb-sm"
                         >
-                          <!-- histogram interval for sql queries -->
                           <HistogramIntervalDropDown
                             v-if="!promqlMode"
                             :model-value="
@@ -446,7 +460,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                               }
                             "
                           />
-                        </div>
+                        </div> -->
                         <q-input
                           dense
                           filled
@@ -596,7 +610,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                 class="q-pl-sm"
               >
                 <q-menu
-                  class="q-pa-md"
+                  class="q-pa-md tw-overflow-scroll"
                   :data-test="`dashboard-y-item-${itemY?.column}-menu`"
                 >
                   <div>
@@ -611,13 +625,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                           ].fields.y[index].isDerived
                         "
                         class="q-mr-xs"
-                        style="width: 160px"
                       >
-                        <q-select
+                        <!-- <q-select
                           v-model="
                             dashboardPanelData.data.queries[
                               dashboardPanelData.layout.currentQueryIndex
-                            ].fields.y[index].aggregationFunction
+                            ].fields.y[index].functionName
                           "
                           :options="
                             dashboardPanelData.data.type == 'heatmap'
@@ -641,13 +654,20 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                                 @click.stop.prevent="
                                   dashboardPanelData.data.queries[
                                     dashboardPanelData.layout.currentQueryIndex
-                                  ].fields.y[index].aggregationFunction = null
+                                  ].fields.y[index].functionName = null
                                 "
                                 class="cursor-pointer"
                               />
                             </div>
                           </template>
-                        </q-select>
+                        </q-select> -->
+                        <DynamicFunctionPopUp
+                          v-model="
+                            dashboardPanelData.data.queries[
+                              dashboardPanelData.layout.currentQueryIndex
+                            ].fields.y[index]
+                          "
+                        />
                       </div>
                       <div
                         class="color-input-wrapper"
@@ -657,7 +677,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                           )
                         "
                       >
-                        <input
+                        <!-- <input
                           type="color"
                           data-test="dashboard-y-item-color"
                           v-model="
@@ -665,26 +685,25 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                               dashboardPanelData.layout.currentQueryIndex
                             ].fields.y[index].color
                           "
-                        />
+                        /> -->
                       </div>
                     </div>
                     <!-- histogram interval if auto sql and aggregation function is histogram-->
-                    <div
+                    <!-- histogram interval for sql queries -->
+                    <!-- <div
                       v-if="
                         !dashboardPanelData.data.queries[
                           dashboardPanelData.layout.currentQueryIndex
                         ].customQuery &&
                         dashboardPanelData.data.queries[
                           dashboardPanelData.layout.currentQueryIndex
-                        ].fields?.y[index]?.aggregationFunction ===
-                          'histogram' &&
+                        ].fields?.y[index]?.functionName === 'histogram' &&
                         !dashboardPanelData.data.queries[
                           dashboardPanelData.layout.currentQueryIndex
                         ].fields.y[index].isDerived
                       "
                       class="q-mb-sm"
                     >
-                      <!-- histogram interval for sql queries -->
                       <HistogramIntervalDropDown
                         v-if="!promqlMode"
                         :model-value="
@@ -702,7 +721,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                           }
                         "
                       />
-                    </div>
+                    </div> -->
                     <q-input
                       dense
                       filled
@@ -864,11 +883,18 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                           class="q-mr-xs"
                           style="width: 160px"
                         >
-                          <q-select
+                          <DynamicFunctionPopUp
                             v-model="
                               dashboardPanelData.data.queries[
                                 dashboardPanelData.layout.currentQueryIndex
-                              ].fields.z[index].aggregationFunction
+                              ].fields.z[index]
+                            "
+                          />
+                          <!-- <q-select
+                            v-model="
+                              dashboardPanelData.data.queries[
+                                dashboardPanelData.layout.currentQueryIndex
+                              ].fields.z[index].functionName
                             "
                             :options="triggerOperators"
                             dense
@@ -877,7 +903,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                             map-options
                             :label="t('common.aggregation')"
                             data-test="dashboard-z-item-dropdown"
-                          ></q-select>
+                          ></q-select> -->
                         </div>
                         <div
                           class="color-input-wrapper"
@@ -963,6 +989,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
       </div>
     </span>
     <q-separator />
+    <DashboardJoinsOption :dashboardData="dashboardData"></DashboardJoinsOption>
+    <q-separator />
     <!-- filters container -->
     <DashboardFiltersOption
       :dashboardData="dashboardData"
@@ -987,6 +1015,9 @@ import CommonAutoComplete from "@/components/dashboards/addPanel/CommonAutoCompl
 import SanitizedHtmlRenderer from "@/components/SanitizedHtmlRenderer.vue";
 import useNotifications from "@/composables/useNotifications";
 import DashboardFiltersOption from "@/views/Dashboards/addPanel/DashboardFiltersOption.vue";
+import DashboardJoinsOption from "@/views/Dashboards/addPanel/DashboardJoinsOption.vue";
+import DynamicFunctionPopUp from "@/components/dashboards/addPanel/dynamicFunction/DynamicFunctionPopUp.vue";
+import { buildSQLQueryFromInput } from "@/utils/dashboard/convertDataIntoUnitValue";
 
 export default defineComponent({
   name: "DashboardQueryBuilder",
@@ -999,6 +1030,8 @@ export default defineComponent({
     CommonAutoComplete,
     SanitizedHtmlRenderer,
     DashboardFiltersOption,
+    DashboardJoinsOption,
+    DynamicFunctionPopUp,
   },
   props: ["dashboardData"],
   setup(props) {
@@ -1155,6 +1188,10 @@ export default defineComponent({
           // move the item from field list to axis
           const dragElement = dashboardPanelData.meta.dragAndDrop.dragElement;
 
+          console.log(dragElement, "dragElement");
+
+
+          // Here, we need all fields for all joins streams
           const dragName =
             selectedStreamFieldsBasedOnUserDefinedSchema.value.find(
               (item: any) => item?.name === dragElement?.column,
@@ -1414,12 +1451,12 @@ export default defineComponent({
       ) {
         return field?.column;
       }
-      if (field?.aggregationFunction) {
-        const aggregation = field?.aggregationFunction?.toUpperCase();
-        return `${aggregation}(${field?.column})`;
-      } else {
-        return field?.column;
-      }
+      return buildSQLQueryFromInput(
+        field,
+        dashboardPanelData.data.queries[
+          dashboardPanelData.layout.currentQueryIndex
+        ].fields?.stream,
+      );
     };
 
     const xLabel = computed(() => {

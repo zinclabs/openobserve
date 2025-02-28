@@ -766,6 +766,7 @@
     "otherColumn": "Other Columns",
     "config": "Config",
     "filters": "Filters",
+    "joins": "Joins",
     "customSql": "Custom SQL",
     "field": "Fields",
     "discard": "Discard",

@@ -73,27 +73,22 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
               color="primary"
               dense
               size="sm"
-              :label="
-                dashboardPanelData.data.queries[
-                  dashboardPanelData.layout.currentQueryIndex
-                ].fields?.latitude?.column
-              "
+              :label="latitudeLabel"
               class="q-pl-sm"
-              :data-test="`dashboard-latitude-item-${
-                dashboardPanelData.data.queries[
-                  dashboardPanelData.layout.currentQueryIndex
-                ].fields?.latitude?.column
-              }`"
+              :data-test="`dashboard-latitude-item-${latitudeLabel}`"
             >
               <q-menu
                 class="q-pa-md"
-                :data-test="`dashboard-latitude-item-${
-                  dashboardPanelData.data.queries[
-                    dashboardPanelData.layout.currentQueryIndex
-                  ].fields?.latitude?.column
-                }-menu`"
+                :data-test="`dashboard-latitude-item-${latitudeLabel}-menu`"
               >
                 <div>
+                  <DynamicFunctionPopUp
+                    v-model="
+                      dashboardPanelData.data.queries[
+                        dashboardPanelData.layout.currentQueryIndex
+                      ].fields.latitude
+                    "
+                  />
                   <q-input
                     dense
                     filled
@@ -129,11 +124,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
               style="height: 100%"
               size="xs"
               dense
-              :data-test="`dashboard-latitude-item-${
-                dashboardPanelData.data.queries[
-                  dashboardPanelData.layout.currentQueryIndex
-                ].fields?.latitude?.column
-              }-remove`"
+              :data-test="`dashboard-latitude-item-${latitudeLabel}-remove`"
               @click="removeLatitude()"
               icon="close"
             />
@@ -209,27 +200,22 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
               dense
               color="primary"
               size="sm"
-              :label="
-                dashboardPanelData.data.queries[
-                  dashboardPanelData.layout.currentQueryIndex
-                ].fields?.longitude?.column
-              "
-              :data-test="`dashboard-longitude-item-${
-                dashboardPanelData.data.queries[
-                  dashboardPanelData.layout.currentQueryIndex
-                ].fields?.longitude?.column
-              }`"
+              :label="longitudeLabel"
+              :data-test="`dashboard-longitude-item-${longitudeLabel}`"
               class="q-pl-sm"
             >
               <q-menu
                 class="q-pa-md"
-                :data-test="`dashboard-longitude-item-${
-                  dashboardPanelData.data.queries[
-                    dashboardPanelData.layout.currentQueryIndex
-                  ].fields?.longitude?.column
-                }-menu`"
+                :data-test="`dashboard-longitude-item-${longitudeLabel}-menu`"
               >
                 <div>
+                  <DynamicFunctionPopUp
+                    v-model="
+                      dashboardPanelData.data.queries[
+                        dashboardPanelData.layout.currentQueryIndex
+                      ].fields.longitude
+                    "
+                  />
                   <q-input
                     dense
                     filled
@@ -265,11 +251,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
               style="height: 100%"
               size="xs"
               dense
-              :data-test="`dashboard-longitude-item-${
-                dashboardPanelData.data.queries[
-                  dashboardPanelData.layout.currentQueryIndex
-                ].fields?.longitude?.column
-              }-remove`"
+              :data-test="`dashboard-longitude-item-${longitudeLabel}-remove`"
               @click="removeLongitude()"
               icon="close"
             />
@@ -346,20 +328,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
               color="primary"
               size="sm"
               :label="weightLabel"
-              :data-test="`dashboard-weight-item-${
-                dashboardPanelData.data.queries[
-                  dashboardPanelData.layout.currentQueryIndex
-                ].fields?.weight?.column
-              }`"
+              :data-test="`dashboard-weight-item-${weightLabel}`"
               class="q-pl-sm"
             >
               <q-menu
                 class="q-pa-md"
-                :data-test="`dashboard-weight-item-${
-                  dashboardPanelData.data.queries[
-                    dashboardPanelData.layout.currentQueryIndex
-                  ].fields?.weight?.column
-                }-menu`"
+                :data-test="`dashboard-weight-item-${weightLabel}-menu`"
               >
                 <div>
                   <div class="row q-mb-sm" style="align-items: center">
@@ -372,7 +346,14 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                       class="q-mr-xs"
                       style="width: 160px"
                     >
-                      <q-select
+                      <DynamicFunctionPopUp
+                        v-model="
+                          dashboardPanelData.data.queries[
+                            dashboardPanelData.layout.currentQueryIndex
+                          ].fields.weight
+                        "
+                      />
+                      <!-- <q-select
                         v-model="
                           dashboardPanelData.data.queries[
                             dashboardPanelData.layout.currentQueryIndex
@@ -398,7 +379,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                             class="cursor-pointer"
                           />
                         </template>
-                      </q-select>
+                      </q-select> -->
                     </div>
                   </div>
                   <q-input
@@ -436,11 +417,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
               style="height: 100%"
               size="xs"
               dense
-              :data-test="`dashboard-weight-item-${
-                dashboardPanelData.data.queries[
-                  dashboardPanelData.layout.currentQueryIndex
-                ].fields?.weight?.column
-              }-remove`"
+              :data-test="`dashboard-weight-item-${weightLabel}-remove`"
               @click="removeWeight()"
               icon="close"
             />
@@ -477,6 +454,8 @@ import SanitizedHtmlRenderer from "@/components/SanitizedHtmlRenderer.vue";
 import { inject } from "vue";
 import useNotifications from "@/composables/useNotifications";
 import DashboardFiltersOption from "@/views/Dashboards/addPanel/DashboardFiltersOption.vue";
+import DynamicFunctionPopUp from "@/components/dashboards/addPanel/dynamicFunction/DynamicFunctionPopUp.vue";
+import { buildSQLQueryFromInput } from "@/utils/dashboard/convertDataIntoUnitValue";
 
 export default defineComponent({
   name: "DashboardGeoMapsQueryBuilder",
@@ -485,6 +464,7 @@ export default defineComponent({
     CommonAutoComplete,
     SanitizedHtmlRenderer,
     DashboardFiltersOption,
+    DynamicFunctionPopUp,
   },
   props: ["dashboardData"],
   setup(props) {
@@ -691,15 +671,32 @@ export default defineComponent({
           dashboardPanelData.layout.currentQueryIndex
         ].customQuery
       ) {
+        // HERE NEED CHANGES
         return field.column;
       }
-      if (field.aggregationFunction) {
-        const aggregation = field.aggregationFunction.toUpperCase();
-        return `${aggregation}(${field.column})`;
-      } else {
-        return field.column;
-      }
+      return buildSQLQueryFromInput(
+        field,
+        dashboardPanelData.data.queries[
+          dashboardPanelData.layout.currentQueryIndex
+        ].fields?.stream,
+      );
     };
+
+    const latitudeLabel = computed(() => {
+      const latitudeField =
+        dashboardPanelData.data.queries[
+          dashboardPanelData.layout.currentQueryIndex
+        ].fields.latitude;
+      return commonBtnLabel(latitudeField);
+    });
+
+    const longitudeLabel = computed(() => {
+      const longitudeField =
+        dashboardPanelData.data.queries[
+          dashboardPanelData.layout.currentQueryIndex
+        ].fields.longitude;
+      return commonBtnLabel(longitudeField);
+    });
 
     const weightLabel = computed(() => {
       const weightField =
@@ -731,6 +728,8 @@ export default defineComponent({
       Hint,
       WeightHint,
       promqlMode,
+      latitudeLabel,
+      longitudeLabel,
       weightLabel,
       onFieldDragStart,
       options: [

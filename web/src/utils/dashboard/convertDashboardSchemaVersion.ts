@@ -52,6 +52,68 @@ const convertPanelSchemaVersion = (data: any) => {
   };
 };
 
+const migrateV5FieldsToV6 = (
+  fieldItem: any,
+  isCustomQuery: boolean,
+  stream: string,
+) => {
+  // if fieldItem is undefined, do nothing
+  if (!fieldItem) return;
+  // mirgrate old args
+  // previously, args was only used for histogram interval
+  // so, add arg type as histogramInverval
+  if (!fieldItem.args) {
+    fieldItem.args = [];
+  } else {
+    fieldItem.args.forEach((arg: any) => {
+      if (!arg.type) {
+        arg.type = "histogramInverval";
+      }
+    });
+  }
+
+  // if customQuery then do nothing
+  // else need to shift column name to as first arg
+  if (isCustomQuery) {
+    fieldItem.type = "custom";
+  } else {
+    fieldItem.type = "build";
+    // prepend column in args
+    fieldItem.args.unshift({
+      type: "field",
+      value: {
+        field: fieldItem.column,
+        streamAlias: stream,
+      },
+    });
+    delete fieldItem.column;
+  }
+
+  // rename aggregationFunction to functionName
+  if (fieldItem.aggregationFunction) {
+    fieldItem.functionName = fieldItem.aggregationFunction;
+    delete fieldItem.aggregationFunction;
+  } else {
+    // if no aggregationFunction then set functionName to null
+    fieldItem.functionName = null;
+  }
+};
+
+function migrateFields(
+  fields: any | any[],
+  isCustomQuery: boolean,
+  stream: string,
+  migrateFunction: (field: any, isCustomQuery: boolean, stream: string) => void,
+) {
+  if (Array.isArray(fields)) {
+    fields.forEach((field: any) =>
+      migrateFunction(field, isCustomQuery, stream),
+    );
+  } else {
+    migrateFunction(fields, isCustomQuery, stream);
+  }
+}
+
 export function convertDashboardSchemaVersion(data: any) {
   if (!data) {
     return;
@@ -169,6 +231,57 @@ export function convertDashboardSchemaVersion(data: any) {
       });
       // update the version
       data.version = 5;
+    }
+
+    case 5: {
+      // need to traverse all panels
+      // for each panel
+      //   for each query
+      //      for each fields [x, y, z, breakdown, latitude, longitude, weight, source, target, value] Make sure that some of fields is not array
+      //          add type: "build"
+      //          field.column will go inside args array : {type: "field", value: field.column}
+      data.tabs.forEach((tabItem: any) => {
+        tabItem.panels.forEach((panelItem: any) => {
+          panelItem.queries.forEach((queryItem: any) => {
+            const {
+              x,
+              y,
+              z,
+              breakdown,
+              latitude,
+              longitude,
+              weight,
+              source,
+              target,
+              value,
+            } = queryItem.fields;
+
+            // Migrate all fields
+            [
+              x,
+              y,
+              z,
+              breakdown,
+              latitude,
+              longitude,
+              weight,
+              source,
+              target,
+              value,
+            ].forEach((field: any) => {
+              migrateFields(
+                field,
+                queryItem.customQuery,
+                queryItem.stream,
+                migrateV5FieldsToV6,
+              );
+            });
+          });
+        });
+      });
+
+      // update the version
+      data.version = 6;
     }
   }
 

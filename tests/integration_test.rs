@@ -39,7 +39,7 @@ mod tests {
                 router::*,
             },
         },
-        service::{alerts::scheduler::handle_triggers, search::SEARCH_SERVER},
+        service::{alerts::scheduler::handlers::handle_triggers, search::SEARCH_SERVER},
     };
     use prost::Message;
     use proto::{cluster_rpc::search_server::SearchServer, prometheus_rpc};

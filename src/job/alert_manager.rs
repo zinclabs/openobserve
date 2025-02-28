@@ -18,8 +18,6 @@ use config::{cluster::LOCAL_NODE, get_config};
 use o2_enterprise::enterprise::common::infra::config::get_config as get_o2_config;
 use tokio::time;
 
-use crate::service;
-
 pub async fn run() -> Result<(), anyhow::Error> {
     if !LOCAL_NODE.is_alert_manager() {
         return Ok(());
@@ -74,16 +72,9 @@ pub async fn run() -> Result<(), anyhow::Error> {
     Ok(())
 }
 
+/// Runs the schedule jobs
 async fn run_schedule_jobs() -> Result<(), anyhow::Error> {
-    let interval = get_config().limit.alert_schedule_interval;
-    let mut interval = time::interval(time::Duration::from_secs(interval as u64));
-    interval.tick().await; // trigger the first run
-    loop {
-        interval.tick().await;
-        if let Err(e) = service::alerts::scheduler::run().await {
-            log::error!("[ALERT MANAGER] run schedule jobs error: {}", e);
-        }
-    }
+    crate::service::alerts::scheduler::run().await
 }
 
 async fn clean_complete_jobs() -> Result<(), anyhow::Error> {
@@ -96,7 +87,7 @@ async fn clean_complete_jobs() -> Result<(), anyhow::Error> {
     loop {
         interval.tick().await;
         if let Err(e) = infra::scheduler::clean_complete().await {
-            log::error!("[ALERT MANAGER] clean complete jobs error: {}", e);
+            log::error!("[SCHEDULER] clean complete jobs error: {}", e);
         }
     }
 }
@@ -111,7 +102,7 @@ async fn watch_timeout_jobs() -> Result<(), anyhow::Error> {
     loop {
         interval.tick().await;
         if let Err(e) = infra::scheduler::watch_timeout().await {
-            log::error!("[ALERT MANAGER] watch timeout jobs error: {}", e);
+            log::error!("[SCHEDULER] watch timeout jobs error: {}", e);
         }
     }
 }

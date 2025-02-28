@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
 use ::config::{
     get_config,
@@ -24,10 +24,30 @@ use ::config::{
     utils::rand::get_rand_element,
 };
 use actix_web::{http::Error, route, web, FromRequest, HttpRequest, HttpResponse};
+use once_cell::sync::OnceCell;
 
 use crate::common::{infra::cluster, utils::http::get_search_type_from_request};
 
 mod ws;
+mod ws_v2;
+
+// Initialize WsHandler global instance
+static WS_HANDLER: OnceCell<Arc<ws_v2::WsHandler>> = OnceCell::new();
+
+// Helper function to get or initialize the WsHandler
+async fn get_ws_handler() -> Arc<ws_v2::WsHandler> {
+    if let Some(handler) = WS_HANDLER.get() {
+        return handler.clone();
+    }
+
+    // Initialize if not already done
+    let handler = ws_v2::init().await.unwrap();
+
+    // This may fail if another thread initialized it first, which is fine
+    let _ = WS_HANDLER.set(handler.clone());
+
+    handler
+}
 
 const QUERIER_ROUTES: [&str; 20] = [
     "/config",
@@ -191,7 +211,7 @@ async fn dispatch(
 
     // check if the request is a websocket request
     let path_columns: Vec<&str> = path.split('/').collect();
-    if *path_columns.get(3).unwrap_or(&"") == "ws" {
+    if path_columns.get(3).unwrap_or(&"").starts_with("ws") {
         return proxy_ws(req, payload, new_url, start).await;
     }
 
@@ -433,27 +453,72 @@ async fn proxy_ws(
 ) -> actix_web::Result<HttpResponse, Error> {
     let cfg = get_config();
     if cfg.websocket.enabled {
-        // Convert the HTTP/HTTPS URL to a WebSocket URL (WS/WSS)
-        let ws_url = match ws::convert_to_websocket_url(&new_url.full_url) {
-            Ok(url) => url,
-            Err(e) => {
-                log::error!("Error converting URL to WebSocket: {}", e);
-                return Ok(HttpResponse::BadRequest().body("Invalid WebSocket URL"));
-            }
-        };
+        // Check if this is a WebSocket v2 request (e.g., contains a specific path segment or
+        // header)
+        let path = req.uri().path();
+        if path.contains("/ws_v2/") {
+            // Extract client ID from the path or query parameters
+            // Path format example: /api/{org_id}/ws_v2/{client_id}
+            let path_parts: Vec<&str> = path.split('/').collect();
+            let client_id = if path_parts.len() >= 4 {
+                // Get client ID from path
+                path_parts[path_parts.len() - 1].to_string()
+            } else {
+                // Fallback to a default or query parameter
+                req.query_string()
+                    .split('&')
+                    .find_map(|pair| {
+                        if pair.starts_with("client_id=") {
+                            Some(pair[10..].to_string())
+                        } else {
+                            None
+                        }
+                    })
+                    .unwrap_or_else(|| "anonymous".to_string())
+            };
 
-        match ws::ws_proxy(req, payload, &ws_url).await {
-            Ok(res) => {
-                log::info!(
-                "[WS_ROUTER] Successfully proxied WebSocket connection to backend: {}, took: {} ms",
-                ws_url,
+            log::info!(
+                "[WS_V2_ROUTER] Handling WS v2 connection for client: {}, took: {} ms",
+                client_id,
                 start.elapsed().as_millis()
             );
-                Ok(res)
+
+            // Use the WebSocket v2 handler
+            match get_ws_handler()
+                .await
+                .handle_connection(req, payload, client_id)
+                .await
+            {
+                Ok(response) => Ok(response),
+                Err(e) => {
+                    log::error!("[WS_V2_ROUTER] failed: {}", e);
+                    Ok(HttpResponse::InternalServerError().body("WebSocket v2 error"))
+                }
             }
-            Err(e) => {
-                log::error!("[WS_ROUTER] failed: {}", e);
-                Ok(HttpResponse::InternalServerError().body("WebSocket proxy error"))
+        } else {
+            // Use the legacy WebSocket proxy implementation
+            // Convert the HTTP/HTTPS URL to a WebSocket URL (WS/WSS)
+            let ws_url = match ws::convert_to_websocket_url(&new_url.full_url) {
+                Ok(url) => url,
+                Err(e) => {
+                    log::error!("Error converting URL to WebSocket: {}", e);
+                    return Ok(HttpResponse::BadRequest().body("Invalid WebSocket URL"));
+                }
+            };
+
+            match ws::ws_proxy(req, payload, &ws_url).await {
+                Ok(res) => {
+                    log::info!(
+                        "[WS_ROUTER] Successfully proxied WebSocket connection to backend: {}, took: {} ms",
+                        ws_url,
+                        start.elapsed().as_millis()
+                    );
+                    Ok(res)
+                }
+                Err(e) => {
+                    log::error!("[WS_ROUTER] failed: {}", e);
+                    Ok(HttpResponse::InternalServerError().body("WebSocket proxy error"))
+                }
             }
         }
     } else {
